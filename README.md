@@ -7,7 +7,9 @@ Full product spec, feature matrix and decisions: [`CONTEXT.md`](CONTEXT.md). Red
 ## Status
 Phase 1 works end to end in demo mode (no AI key): setup, interview, Story Vault, profile fix, outreach drafts, posts and comments, and the message checker. Tested by clicking through in Chrome at desktop and phone widths; typecheck, lint and production build are clean. Real-AI mode is wired but has not been run against a real provider yet. See `CONTEXT.md` for details.
 
-**This week (new):** your weekly actions (default 3 messages, 2 comments, 1 post) on a Mon–Fri calendar in IST, each linked to one of your drafts and tagged by type. Move items through Draft → Scheduled → Posted/Sent, change the plan by typing ("2 posts, no comments", "posts at 8am"), get reminders via `.ics`, Google Calendar or an in-tab notification, and see when a follow-up is due. Nothing is posted for you. Spec, evidence and test results are in `research/`.
+**Ask ladder:** the Outreach tab asks who you are messaging and gives the right first message: one specific question for a stranger, a 15-minute chat ask for alumni, a referral ask (job ID, resume, fit, easy out) for someone who knows you.
+
+**This week:** your weekly actions (default 3 messages, 2 comments, 1 post) on a Mon–Fri calendar in IST, each linked to one of your drafts and tagged by type. Move items through Draft → Scheduled → Posted/Sent, change the plan by typing ("2 posts, no comments", "posts at 8am"), get reminders via `.ics`, Google Calendar or an in-tab notification, and see when a follow-up is due. Nothing is posted for you. Spec, evidence and test results are in `research/`.
 
 | Story Vault | Copy stays locked until you fill the blanks | Message checker |
 |---|---|---|
@@ -30,7 +32,7 @@ Open http://localhost:3000.
 ## Tests
 ```bash
 npm test            # unit tests (weekly plan, calendar files, chat parser)
-npm run test:e2e    # browser test of the full flow; needs `npm run dev` running and Google Chrome installed
+npm run test:e2e    # browser tests of the full flow; needs `npm run dev` running and Google Chrome installed
 ```
 
 ## Environment

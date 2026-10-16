@@ -37,6 +37,8 @@ function draftFor(result: GenerateReply, draftId: string): Draft | null {
   const [kind, key] = draftId.split(":");
   if (kind === "post") return result.posts[Number(key)] ?? null;
   if (kind === "comment") return result.comments[Number(key)] ?? null;
+  if (draftId === "out:stranger") return result.outreach.stranger ?? null;
+  if (draftId === "out:alumni") return result.outreach.alumni ?? null;
   if (draftId === "out:referral") return result.outreach.referral;
   if (draftId === "out:hm") return result.outreach.hiring_manager;
   if (draftId === "out:follow") return result.outreach.follow_up;

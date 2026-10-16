@@ -23,3 +23,15 @@ Each test has an ID used in `validation-report.md`. "Unit" tests run with `node 
 | P17 | Browser | Phone width | At 390px days stack, no horizontal page scroll |
 | P18 | Browser | Clear | "Clear everything" removes the plan |
 | P19 | Build | Checks | `tsc`, `eslint`, `next build` clean; existing flow still passes |
+
+# Acceptance tests: ask ladder
+
+| ID | Type | Test | Pass when |
+|---|---|---|---|
+| L1 | Unit | Schema | `GenerateReply` requires `outreach.stranger` and `outreach.alumni`; demo output validates |
+| L2 | Unit | Stranger rung | Demo stranger draft, blanks filled, gets "Ready to send" from the checker as a stranger message, never contains "refer", ≤ 70 words |
+| L3 | Unit | Alumni rung | Demo alumni draft, blanks filled, mentions "15-minute", contains no referral ask, "Ready to send" as alumni, ≤ 80 words |
+| L4 | Unit | Referral rung | Demo referral draft, blanks filled, has job ID, resume, one ask and an easy out; "Ready to send" as knows-me |
+| L5 | Browser | Picker switches the draft | Stranger shows the question draft, alumni the 15-minute chat draft, knows-me the referral draft; follow-up always shown |
+| L6 | Browser | Old results | A saved result without the new drafts shows the rewrite prompt, no crash |
+| L7 | Build | Checks | tsc, eslint, unit tests, e2e (plan + ladder) and next build clean |

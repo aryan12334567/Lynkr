@@ -43,3 +43,19 @@ Date: 2026-10-16. Demo mode (no AI key). Tests are defined in `acceptance-tests.
 - Browser notifications firing at the scheduled time (needs a real wait and a permission grant; logic is a 30-second check of Scheduled items).
 - Importing the .ics into Google Calendar or Outlook by hand.
 - Mobile: the active "This week" tab can sit off-screen in the scrolling tab row on narrow phones; usable, not polished.
+
+# Validation report: ask ladder
+
+Date: 2026-10-16. Demo mode. Tests in `acceptance-tests.md` (L1–L7).
+
+| ID | Result | Evidence |
+|---|---|---|
+| L1 | Pass | Demo output validates; removing `outreach.stranger` fails the schema |
+| L2 | Pass | Stranger draft (blanks filled) "Ready to send" as a stranger message, no "refer", ≤ 70 words |
+| L3 | Pass | Alumni draft mentions a 15-minute call, no referral ask, "Ready to send", ≤ 80 words |
+| L4 | Pass | Referral draft "Ready to send" for someone who knows you; the same draft to a stranger gets "Don't send yet" |
+| L5 | Pass | Picker shows "First message to a stranger" / "Message to someone from your college" / "Referral request"; follow-up always shown (`docs/ladder.png`) |
+| L6 | Pass | A saved result without the new drafts shows "Rewrite drafts" instead of crashing |
+| L7 | Pass | tsc, eslint, 13 unit tests, 12 browser checks (`npm run test:e2e`), next build |
+
+Not tested: the AI path for the two new drafts (no key). The prompt rules mirror the checker's rules, so a real-key run should be checked against L2–L4 once a key exists.

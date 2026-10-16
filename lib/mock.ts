@@ -84,6 +84,16 @@ export function mockGenerate(profile: ProfileInput, turns: Turn[]): GenerateRepl
       ],
     },
     outreach: {
+      stranger: {
+        title: "First message to a stranger",
+        why: "One real question, no favour asked.",
+        body: `Hi [[their first name]], I read [[one specific thing they posted or built]]. I'm asking because I'm working towards ${role} roles. ${clip(built, 110)} One question: [[your one specific question about their work]]? No worries if you're busy.`,
+      },
+      alumni: {
+        title: "Message to someone from your college",
+        why: "Shared college plus a small, clear ask.",
+        body: `Hi [[their first name]], I'm a [[your year and course]] at [[your college]], where you studied too. I'm working towards ${role} roles. ${clip(built, 110)} Would you be open to a 15-minute call next week about how you got into [[their team or role]]? No worries if it's not a good time.`,
+      },
       referral: {
         title: "Referral request",
         why: "Short, specific, easy to say no to.",

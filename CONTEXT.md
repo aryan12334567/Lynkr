@@ -9,7 +9,8 @@ A free "get-noticed" coach for Indian freshers and early-career job seekers, bui
 - **LLM layer is provider-agnostic** (`lib/llm.ts`): Anthropic (`ANTHROPIC_API_KEY`) or any OpenAI-compatible endpoint (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`); demo mode when neither is set. OpenAI-compatible path tested against a local stub only, not a real provider. Aryan has no API credits; GitHub Copilot cannot back the app (no app API key; GitHub Models retired 2026-07-30 per GitHub docs).
 - **REA evidence pass done (2026-10-16), public pages only:** `research/feature-evidence.md` (REA passive inspection of uplinked.app; no signup). Following the REA notes, Aryan chose one feature to build: **weekly plan + calendar**, plus two UpLinked ideas: content-type tags and adjusting the plan by chat.
 - **Weekly plan + calendar built and validated (2026-10-16):** "This week" tab; spec `research/feature-spec.md`, tests `research/acceptance-tests.md`, results `research/validation-report.md` (all 19 acceptance tests pass in demo mode). `npm test` (unit) and `npm run test:e2e` (Playwright on installed Chrome).
-- Not built (phase 2): ask ladder, Connect Coach. Voice input not testable here; Aryan to test the mic.
+- **Ask ladder built and validated (2026-10-16):** Outreach tab picks the first message by relationship (stranger: one question; alumni: 15-minute chat; knows you: referral) plus a follow-up; spec `research/spec-ask-ladder.md`, results in `research/validation-report.md` (L1–L7 pass).
+- Not built yet: Connect Coach (next). Voice input not testable here; Aryan to test the mic.
 - Git: repo at `app/`, branch `master`. Committed and pushed to `aryan12334567/Lynkr` (private, created by Aryan).
 - `ANTHROPIC_API_KEY` is not set and is not needed during planning. Mock mode runs the whole flow without a key.
 - **Decisions recorded 2026-10-16:** commit approved; test dependencies approved (Vitest, Playwright); GitHub repo private (created by Aryan); no API key yet.

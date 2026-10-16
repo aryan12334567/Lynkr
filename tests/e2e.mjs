@@ -1,6 +1,6 @@
-// End-to-end check of the weekly plan (acceptance tests P10–P18 in research/acceptance-tests.md).
+// End-to-end checks (acceptance tests in research/acceptance-tests.md): weekly plan P10–P18, ask ladder L5–L6.
 // Needs the dev server in demo mode on :3000 and Google Chrome installed.
-// Run: node tests/e2e-plan.mjs
+// Run: node tests/e2e.mjs
 import { chromium } from "playwright-core";
 import { readFileSync } from "node:fs";
 
@@ -43,6 +43,18 @@ try {
     }
   }
   await page.getByRole("tab", { name: "This week" }).waitFor({ timeout: 15000 });
+
+  // L5: the relationship picker switches the first message (ask ladder).
+  await page.getByRole("tab", { name: "Outreach" }).click();
+  const firstTitle = () => page.locator("h3").filter({ hasText: /First message to a stranger|Message to someone from your college|Referral request/ }).first().innerText();
+  const t1 = await firstTitle();
+  await page.screenshot({ path: "docs/ladder.png", fullPage: true });
+  await page.getByRole("radio", { name: "Same college / alumni" }).click();
+  const t2 = await firstTitle();
+  await page.getByRole("radio", { name: "Someone who knows me" }).click();
+  const t3 = await firstTitle();
+  const follow = await page.getByRole("heading", { name: "Follow-up in 5 to 7 days" }).count();
+  check("L5", t1 === "First message to a stranger" && t2 === "Message to someone from your college" && t3 === "Referral request" && follow === 1, `${t1} / ${t2} / ${t3}, follow-up ${follow}`);
 
   // P10: default view.
   await openPlanTab();
@@ -117,6 +129,18 @@ try {
   check("P17", overflow <= 0, `horizontal overflow ${overflow}px`);
   await page.screenshot({ path: "docs/plan-phone.png", fullPage: false });
   await page.setViewportSize({ width: 1280, height: 900 });
+
+  // L6: results saved before the ask ladder (no stranger/alumni drafts) show a rewrite prompt.
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("lynkr:v1"));
+    delete s.result.outreach.stranger;
+    delete s.result.outreach.alumni;
+    localStorage.setItem("lynkr:v1", JSON.stringify(s));
+  });
+  await page.reload();
+  await page.getByRole("tab", { name: "Outreach" }).click();
+  const prompt = await page.getByRole("button", { name: "Rewrite drafts" }).count();
+  check("L6", prompt === 1, `rewrite prompt ${prompt}`);
 
   // P18: clear everything removes the plan.
   await page.getByRole("tab", { name: "Story Vault" }).click();

@@ -64,6 +64,11 @@ export const GenerateReply = z.object({
     gaps: z.array(z.string()),
   }),
   outreach: z.object({
+    /** Ask ladder rung 1: a stranger gets one specific question, never a referral ask. */
+    stranger: Draft,
+    /** Rung 2: same college / alumni get a 15-minute chat ask. */
+    alumni: Draft,
+    /** Rung 3: someone who knows you gets the referral ask. */
     referral: Draft,
     hiring_manager: Draft,
     follow_up: Draft,

@@ -19,6 +19,12 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
+const LADDER: Record<Relationship, string> = {
+  stranger: "Ask one specific question about their work. Don't ask a stranger for a referral: it spends their reputation on someone they don't know.",
+  alumni: "Use the shared college and ask for a 15-minute chat. Save the referral ask for later.",
+  knows_me: "Ask for a referral with the job ID, your resume and why you fit, and make it easy to say no.",
+};
+
 const KIND_LABEL: Record<string, string> = {
   story: "Story",
   number: "Number",
@@ -47,7 +53,7 @@ export function Results({
   onPlan: (p: Plan) => void;
 }) {
   const [tab, setTab] = useState<Tab>("vault");
-  const [rel, setRel] = useState<Relationship>("knows_me");
+  const [rel, setRel] = useState<Relationship>("stranger");
   const card = (id: string, kind: "post" | "comment" | "message", draft: GenerateReply["posts"][number]) => (
     <DraftCard
       key={id}
@@ -139,18 +145,32 @@ export function Results({
       {tab === "outreach" && (
         <div className="space-y-4">
           <Card>
-            <Label>Who are you messaging? The checker judges each draft against this.</Label>
+            <Label>Who are you messaging?</Label>
             <RelationshipPicker value={rel} onChange={setRel} />
-            {rel === "stranger" && (
-              <p className="mt-3 text-sm text-warn">
-                Strangers rarely refer strangers: a referral spends their reputation. Use the hiring-manager style message or
-                ask one specific question first.
-              </p>
-            )}
+            <p className="mt-3 text-sm text-soft">{LADDER[rel]}</p>
           </Card>
-          {card("out:referral", "message", result.outreach.referral)}
-          {card("out:hm", "message", result.outreach.hiring_manager)}
+          {(() => {
+            // Ask ladder: the first message depends on how well they know you.
+            const rung = rel === "stranger" ? result.outreach.stranger : rel === "alumni" ? result.outreach.alumni : result.outreach.referral;
+            const id = rel === "stranger" ? "out:stranger" : rel === "alumni" ? "out:alumni" : "out:referral";
+            if (!rung) {
+              // Results saved before the ask ladder existed have no stranger/alumni drafts.
+              return (
+                <Card>
+                  <p className="text-sm">This message is new. Rewrite your drafts to get it; your answers are kept.</p>
+                  <Button className="mt-3" onClick={onRedo}>
+                    Rewrite drafts
+                  </Button>
+                </Card>
+              );
+            }
+            return card(id, "message", rung);
+          })()}
           {card("out:follow", "message", result.outreach.follow_up)}
+          <details className="rounded-xl border border-line bg-surface p-4">
+            <summary className="cursor-pointer text-sm font-medium">Other drafts: cold message to a hiring manager</summary>
+            <div className="mt-4">{card("out:hm", "message", result.outreach.hiring_manager)}</div>
+          </details>
         </div>
       )}
 

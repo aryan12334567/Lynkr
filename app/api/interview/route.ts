@@ -1,4 +1,5 @@
 import { InterviewReply, InterviewRequest } from "@/lib/schemas";
+import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
 import { INTERVIEW_SYSTEM, interviewUser } from "@/lib/prompts";
 import { mockInterview } from "@/lib/mock";
@@ -10,12 +11,9 @@ const MAX_QUESTIONS = 8;
 const MIN_QUESTIONS = 4;
 
 export async function POST(req: Request) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
-  }
+  const read = await readJson(req, BODY_LIMIT.interview);
+  if ("error" in read) return read.error;
+  const body = read.body;
   const parsed = InterviewRequest.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Please check your answers and try again." }, { status: 400 });

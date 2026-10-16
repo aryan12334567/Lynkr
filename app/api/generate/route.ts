@@ -1,4 +1,5 @@
 import { GenerateReply, GenerateRequest } from "@/lib/schemas";
+import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
 import { GENERATE_SYSTEM, generateUser } from "@/lib/prompts";
 import { mockGenerate } from "@/lib/mock";
@@ -7,12 +8,9 @@ import { checkLimits } from "@/lib/limit";
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
-  }
+  const read = await readJson(req, BODY_LIMIT.generate);
+  if ("error" in read) return read.error;
+  const body = read.body;
   const parsed = GenerateRequest.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Please check your answers and try again." }, { status: 400 });

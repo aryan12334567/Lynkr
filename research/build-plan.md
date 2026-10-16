@@ -1,6 +1,6 @@
 # Lynkr build plan (web app)
 
-Status (2026-10-16): Phases 0, 1 (public pages only), 2 and 3 done for every phase 1 feature; Phase 4 done except tasks blocked on an AI key (draft evaluation, real-key e2e) and Firefox/Safari; Phase 5 in progress. Results: `research/validation-report.md`. Original status line: draft for review; Aryan said "go" on 2026-10-16.
+Status (2026-10-16): Phases 0, 1 (public pages only), 2 and 3 done for every phase 1 feature; Phase 4 done except tasks blocked on an AI key (draft evaluation, real-key e2e) and Firefox/Safari; Phase 5 done except the spend check (needs a key). Results: `research/validation-report.md`. Original status line: draft for review; Aryan said "go" on 2026-10-16.
 
 ## 1. Scope and boundaries
 

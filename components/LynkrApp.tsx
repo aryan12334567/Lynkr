@@ -112,8 +112,11 @@ export function LynkrApp() {
       <footer className="mt-12 border-t border-line pt-6 text-xs leading-relaxed text-faint">
         <p>
           <strong className="text-soft">No LinkedIn login. No scraping. No auto-posting or auto-messaging.</strong> You copy
-          and send everything yourself. Your answers are sent to the AI only to write drafts and are not stored by us; your
-          Story Vault stays in this browser.
+          and send everything yourself.{" "}
+          {mock
+            ? "Demo mode: your answers go only to Lynkr's server to fill in templates. They aren't sent to any AI and aren't stored."
+            : "Your answers, pasted text and screenshots go through Lynkr's server to the AI provider only to write drafts. Lynkr doesn't store them."}{" "}
+          Your Story Vault, weekly plan and people tracker stay in this browser; &quot;Clear everything&quot; deletes them.
         </p>
         {s.stage !== "setup" && (
           <Button variant="ghost" className="mt-3" onClick={reset}>

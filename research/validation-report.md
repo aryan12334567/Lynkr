@@ -109,3 +109,21 @@ Fixed in this pass:
 - Text inputs suppressed the focus outline (`focus:outline-none` with a 20% ring); removed so they get the shared 2 px outline.
 - On phones the active tab could sit off-screen; clicking a tab now scrolls it into view.
 - Note: a stale dev-server CSS cache hid the focus fix at first; the loose "outline isn't none" check passed on Chrome's default ring. The check now requires the real `solid 2px` outline.
+
+# Phase 5 (hardening) progress
+
+Date: 2026-10-16. Build plan `research/build-plan.md`, Phase 5.
+
+| Task | Status | Evidence |
+|---|---|---|
+| 1. Rate limits | Done | Server pointed at a local fake AI with `LYNKR_DAILY_CAP=3`: requests 1–3 returned 200, request 4 returned 429 "This free demo has reached its daily limit." Per-visitor hourly cap unit-tested (7th generate call refused, other visitors unaffected). |
+| 2. Spend check | **Blocked** | Needs an AI key and a provider spend cap. |
+| 3. Fresh clone runs from the README | Done | Cloned the private repo, `npm ci`, `npm run build`, `npm test` (26 pass), `next start` → home 200, `/api/status` demo mode. |
+| 4. Demo script | Done | `research/demo-script.md`, 3 minutes, fictional test profile. |
+| 5. Privacy copy vs spec step 9 | Done | Footer said answers "are sent to the AI" even in demo mode, where nothing reaches an AI. Now matches the mode, and names everything kept in the browser (vault, plan, tracker). Server code logs nothing (no `console` calls in `app/` or `lib/`). |
+
+Also hardened (from the plan's security rules):
+- Request bodies are size-capped before parsing (`lib/http.ts`): 32 KB interview, 64 KB generate, 4 KB plan, 6 MB connect. Oversize → 413, malformed JSON → 400. Checked with curl.
+
+Known limit, not fixed:
+- Per-visitor limits key on `x-forwarded-for`, which a client can set unless a hosting proxy overwrites it. The daily cap and the provider's spend limit are the real protection. Recheck on whatever host Lynkr is deployed to.

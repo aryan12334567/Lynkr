@@ -1,4 +1,5 @@
 import { PlanChatReply, PlanChatRequest } from "@/lib/schemas";
+import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
 import { PLAN_CHAT_SYSTEM, planChatUser } from "@/lib/prompts";
 import { clampCounts, parsePlanChat, type PlanChange } from "@/lib/plan";
@@ -9,12 +10,9 @@ export const maxDuration = 60;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function POST(req: Request) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
-  }
+  const read = await readJson(req, BODY_LIMIT.plan);
+  if ("error" in read) return read.error;
+  const body = read.body;
   const parsed = PlanChatRequest.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Write what to change, in up to 500 characters." }, { status: 400 });

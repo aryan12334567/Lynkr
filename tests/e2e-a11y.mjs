@@ -24,6 +24,8 @@ const unlabelled = () =>
 
 try {
   await page.goto(BASE);
+  // The app renders client-side; wait for the form before using the keyboard.
+  await page.getByLabel("Target role").waitFor();
 
   // A1 (setup): keyboard only, from page load to the first interview question.
   const focusedLabel = () => page.evaluate(() => document.activeElement?.labels?.[0]?.innerText?.trim() ?? document.activeElement?.innerText?.trim() ?? "");

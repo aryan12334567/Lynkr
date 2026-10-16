@@ -1,4 +1,5 @@
 import { ConnectReply, ConnectRequest } from "@/lib/schemas";
+import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
 import { CONNECT_SYSTEM, connectUser } from "@/lib/prompts";
 import { mockNote, validateImage } from "@/lib/connect";
@@ -7,12 +8,9 @@ import { checkLimits } from "@/lib/limit";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
-  }
+  const read = await readJson(req, BODY_LIMIT.connect);
+  if ("error" in read) return read.error;
+  const body = read.body;
   const parsed = ConnectRequest.safeParse(body);
   if (!parsed.success) {
     return Response.json({ error: "Paste up to 4,000 characters, or a PNG, JPG or WebP screenshot under 4 MB." }, { status: 400 });

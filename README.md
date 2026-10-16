@@ -34,7 +34,8 @@ Open http://localhost:3000.
 ## Tests
 ```bash
 npm test            # unit tests (weekly plan, calendar files, chat parser)
-npm run test:e2e    # browser tests of the full flow; needs `npm run dev` running and Google Chrome installed
+npm run test:e2e    # browser tests (flow + accessibility); needs `npm run dev` running and Google Chrome
+LYNKR_BROWSER=msedge npm run test:e2e   # same, on Microsoft Edge
 ```
 
 ## Environment
@@ -56,6 +57,9 @@ components/         UI: setup, interview (with voice), results tabs, draft card,
 tests/              unit tests and the browser test
 docs/               screenshots
 ```
+
+## Demo
+A 3-minute walkthrough with a fictional test profile: [`research/demo-script.md`](research/demo-script.md).
 
 ## Rules
 - No LinkedIn login, scraping, auto-posting or automated sending.

@@ -75,6 +75,10 @@ export const GenerateReply = z.object({
   }),
   posts: z.array(Draft),
   comments: z.array(Draft),
+  /** Connect Coach: kinds of people to look for. Never named individuals. */
+  connect: z.object({
+    look_for: z.array(z.object({ who: z.string(), why: z.string(), search: z.string() })),
+  }),
 });
 export type GenerateReply = z.infer<typeof GenerateReply>;
 
@@ -98,3 +102,21 @@ export const PlanChatReply = z.object({
   reply: z.string(),
 });
 export type PlanChatReply = z.infer<typeof PlanChatReply>;
+
+// ---- Connect Coach: note writer ----
+export const ConnectRequest = z.object({
+  profile: ProfileInput,
+  facts: z.array(z.string().max(300)).max(12).default([]),
+  relationship: z.enum(["stranger", "alumni", "knows_me"]),
+  text: z.string().trim().max(4000).default(""),
+  image: z
+    .object({ media_type: z.enum(["image/png", "image/jpeg", "image/webp"]), data: z.string().max(5_600_000) })
+    .optional(),
+});
+
+export const ConnectReply = z.object({
+  who: z.string(),
+  hook: z.string(),
+  note: z.string(),
+});
+export type ConnectReply = z.infer<typeof ConnectReply>;

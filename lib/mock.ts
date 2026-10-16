@@ -1,4 +1,5 @@
 import type { GenerateReply, InterviewReply, ProfileInput, Turn, VaultItem } from "./schemas";
+import { mockLookFor } from "./connect";
 
 /**
  * Mock engine: runs the full flow with no API key. It only rearranges what the
@@ -139,5 +140,6 @@ export function mockGenerate(profile: ProfileInput, turns: Turn[]): GenerateRepl
         body: `When you said [[what the post said]], how did you [[specific thing you want to know]]? I ran into [[your specific problem]].`,
       },
     ],
+    connect: { look_for: mockLookFor(profile, turns) },
   };
 }

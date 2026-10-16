@@ -35,3 +35,21 @@ Each test has an ID used in `validation-report.md`. "Unit" tests run with `node 
 | L5 | Browser | Picker switches the draft | Stranger shows the question draft, alumni the 15-minute chat draft, knows-me the referral draft; follow-up always shown |
 | L6 | Browser | Old results | A saved result without the new drafts shows the rewrite prompt, no crash |
 | L7 | Build | Checks | tsc, eslint, unit tests, e2e (plan + ladder) and next build clean |
+
+# Acceptance tests: Connect Coach
+
+| ID | Type | Test | Pass when |
+|---|---|---|---|
+| C1 | Unit | Who to look for | Demo gives 5–8 cards; every search link is a LinkedIn people search with the card's keywords; a full name typed in the "who to reach" answer ("Rahul Sharma") appears in no card |
+| C2 | Unit | Note budget | Default 3; two noted sends this IST month → 1 left; a noted send last month or a send without a note doesn't count; never below 0 |
+| C3 | Unit | Weekly cap | 5 people added this IST week → can't add; people added last week don't count |
+| C4 | Unit | Tracker states | to_find → sent → accepted → messaged → replied and back; follow-up due at 5 days after messaged, not at 4, not after replied |
+| C5 | Unit | Demo note | ≤ 200 characters, starts "Hi [[", no "refer", no job ask |
+| C6 | Unit | Screenshot validation | png/jpeg/webp up to 4 MB accepted; gif or a larger file rejected with a clear message |
+| C7 | Browser | Cards | Connect tab shows 5–8 cards, each with a LinkedIn people-search link |
+| C8 | Browser | Note from pasted text | Note shown with a character count ≤ 200; copy locked until blanks are filled |
+| C9 | Browser | Screenshot in demo mode | Uploading an image shows "needs an AI key" message, no crash |
+| C10 | Browser | Tracker + budget | Adding a person shows To find; marking Sent with a note lowers "notes left"; Accepted shows the ladder hint; survives reload |
+| C11 | Browser | Cap | With cap 1 and one person added this week, Add is disabled with a message |
+| C12 | Browser | Clear + phone | "Clear everything" removes people; no horizontal scroll at 390 px |
+| C13 | Build | Checks | tsc, eslint, unit tests, browser tests, next build clean |

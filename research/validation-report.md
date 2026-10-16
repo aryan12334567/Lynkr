@@ -59,3 +59,33 @@ Date: 2026-10-16. Demo mode. Tests in `acceptance-tests.md` (L1–L7).
 | L7 | Pass | tsc, eslint, 13 unit tests, 12 browser checks (`npm run test:e2e`), next build |
 
 Not tested: the AI path for the two new drafts (no key). The prompt rules mirror the checker's rules, so a real-key run should be checked against L2–L4 once a key exists.
+
+# Validation report: Connect Coach
+
+Date: 2026-10-16. Demo mode. Tests in `acceptance-tests.md` (C1–C13).
+
+| ID | Result | Evidence |
+|---|---|---|
+| C1 | Pass | 6 demo cards; all LinkedIn people-search links; "Rahul Sharma" typed in the who-to-reach answer appears in no card; company name kept |
+| C2 | Pass | Default 3; two noted sends this IST month → 1 left; last month's and note-less sends not counted; floor at 0 |
+| C3 | Pass | Cap reached at 5 people this IST week; last week's not counted |
+| C4 | Pass | to_find → sent → accepted → messaged → replied and back; follow-up due at 5 days, not 4, not after reply; going back un-sends |
+| C5 | Pass | Demo note ≤ 200 characters, starts "Hi [[", no referral or job ask |
+| C6 | Pass | png/jpeg/webp accepted; gif and > 4 MB rejected with clear messages |
+| C7 | Pass | 6 cards, each with a LinkedIn people-search link |
+| C8 | Pass | Copy locked until blanks filled; 120 / 200 characters (`docs/connect.png`) |
+| C9 | Pass | Screenshot upload in demo mode shows "needs an AI key" |
+| C10 | Pass | To find → Sent lowers notes left 3 → 2 → Accepted shows the stranger-rung hint; survives reload |
+| C11 | Pass | Cap set to 1 with one person this week: Add disabled, cap message shown |
+| C12 | Pass | "Clear everything" removes people; 0 px overflow at 390 px |
+| C13 | Pass | tsc, eslint, 19 unit tests, 18 browser checks, next build |
+
+## Fixed during validation
+- Demo mode showed raw `[[...]]` markers for "who they are" and "worth mentioning"; now says plainly that demo mode doesn't read profiles.
+- Number inputs stretched full width; now narrow.
+- The "places you named" search used the whole sentence; now role plus up to two named places or companies.
+- The browser console check now ignores only the deliberate 422 from C9.
+
+## Not tested
+- The AI path: note writing from pasted text or a screenshot, and the who-to-look-for cards from the model (no key). The prompt forbids naming people, but only the demo path is verified to never name anyone.
+- Notes that exceed 200 characters after a real AI reply (the UI blocks copying them; not exercised).

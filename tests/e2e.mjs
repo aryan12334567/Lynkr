@@ -1,4 +1,4 @@
-// End-to-end checks (acceptance tests in research/acceptance-tests.md): weekly plan P10–P18, ask ladder L5–L6.
+// End-to-end checks (acceptance tests in research/acceptance-tests.md): weekly plan P10–P18, ask ladder L5–L6, Connect Coach C7–C12.
 // Needs the dev server in demo mode on :3000 and Google Chrome installed.
 // Run: node tests/e2e.mjs
 import { chromium } from "playwright-core";
@@ -16,7 +16,8 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 900 
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
-page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+// C9 deliberately triggers a 422 (screenshots need an AI key); the browser logs it. Any other failed request still counts.
+page.on("console", (m) => m.type() === "error" && !/status of 422/.test(m.text()) && errors.push(m.text()));
 
 const openPlanTab = () => page.getByRole("tab", { name: "This week" }).click();
 
@@ -55,6 +56,66 @@ try {
   const t3 = await firstTitle();
   const follow = await page.getByRole("heading", { name: "Follow-up in 5 to 7 days" }).count();
   check("L5", t1 === "First message to a stranger" && t2 === "Message to someone from your college" && t3 === "Referral request" && follow === 1, `${t1} / ${t2} / ${t3}, follow-up ${follow}`);
+
+  // C7: who-to-look-for cards with LinkedIn people-search links.
+  await page.getByRole("tab", { name: "Connect" }).click();
+  const cards = page.locator("[data-look-for]");
+  const nCards = await cards.count();
+  const hrefs = await cards.locator("a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+  check("C7", nCards >= 5 && nCards <= 8 && hrefs.every((h) => h.startsWith("https://www.linkedin.com/search/results/people/?keywords=")), `${nCards} cards`);
+
+  // C8: note from pasted text; copy locked until blanks are filled; ≤ 200 characters.
+  await page.getByLabel("Paste from their profile or post").fill(["Priya Nair", "Senior Analyst at Fractal | SQL, Tableau", "Posted about cleaning survey data"].join("\n"));
+  await page.getByRole("button", { name: "Write my note" }).click();
+  const noteBox = page.locator("[data-note]");
+  await noteBox.waitFor();
+  const lockedBefore = await page.getByRole("button", { name: "Copy note" }).isDisabled();
+  for (const input of await noteBox.getByPlaceholder("Your real answer").all()) await input.fill("Priya");
+  const lockedAfter = await page.getByRole("button", { name: "Copy note" }).isDisabled();
+  const countText = await page.locator("[data-count]").innerText();
+  const chars = Number(countText.split("/")[0].trim());
+  check("C8", lockedBefore && !lockedAfter && chars > 0 && chars <= 200, `locked ${lockedBefore} -> ${lockedAfter}, ${countText}`);
+  await page.screenshot({ path: "docs/connect.png", fullPage: true });
+
+  // C9: screenshot upload in demo mode gives a clear message.
+  await page.getByLabel("Paste from their profile or post").fill("");
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  await page.locator("input[type=file]").setInputFiles({ name: "profile.png", mimeType: "image/png", buffer: png });
+  await page.getByRole("button", { name: "Write my note" }).click();
+  await page.getByText(/needs an AI key/).waitFor();
+  check("C9", true, "demo mode explains screenshots need a key");
+
+  // C10: tracker and note budget, persisted across reload.
+  await page.getByLabel("Who (your own label)").fill("Analytics lead at a Pune SaaS firm");
+  await page.getByRole("button", { name: "Add person" }).click();
+  const person = page.locator("[data-person]").first();
+  const st1 = await person.locator("[data-status]").innerText();
+  const left1 = await page.locator("[data-notes-left]").innerText();
+  await person.getByRole("button", { name: "Mark sent" }).click();
+  const left2 = await page.locator("[data-notes-left]").innerText();
+  await person.getByRole("button", { name: "Mark accepted" }).click();
+  const hint = await person.locator("p").innerText();
+  await page.reload();
+  await page.getByRole("tab", { name: "Connect" }).click();
+  const st2 = await page.locator("[data-person] [data-status]").first().innerText();
+  check(
+    "C10",
+    st1 === "To find" && /^3 of 3/.test(left1) && /^2 of 3/.test(left2) && /first message to a stranger/.test(hint) && st2 === "Accepted",
+    `${st1} | ${left1.split(" personalised")[0]} -> ${left2.split(" personalised")[0]} | ${hint} | after reload ${st2}`,
+  );
+
+  // C11: weekly cap.
+  await page.getByLabel("New people per week").fill("1");
+  await page.getByLabel("Who (your own label)").fill("Second person");
+  const addDisabled = await page.getByRole("button", { name: "Add person" }).isDisabled();
+  const capMsg = await page.locator("[data-cap]").count();
+  check("C11", addDisabled && capMsg === 1, `add disabled ${addDisabled}, cap message ${capMsg}`);
+
+  // C12 (phone part): no horizontal scroll on the Connect tab.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(300);
+  const connectOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   // P10: default view.
   await openPlanTab();
@@ -146,8 +207,11 @@ try {
   await page.getByRole("tab", { name: "Story Vault" }).click();
   await page.getByRole("button", { name: "Clear everything" }).click();
   const stored = await page.evaluate(() => localStorage.getItem("lynkr:v1"));
-  const plan = stored ? JSON.parse(stored).plan : null;
+  const saved = stored ? JSON.parse(stored) : null;
+  const plan = saved ? saved.plan : null;
   check("P18", plan === null, `stored plan after clear: ${plan === null ? "none" : "still there"}`);
+  const people = saved?.connect?.people?.length ?? 0;
+  check("C12", people === 0 && connectOverflow <= 0, `people after clear ${people}, Connect tab overflow at 390px ${connectOverflow}px`);
 
   check("console", errors.length === 0, errors.slice(0, 3).join(" | "));
 } catch (e) {

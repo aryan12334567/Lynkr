@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { GenerateReply } from "@/lib/schemas";
+import type { GenerateReply, ProfileInput } from "@/lib/schemas";
 import type { Relationship } from "@/lib/checker";
 import { newPlan, type Plan } from "@/lib/plan";
 import { WeekPlan } from "./WeekPlan";
+import { ConnectCoach } from "./ConnectCoach";
+import type { Connect } from "@/lib/connect";
 import { DraftCard } from "./DraftCard";
 import { Checker, RelationshipPicker } from "./Checker";
 import { Button, Card, Label } from "./ui";
@@ -15,6 +17,7 @@ const TABS = [
   { id: "outreach", label: "Outreach" },
   { id: "posts", label: "Posts & comments" },
   { id: "plan", label: "This week" },
+  { id: "connect", label: "Connect" },
   { id: "check", label: "Check a message" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -43,6 +46,9 @@ export function Results({
   onRedo,
   plan,
   onPlan,
+  profile,
+  connect,
+  onConnect,
 }: {
   result: GenerateReply;
   fills: Record<string, string[]>;
@@ -51,6 +57,9 @@ export function Results({
   onRedo: () => void;
   plan: Plan | null;
   onPlan: (p: Plan) => void;
+  profile: ProfileInput;
+  connect: Connect;
+  onConnect: (c: Connect) => void;
 }) {
   const [tab, setTab] = useState<Tab>("vault");
   const [rel, setRel] = useState<Relationship>("stranger");
@@ -183,6 +192,20 @@ export function Results({
       )}
 
       {tab === "plan" && plan && <WeekPlan plan={plan} onPlan={onPlan} result={result} fills={fills} />}
+
+      {tab === "connect" && (
+        <ConnectCoach
+          result={result}
+          profile={profile}
+          connect={connect}
+          onConnect={onConnect}
+          onRedo={onRedo}
+          onGoTo={(t, r) => {
+            if (r) setRel(r);
+            setTab(t);
+          }}
+        />
+      )}
 
       {tab === "check" && <Checker />}
 

@@ -1,5 +1,6 @@
 import type { GenerateReply, ProfileInput, Turn } from "./schemas";
 import type { Plan } from "./plan";
+import { DEFAULT_CONNECT, type Connect } from "./connect";
 
 /** Everything Lynkr keeps lives in this browser only (localStorage). */
 export type Stage = "setup" | "interview" | "generating" | "results";
@@ -13,11 +14,13 @@ export type Saved = {
   fills: Record<string, string[]>;
   /** Weekly plan + calendar; built the first time the "This week" tab opens. */
   plan: Plan | null;
+  /** Connect Coach: note budget, weekly cap and the people tracker. */
+  connect: Connect;
 };
 
 const KEY = "lynkr:v1";
 
-export const EMPTY: Saved = { stage: "setup", profile: null, turns: [], result: null, fills: {}, plan: null };
+export const EMPTY: Saved = { stage: "setup", profile: null, turns: [], result: null, fills: {}, plan: null, connect: DEFAULT_CONNECT };
 
 export function load(): Saved {
   try {

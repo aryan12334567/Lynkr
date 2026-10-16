@@ -93,7 +93,7 @@ export function LynkrApp() {
           </Card>
         )}
 
-        {s.stage === "results" && s.result && (
+        {s.stage === "results" && s.result && s.profile && (
           <Results
             result={s.result}
             fills={s.fills}
@@ -102,6 +102,9 @@ export function LynkrApp() {
             onRedo={() => update({ stage: "interview" })}
             plan={s.plan}
             onPlan={(plan) => setS((prev) => ({ ...prev, plan }))}
+            profile={s.profile}
+            connect={s.connect}
+            onConnect={(connect) => setS((prev) => ({ ...prev, connect }))}
           />
         )}
       </main>

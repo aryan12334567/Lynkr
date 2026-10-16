@@ -49,12 +49,16 @@ function client(): Anthropic {
 
 type Effort = "low" | "medium" | "high";
 
+/** Optional screenshot sent with the request (Connect Coach). Never stored. */
+export type ImageInput = { mediaType: "image/png" | "image/jpeg" | "image/webp"; data: string };
+
 export async function callStructured<S extends z.ZodType>(opts: {
   system: string;
   user: string;
   schema: S;
   effort: Effort;
   maxTokens: number;
+  image?: ImageInput;
 }): Promise<z.infer<S>> {
   return provider() === "openai" ? callOpenAI(opts) : callAnthropic(opts);
 }
@@ -65,13 +69,24 @@ async function callAnthropic<S extends z.ZodType>(opts: {
   schema: S;
   effort: Effort;
   maxTokens: number;
+  image?: ImageInput;
 }): Promise<z.infer<S>> {
   try {
     const res = await client().messages.parse({
       model: modelName(),
       max_tokens: opts.maxTokens,
       system: opts.system,
-      messages: [{ role: "user", content: opts.user }],
+      messages: [
+        {
+          role: "user",
+          content: opts.image
+            ? [
+                { type: "image", source: { type: "base64", media_type: opts.image.mediaType, data: opts.image.data } },
+                { type: "text", text: opts.user },
+              ]
+            : opts.user,
+        },
+      ],
       output_config: { format: zodOutputFormat(opts.schema), effort: opts.effort },
     });
     if (res.stop_reason === "refusal") {
@@ -111,6 +126,7 @@ async function callOpenAI<S extends z.ZodType>(opts: {
   user: string;
   schema: S;
   maxTokens: number;
+  image?: ImageInput;
 }): Promise<z.infer<S>> {
   const base = (process.env.LLM_BASE_URL || "").replace(/\/+$/, "");
   let res: Response;
@@ -126,7 +142,15 @@ async function callOpenAI<S extends z.ZodType>(opts: {
         max_tokens: opts.maxTokens,
         messages: [
           { role: "system", content: opts.system },
-          { role: "user", content: opts.user },
+          {
+            role: "user",
+            content: opts.image
+              ? [
+                  { type: "text", text: opts.user },
+                  { type: "image_url", image_url: { url: `data:${opts.image.mediaType};base64,${opts.image.data}` } },
+                ]
+              : opts.user,
+          },
         ],
         response_format: {
           type: "json_schema",

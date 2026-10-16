@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --no-warnings --import ./tests/register.mjs --test tests/*.test.mts",
-    "test:e2e": "node tests/e2e.mjs"
+    "test:e2e": "node tests/e2e.mjs && node tests/e2e-a11y.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

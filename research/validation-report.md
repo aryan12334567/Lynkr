@@ -89,3 +89,23 @@ Date: 2026-10-16. Demo mode. Tests in `acceptance-tests.md` (C1–C13).
 ## Not tested
 - The AI path: note writing from pasted text or a screenshot, and the who-to-look-for cards from the model (no key). The prompt forbids naming people, but only the demo path is verified to never name anyone.
 - Notes that exceed 200 characters after a real AI reply (the UI blocks copying them; not exercised).
+
+# Phase 4 (quality) progress
+
+Date: 2026-10-16. Build plan `research/build-plan.md`, Phase 4.
+
+| Task | Status | Evidence |
+|---|---|---|
+| 1. Unit tests: checker, slots, specificity, limits, schemas | Done | `tests/core.test.mts` (6 tests); checker determinism checked over 10 runs; every AI prompt keeps the "data, not instructions" rule. 26 unit tests in total. |
+| 2. End-to-end tests | Done in demo mode | `npm run test:e2e`: 18 flow checks + 5 accessibility/phone checks. Real-key run blocked (no API key). |
+| 3. Draft evaluation, 5 profiles | **Blocked** | Needs an AI key. Demo drafts are templates, so evaluating them would prove nothing. |
+| 4. Accessibility | Done | Keyboard-only setup and interview (Tab + Enter); visible 2 px focus outline on every control; every input, textarea and select labelled on all 7 tabs; text and button colours ≥ 4.5:1 in light and dark (`tests/contrast.test.mts`). |
+| 5. Mobile at 375 px | Done | No horizontal scroll on any tab; the active tab scrolls into view. |
+| 6. Browsers | Partly | Chrome and Edge pass both suites. Firefox and Safari aren't installed here: typing fallback untested there. Voice input untested everywhere (no microphone in automation). |
+
+Fixed in this pass:
+- `faint` text failed contrast in both themes (3.0–4.2:1) and `warn` was 4.46:1 on muted; darkened/lightened tokens.
+- Primary buttons had white text on the dark-mode accent (≈ 2.9:1); now use the background colour.
+- Text inputs suppressed the focus outline (`focus:outline-none` with a 20% ring); removed so they get the shared 2 px outline.
+- On phones the active tab could sit off-screen; clicking a tab now scrolls it into view.
+- Note: a stale dev-server CSS cache hid the focus fix at first; the loose "outline isn't none" check passed on Chrome's default ring. The check now requires the real `solid 2px` outline.

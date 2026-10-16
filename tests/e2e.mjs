@@ -11,7 +11,7 @@ const check = (id, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"} ${id}${detail ? ` - ${detail}` : ""}`);
 };
 
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({ channel: process.env.LYNKR_BROWSER || "chrome", headless: true });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true, timezoneId: "Asia/Kolkata" });
 const page = await context.newPage();
 const errors = [];

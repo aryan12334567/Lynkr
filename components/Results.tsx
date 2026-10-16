@@ -82,10 +82,12 @@ export function Results({
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
-            onClick={() => {
+            onClick={(e) => {
               // The plan is built the first time this tab opens, from the current drafts.
               if (t.id === "plan" && !plan) onPlan(newPlan());
               setTab(t.id);
+              // On phones the tab row scrolls sideways; keep the chosen tab visible.
+              e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
             }}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${
               tab === t.id ? "bg-ink text-bg" : "text-soft hover:bg-muted"

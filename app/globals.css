@@ -7,11 +7,11 @@
   --line: #e2e2dc;
   --ink: #1c1c1a;
   --soft: #55554f;
-  --faint: #8b8b84;
+  --faint: #686862;
   --accent: #0a66c2;
   --accent-strong: #084d92;
   --good: #1d7a3e;
-  --warn: #9a6200;
+  --warn: #875600;
   --bad: #b42318;
 }
 
@@ -23,7 +23,7 @@
     --line: #33332f;
     --ink: #ededea;
     --soft: #b4b4ad;
-    --faint: #7d7d76;
+    --faint: #9a9a93;
     --accent: #4b9be8;
     --accent-strong: #70b2f0;
     --good: #4cc77a;
@@ -52,4 +52,10 @@
 body {
   background: var(--bg);
   color: var(--ink);
+}
+
+/* Visible keyboard focus everywhere (mouse clicks don't show it). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

@@ -5,10 +5,14 @@ A free "get-noticed" coach for Indian freshers and early-career job seekers. It 
 Full product spec, feature matrix and decisions: [`CONTEXT.md`](CONTEXT.md). Reddit evidence: [`research/reddit-pain-points.md`](research/reddit-pain-points.md). Build plan: [`research/build-plan.md`](research/build-plan.md).
 
 ## Status
-Draft, not yet verified. API routes and `lib/` exist, and a first-draft UI is in `components/` (untested). Nothing is approved to build beyond the scaffold yet. See the status section in `CONTEXT.md`.
+Phase 1 works end to end in demo mode (no AI key): setup, interview, Story Vault, profile fix, outreach drafts, posts and comments, and the message checker. Tested by clicking through in Chrome at desktop and phone widths; typecheck, lint and production build are clean. Real-AI mode is wired but has not been run against a real provider yet. See `CONTEXT.md` for details.
+
+| Story Vault | Copy stays locked until you fill the blanks | Message checker |
+|---|---|---|
+| ![Story Vault](docs/vault.png) | ![Posts](docs/posts.png) | ![Checker](docs/checker.png) |
 
 ## Stack
-Mirrors UpLinked's published stack where phase 1 allows: Next.js 16 (App Router), TypeScript, Tailwind v4, Vercel. LLM through the Anthropic SDK (`claude-opus-5-5`, override with `LYNKR_MODEL`). Convex, WorkOS and Capacitor are phase 2.
+Mirrors UpLinked's published stack where phase 1 allows: Next.js 16 (App Router), TypeScript, Tailwind v4, Vercel. The LLM layer takes either the Anthropic SDK or any OpenAI-compatible endpoint. Convex, WorkOS and Capacitor are phase 2.
 
 ## Run
 ```bash
@@ -18,24 +22,21 @@ npm run dev
 Open http://localhost:3000.
 
 ## Environment
-Create `.env.local` (never commit it):
+Copy `.env.example` to `.env.local` (never commit it) and fill in one option:
 
-```
-ANTHROPIC_API_KEY=
-LYNKR_MODEL=claude-opus-5-5
-LYNKR_DAILY_CAP=400
-LYNKR_MOCK=0
-```
+- **Anthropic:** `ANTHROPIC_API_KEY` (model `claude-opus-5-5`, override with `LYNKR_MODEL`).
+- **Any OpenAI-compatible endpoint** (OpenRouter, a local server, etc.): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`.
 
-With no `ANTHROPIC_API_KEY`, or `LYNKR_MOCK=1`, the app runs in mock mode: the whole flow works using the user's own answers and blanks, with no AI calls. Set a monthly spend limit in the Anthropic console; the in-app limits are best-effort only.
+With neither set, or `LYNKR_MOCK=1`, the app runs in demo mode: the whole flow works using the user's own answers and blanks, with no AI calls. Set a spend limit with your provider; the in-app limits (`LYNKR_DAILY_CAP`) are best-effort only.
 
 ## Layout
 ```
 app/api/interview   next interview question
 app/api/generate    all drafts
-app/api/status      mock mode / model
-lib/                schemas, prompts, llm wrapper, mock engine, limits, slots, specificity
-components/         UI (first draft, untested)
+app/api/status      demo mode / provider / model
+lib/                schemas, prompts, llm wrapper, mock engine, checker, store, limits, slots, specificity
+components/         UI: setup, interview (with voice), results tabs, draft card, checker
+docs/               screenshots
 ```
 
 ## Rules

@@ -44,7 +44,7 @@ export const InterviewReply = z.object({
 export type InterviewReply = z.infer<typeof InterviewReply>;
 
 export const VaultItem = z.object({
-  kind: z.enum(["story", "number", "proof", "skill", "opinion", "constraint"]),
+  kind: z.enum(["story", "number", "proof", "skill", "opinion", "constraint", "target"]),
   text: z.string(),
 });
 export type VaultItem = z.infer<typeof VaultItem>;

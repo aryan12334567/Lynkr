@@ -47,6 +47,7 @@ function kindOf(a: string, i: number): VaultItem["kind"] {
   if (i === 0 || i === 2) return "proof";
   if (i === 3) return "story";
   if (i === 4) return "constraint";
+  if (i === 5) return "target";
   return /\d/.test(a) ? "number" : "skill";
 }
 
@@ -61,9 +62,11 @@ export function mockGenerate(profile: ProfileInput, turns: Turn[]): GenerateRepl
   const hard = a(4, profile.background);
   const targets = a(5, "[[2-3 companies you want to reach]]");
 
+  // Label by the question's original position, so a skipped question doesn't shift the labels.
   const vault: VaultItem[] = turns
+    .map((t, i) => ({ a: t.a, i }))
     .filter((t) => t.a !== "(skipped)")
-    .map((t, i) => ({ kind: kindOf(t.a, i), text: clip(t.a, 160) }));
+    .map((t) => ({ kind: kindOf(t.a, t.i), text: clip(t.a, 160) }));
 
   return {
     vault,
@@ -84,17 +87,17 @@ export function mockGenerate(profile: ProfileInput, turns: Turn[]): GenerateRepl
       referral: {
         title: "Referral request",
         why: "Short, specific, easy to say no to.",
-        body: `Hi [[their first name]], I am applying for [[role title]] at [[company]] ([[job ID or link]]). ${clip(built, 140)} ${clip(proves, 120)} My resume is attached. If it is not a fit for a referral, no worries at all, and thank you for reading.`,
+        body: `Hi [[their first name]], I am applying for [[role title]] at [[company]] ([[job ID or link]]). ${clip(built, 140)} ${clip(proves, 120)} My resume is attached. Would you be comfortable referring me? If it is not a fit, no worries at all.`,
       },
       hiring_manager: {
         title: "Message to a hiring manager",
         why: "One specific thing about their team, one proof, one small ask.",
-        body: `Hi [[their first name]], I saw [[something specific about their team]]. ${clip(built, 120)} Could I send you a two-line summary of it?`,
+        body: `Hi [[their first name]], I saw [[something specific about their team]]. ${clip(built, 120)} Could I send you a two-line summary of it? No worries if not.`,
       },
       follow_up: {
         title: "Follow-up in 5 to 7 days",
         why: "Adds something new instead of just following up.",
-        body: `Hi [[their first name]], since I wrote, [[one new thing you did or learned]]. Happy to share if useful.`,
+        body: `Hi [[their first name]], since I wrote, [[one new thing you did or learned]]. Would it help if I shared it? No worries if now is not a good time.`,
       },
     },
     posts: [

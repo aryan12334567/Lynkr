@@ -23,6 +23,7 @@ const KIND_LABEL: Record<string, string> = {
   skill: "Skill",
   opinion: "Opinion",
   constraint: "Constraint",
+  target: "Target",
 };
 
 export function Results({
@@ -53,7 +54,7 @@ export function Results({
 
   return (
     <div className="space-y-4">
-      <nav className="-mx-1 flex gap-1 overflow-x-auto pb-1" role="tablist">
+      <nav className="-mx-1 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none]" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}

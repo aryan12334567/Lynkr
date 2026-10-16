@@ -27,13 +27,13 @@ STYLE (this is what stops posts reading as AI slop)
 - Sound like a sensible person writing to one other person, not performing for an audience.
 
 WHAT TO PRODUCE
-- vault: 6 to 10 short items (each under 25 words) that restate the person's facts in their own terms. kind is one of story, number, proof, skill, opinion, constraint. Nothing that the person did not say.
+- vault: 6 to 10 short items (each under 25 words) that restate the person's facts in their own terms. kind is one of story, number, proof, skill, opinion, constraint, target (who they want to reach). Nothing that the person did not say.
 - profile.headlines: exactly 3 headline options, each under 120 characters, built from the target role keywords plus one proof point. Use blanks where proof is missing.
 - profile.about: 120 to 180 words, first person, includes the keywords a recruiter would search for the target role, uses only the person's facts, blanks where needed.
 - profile.gaps: 3 to 5 concrete, specific profile fixes (for example featured section, project links, skills order, custom URL, location). No generic advice.
-- outreach.referral: a message asking someone at a company for a referral. Under 90 words. Greeting with [[their first name]]. One sentence on who I am. The role with [[job ID or link]]. Two sentences of specific fit from the facts. Say the resume is attached. Include a polite out ("no worries if it's not a fit") and never demand a quick reply.
-- outreach.hiring_manager: a short cold message to a hiring manager. Under 70 words. One specific thing about their team as a blank, one proof from the facts, one low-effort ask.
-- outreach.follow_up: a follow-up to send 5 to 7 days later. Under 50 words. It must add one new thing, never "just following up".
+- outreach.referral: a message asking someone at a company for a referral. Under 90 words. Greeting with [[their first name]]. One sentence on who I am. The role with [[job ID or link]]. Two sentences of specific fit from the facts. Say the resume is attached. Exactly one ask, as a yes/no question ("Would you be comfortable referring me?"). Include a polite out ("no worries if it's not a fit") and never demand a quick reply.
+- outreach.hiring_manager: a short cold message to a hiring manager. Under 70 words. One specific thing about their team as a blank, one proof from the facts, one low-effort ask as a question, and a polite out.
+- outreach.follow_up: a follow-up to send 5 to 7 days later. Under 50 words. It must add one new thing, never "just following up", and end with one easy yes/no question plus a polite out.
 - posts: exactly 3 posts, each 90 to 180 words: (1) proof of work, what I made or did with numbers, (2) a specific mistake or setback and what changed, (3) a specific observation about the target field anchored in my experience. Each post must contain 2 to 5 blanks. Each has a title, a body, and why (one sentence on why this will not read as generic).
 - comments: exactly 2 comment drafts the person can leave on a post by someone in their target field. Each adds one specific experience of theirs, 30 to 70 words, and includes a blank like [[what the post said]].
 For outreach drafts, put the message text in body, a short label in title, and one sentence in why.`;

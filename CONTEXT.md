@@ -3,13 +3,16 @@
 A free "get-noticed" coach for Indian freshers and early-career job seekers, built on UpLinked's published stack and feature set, with some UpLinked features removed and new ones added, shaped by Reddit pain-point research.
 
 ## Status (2026-10-16)
-- **Direction approved by Aryan on 2026-10-16:** build on UpLinked's infrastructure, remove certain UpLinked features, add the features below. Not built yet. Aryan said: do not build until he says go.
-- Exists in `app/`: Next.js 16 scaffold, `lib/` (schemas, prompts, llm wrapper, mock engine, limits, slot parser, specificity score), 3 API routes (`interview`, `generate`, `status`), and a draft UI in `components/` (13 files, about 1,000 lines, untested). Typecheck, lint and build were not re-run in the 2026-10-16 session that committed the work.
+- **Direction approved by Aryan on 2026-10-16:** build on UpLinked's infrastructure, remove certain UpLinked features, add the features below. Aryan said "just build" (G3 go) on 2026-10-16.
+- **Phase 1 slice built and verified in demo (mock) mode, 2026-10-16:** Setup → interview (typing, mic where supported, skip, edit) → Story Vault, Profile fix, Outreach (with inline checker verdict), Posts & comments (copy locked until blanks are filled, specificity hint), Check a message. State persists in localStorage across reloads; "Clear everything" wipes it. Clicked through end to end in Chrome at desktop and 390px widths; `tsc`, `eslint` and `next build` clean. Screenshots in `docs/`.
+- Fixed during the test: the referral, hiring-manager and follow-up templates failed Lynkr's own checker (no ask / no polite out), so templates and prompt now require one yes/no ask plus an easy out; vault labels shifted after a skipped question; added a `target` vault kind for "who to reach".
+- **LLM layer is provider-agnostic** (`lib/llm.ts`): Anthropic (`ANTHROPIC_API_KEY`) or any OpenAI-compatible endpoint (`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`); demo mode when neither is set. OpenAI-compatible path tested against a local stub only, not a real provider. Aryan has no API credits; GitHub Copilot cannot back the app (no app API key; GitHub Models retired 2026-07-30 per GitHub docs).
+- Not built (phase 2): ask ladder, Connect Coach, calendar, weekly plan and tracker. Voice input not testable here; Aryan to test the mic.
 - Git: repo at `app/`, branch `master`. Committed and pushed to `aryan12334567/Lynkr` (private, created by Aryan).
 - `ANTHROPIC_API_KEY` is not set and is not needed during planning. Mock mode runs the whole flow without a key.
 - **Decisions recorded 2026-10-16:** commit approved; test dependencies approved (Vitest, Playwright); GitHub repo private (created by Aryan); no API key yet.
 - **Build plan:** `research/build-plan.md` (six phases, exit checks, decision gates). Gate status: G1 commit done, G4 test dependencies approved, G6 repo done, G5 API key deferred, G2 (which four public UpLinked features to study), G3 ("go" to build) and G7 (model choice) open.
-- Deadline: college submission end of day 2026-10-16 (hour TBD). Format: GitHub repo + demo, not a live URL.
+- Format: GitHub repo + demo, not a live URL. Aryan asked (2026-10-16) that the deadline not be raised again.
 
 ## Foundation: UpLinked's infrastructure
 UpLinked's code and hosting are not available to us. What is public is its stack (TrustMRR listing, 2026-10-16), which Lynkr mirrors:
@@ -105,11 +108,10 @@ Full write-up: `research/reddit-pain-points.md`. 1,059 Reddit posts coded + 130 
 - Unknowns: voice-first and the referrer-share loop are inferred, not asked for by freshers. Reddit skews to employed referrers and complainers. India willingness to pay is unvalidated.
 
 ## Open items
-- Deadline hour (Aryan to tell me).
-- `ANTHROPIC_API_KEY` in `app/.env.local` (never in chat) and a console spend cap (Aryan to name the number). Deferred: not needed until real-key runs.
-- Build go-ahead (G3). Aryan must say "go" before any build work.
-- Choose four public UpLinked features to study with REA (G2). Public pages only; no login, no copying.
-- Model choice (G7): `claude-opus-5-5` is the current default. Sonnet 5.5 for interview turns would cost about half; Aryan's call.
+- An AI key in `app/.env.local` (never in chat), any provider via `.env.example`, plus a spend cap. Deferred: Aryan has no credits; demo mode works without one.
+- Choose four public UpLinked features to study with REA (G2). Public pages only; no login, no copying. REA + Ghidra 12.1.4 are installed and registered in Claude Code.
+- Model choice (G7): depends on which provider Aryan gets a key for.
+- Aryan to test voice input (mic) in Chrome/Edge.
 - One real test profile to check outputs are not generic.
 - Whether to acquire UpLinked on TrustMRR for its real code, or keep building from scratch on the mirrored stack.
 - Validation, put on hold: show it to ~10 people in the MU LinkedIn support group. Aryan to name a date and a numeric bar (e.g. how many of 10 would use it again).

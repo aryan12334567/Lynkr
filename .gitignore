@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw REA captures of third-party pages (evidence only, not redistributed)
+research/evidence/

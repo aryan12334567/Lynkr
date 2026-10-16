@@ -7,9 +7,15 @@ Full product spec, feature matrix and decisions: [`CONTEXT.md`](CONTEXT.md). Red
 ## Status
 Phase 1 works end to end in demo mode (no AI key): setup, interview, Story Vault, profile fix, outreach drafts, posts and comments, and the message checker. Tested by clicking through in Chrome at desktop and phone widths; typecheck, lint and production build are clean. Real-AI mode is wired but has not been run against a real provider yet. See `CONTEXT.md` for details.
 
+**This week (new):** your weekly actions (default 3 messages, 2 comments, 1 post) on a Mon–Fri calendar in IST, each linked to one of your drafts and tagged by type. Move items through Draft → Scheduled → Posted/Sent, change the plan by typing ("2 posts, no comments", "posts at 8am"), get reminders via `.ics`, Google Calendar or an in-tab notification, and see when a follow-up is due. Nothing is posted for you. Spec, evidence and test results are in `research/`.
+
 | Story Vault | Copy stays locked until you fill the blanks | Message checker |
 |---|---|---|
 | ![Story Vault](docs/vault.png) | ![Posts](docs/posts.png) | ![Checker](docs/checker.png) |
+
+| This week | Month view |
+|---|---|
+| ![Week plan](docs/plan-week.png) | ![Month view](docs/plan-month.png) |
 
 ## Stack
 Mirrors UpLinked's published stack where phase 1 allows: Next.js 16 (App Router), TypeScript, Tailwind v4, Vercel. The LLM layer takes either the Anthropic SDK or any OpenAI-compatible endpoint. Convex, WorkOS and Capacitor are phase 2.
@@ -20,6 +26,12 @@ npm install
 npm run dev
 ```
 Open http://localhost:3000.
+
+## Tests
+```bash
+npm test            # unit tests (weekly plan, calendar files, chat parser)
+npm run test:e2e    # browser test of the full flow; needs `npm run dev` running and Google Chrome installed
+```
 
 ## Environment
 Copy `.env.example` to `.env.local` (never commit it) and fill in one option:
@@ -34,8 +46,10 @@ With neither set, or `LYNKR_MOCK=1`, the app runs in demo mode: the whole flow w
 app/api/interview   next interview question
 app/api/generate    all drafts
 app/api/status      demo mode / provider / model
+app/api/plan        adjust the weekly plan by chat
 lib/                schemas, prompts, llm wrapper, mock engine, checker, store, limits, slots, specificity
-components/         UI: setup, interview (with voice), results tabs, draft card, checker
+components/         UI: setup, interview (with voice), results tabs, draft card, checker, weekly plan + calendar
+tests/              unit tests and the browser test
 docs/               screenshots
 ```
 

@@ -100,6 +100,8 @@ export function LynkrApp() {
             onFill={(id, f) => setS((prev) => ({ ...prev, fills: { ...prev.fills, [id]: f } }))}
             onClearVault={reset}
             onRedo={() => update({ stage: "interview" })}
+            plan={s.plan}
+            onPlan={(plan) => setS((prev) => ({ ...prev, plan }))}
           />
         )}
       </main>

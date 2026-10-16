@@ -72,3 +72,24 @@ export const GenerateReply = z.object({
   comments: z.array(Draft),
 });
 export type GenerateReply = z.infer<typeof GenerateReply>;
+
+// ---- weekly plan: adjust by chat ----
+const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+export const PlanChatRequest = z.object({
+  text: z.string().trim().min(1).max(500),
+  counts: z.object({ posts: z.number().int(), comments: z.number().int(), messages: z.number().int() }),
+  times: z.object({ post: HHMM, comment: HHMM, message: HHMM }),
+});
+
+export const PlanChatReply = z.object({
+  posts: z.number().int(),
+  comments: z.number().int(),
+  messages: z.number().int(),
+  post_time: z.string(),
+  comment_time: z.string(),
+  message_time: z.string(),
+  understood: z.boolean(),
+  reply: z.string(),
+});
+export type PlanChatReply = z.infer<typeof PlanChatReply>;

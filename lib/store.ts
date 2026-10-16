@@ -1,4 +1,5 @@
 import type { GenerateReply, ProfileInput, Turn } from "./schemas";
+import type { Plan } from "./plan";
 
 /** Everything Lynkr keeps lives in this browser only (localStorage). */
 export type Stage = "setup" | "interview" | "generating" | "results";
@@ -10,11 +11,13 @@ export type Saved = {
   result: GenerateReply | null;
   /** Fill-in values for each draft's [[slots]], keyed by draft id. */
   fills: Record<string, string[]>;
+  /** Weekly plan + calendar; built the first time the "This week" tab opens. */
+  plan: Plan | null;
 };
 
 const KEY = "lynkr:v1";
 
-export const EMPTY: Saved = { stage: "setup", profile: null, turns: [], result: null, fills: {} };
+export const EMPTY: Saved = { stage: "setup", profile: null, turns: [], result: null, fills: {}, plan: null };
 
 export function load(): Saved {
   try {

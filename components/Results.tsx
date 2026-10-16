@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { GenerateReply } from "@/lib/schemas";
 import type { Relationship } from "@/lib/checker";
+import { newPlan, type Plan } from "@/lib/plan";
+import { WeekPlan } from "./WeekPlan";
 import { DraftCard } from "./DraftCard";
 import { Checker, RelationshipPicker } from "./Checker";
 import { Button, Card, Label } from "./ui";
@@ -12,6 +14,7 @@ const TABS = [
   { id: "profile", label: "Profile fix" },
   { id: "outreach", label: "Outreach" },
   { id: "posts", label: "Posts & comments" },
+  { id: "plan", label: "This week" },
   { id: "check", label: "Check a message" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -32,12 +35,16 @@ export function Results({
   onFill,
   onClearVault,
   onRedo,
+  plan,
+  onPlan,
 }: {
   result: GenerateReply;
   fills: Record<string, string[]>;
   onFill: (id: string, f: string[]) => void;
   onClearVault: () => void;
   onRedo: () => void;
+  plan: Plan | null;
+  onPlan: (p: Plan) => void;
 }) {
   const [tab, setTab] = useState<Tab>("vault");
   const [rel, setRel] = useState<Relationship>("knows_me");
@@ -60,7 +67,11 @@ export function Results({
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              // The plan is built the first time this tab opens, from the current drafts.
+              if (t.id === "plan" && !plan) onPlan(newPlan());
+              setTab(t.id);
+            }}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${
               tab === t.id ? "bg-ink text-bg" : "text-soft hover:bg-muted"
             }`}
@@ -150,6 +161,8 @@ export function Results({
           {result.comments.map((c, i) => card(`comment:${i}`, "comment", c))}
         </div>
       )}
+
+      {tab === "plan" && plan && <WeekPlan plan={plan} onPlan={onPlan} result={result} fills={fills} />}
 
       {tab === "check" && <Checker />}
 

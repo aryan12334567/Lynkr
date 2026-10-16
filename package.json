@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --no-warnings --import ./tests/register.mjs --test tests/*.test.mts",
+    "test:e2e": "node tests/e2e-plan.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
@@ -22,6 +24,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "playwright-core": "^1.58.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

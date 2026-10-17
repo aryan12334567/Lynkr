@@ -1,17 +1,21 @@
-import type { Metadata } from "next";
-import { Martel, Mukta } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Manrope, Newsreader } from "next/font/google";
 import "./globals.css";
 
-const martel = Martel({
+// Newsreader: an editorial serif with optical sizes, for headlines and every draft.
+const serif = Newsreader({
   variable: "--font-martel",
   subsets: ["latin"],
-  weight: ["400", "700", "800"],
+  style: ["normal", "italic"],
+  axes: ["opsz"],
+  display: "swap",
 });
 
-const mukta = Mukta({
+// Manrope: a crisp geometric sans for the interface.
+const sans = Manrope({
   variable: "--font-mukta",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -19,9 +23,15 @@ export const metadata: Metadata = {
   description: "Write to one person on LinkedIn and sound like yourself. Free for Indian freshers and early-career job seekers.",
 };
 
+export const viewport: Viewport = {
+  // The whole product uses the night palette (see .theme-night in globals.css).
+  themeColor: "#0a0c1f",
+  colorScheme: "dark",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${martel.variable} ${mukta.variable} h-full antialiased`}>
+    <html lang="en-IN" className={`theme-night ${serif.variable} ${sans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

@@ -3,41 +3,73 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 
 /**
- * Two backends, picked by env:
- * - Anthropic: set ANTHROPIC_API_KEY (default model claude-opus-5-5, override LYNKR_MODEL).
+ * Backends, picked by env (first match wins):
+ * - OpenAI: set OPENAI_API_KEY (model from LLM_MODEL, default gpt-5-mini).
  * - Any OpenAI-compatible chat endpoint: set LLM_BASE_URL, LLM_API_KEY and LLM_MODEL.
- * With neither key set, mock mode runs the whole flow with no AI.
+ * - Anthropic: set ANTHROPIC_API_KEY (default model claude-opus-5-5, override LYNKR_MODEL).
+ * With no key set, or LYNKR_MOCK=1, mock mode runs the whole flow with no AI.
  */
 type Provider = "anthropic" | "openai";
 
+const OPENAI_BASE = "https://api.openai.com/v1";
+const OPENAI_DEFAULT_MODEL = "gpt-5-mini";
+
 function provider(): Provider {
-  if (process.env.LLM_BASE_URL) return "openai";
+  if (process.env.OPENAI_API_KEY || process.env.LLM_BASE_URL) return "openai";
   return "anthropic";
 }
 
+function openaiBase(): string {
+  return (process.env.LLM_BASE_URL || OPENAI_BASE).replace(/\/+$/, "");
+}
+
+function openaiKey(): string {
+  return process.env.LLM_API_KEY || process.env.OPENAI_API_KEY || "";
+}
+
 export function modelName(): string {
-  return provider() === "openai" ? process.env.LLM_MODEL || "" : process.env.LYNKR_MODEL || "claude-opus-5-5";
+  if (provider() === "openai") return process.env.LLM_MODEL || (process.env.LLM_BASE_URL ? "" : OPENAI_DEFAULT_MODEL);
+  return process.env.LYNKR_MODEL || "claude-opus-5-5";
 }
 
 export function isMock(): boolean {
   if (process.env.LYNKR_MOCK === "1") return true;
-  if (provider() === "openai") {
-    return !(process.env.LLM_API_KEY && process.env.LLM_MODEL);
-  }
+  if (provider() === "openai") return !(openaiKey() && modelName());
   return !process.env.ANTHROPIC_API_KEY;
 }
 
 export function providerLabel(): string | null {
   if (isMock()) return null;
-  return provider() === "openai" ? `OpenAI-compatible (${modelName()})` : `Anthropic (${modelName()})`;
+  if (provider() === "openai") return `${openaiBase() === OPENAI_BASE ? "OpenAI" : "OpenAI-compatible"} (${modelName()})`;
+  return `Anthropic (${modelName()})`;
+}
+
+/**
+ * OpenAI strict JSON schemas accept a subset of JSON Schema. Drop what zod adds that
+ * strict mode doesn't need: the $schema header and integer range bounds. The zod
+ * schema still validates the reply afterwards.
+ */
+export function strictSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(strictSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(schema as Record<string, unknown>)) {
+    if (k === "$schema" || k === "minimum" || k === "maximum" || k === "exclusiveMinimum" || k === "exclusiveMaximum") continue;
+    out[k] = strictSchema(v);
+  }
+  return out;
+}
+
+/** OpenAI's reasoning models (o-series, GPT-5) take max_completion_tokens and a reasoning effort. */
+function isReasoningModel(model: string): boolean {
+  return /^(o\d|gpt-5)/i.test(model);
 }
 
 export class LlmError extends Error {
-  constructor(
-    message: string,
-    public status = 502,
-  ) {
+  status: number;
+  constructor(message: string, status = 502) {
     super(message);
+    this.status = status;
   }
 }
 
@@ -125,21 +157,30 @@ async function callOpenAI<S extends z.ZodType>(opts: {
   system: string;
   user: string;
   schema: S;
+  effort: Effort;
   maxTokens: number;
   image?: ImageInput;
 }): Promise<z.infer<S>> {
-  const base = (process.env.LLM_BASE_URL || "").replace(/\/+$/, "");
+  const base = openaiBase();
+  const model = modelName();
+  const reasoning = base === OPENAI_BASE && isReasoningModel(model);
+  // Reasoning tokens count against the limit, so give reasoning models more room.
+  const limit = reasoning
+    ? { max_completion_tokens: opts.maxTokens * 2, reasoning_effort: opts.effort }
+    : base === OPENAI_BASE
+      ? { max_completion_tokens: opts.maxTokens }
+      : { max_tokens: opts.maxTokens };
   let res: Response;
   try {
     res = await fetch(`${base}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.LLM_API_KEY}`,
+        Authorization: `Bearer ${openaiKey()}`,
       },
       body: JSON.stringify({
-        model: modelName(),
-        max_tokens: opts.maxTokens,
+        model,
+        ...limit,
         messages: [
           { role: "system", content: opts.system },
           {
@@ -154,7 +195,7 @@ async function callOpenAI<S extends z.ZodType>(opts: {
         ],
         response_format: {
           type: "json_schema",
-          json_schema: { name: "lynkr_reply", schema: z.toJSONSchema(opts.schema), strict: true },
+          json_schema: { name: "lynkr_reply", schema: strictSchema(z.toJSONSchema(opts.schema)), strict: true },
         },
       }),
     });
@@ -162,14 +203,23 @@ async function callOpenAI<S extends z.ZodType>(opts: {
     throw new LlmError("Could not reach the AI. Check your connection and retry.", 502);
   }
 
-  if (res.status === 401 || res.status === 403) throw new LlmError("The server's AI key is invalid.", 500);
-  if (res.status === 429) throw new LlmError("The AI is busy right now. Please try again in a minute.", 429);
-  if (!res.ok) throw new LlmError(`The AI service returned an error (${res.status}).`, 502);
+  if (!res.ok) {
+    // The provider's own message goes to the server log only (it never contains the key); users get a plain one.
+    const detail = await res.text().catch(() => "");
+    console.error(`[lynkr] AI request failed (${res.status}) for model ${model}: ${detail.slice(0, 400)}`);
+    if (res.status === 401 || res.status === 403) throw new LlmError("The server's AI key is invalid.", 500);
+    if (res.status === 404) throw new LlmError("The AI model set on the server isn't available. Check LLM_MODEL.", 500);
+    if (res.status === 429) {
+      throw new LlmError(/quota|billing/i.test(detail) ? "The AI account is out of credit. The owner needs to add credit or raise the limit." : "The AI is busy right now. Please try again in a minute.", 429);
+    }
+    throw new LlmError(`The AI service returned an error (${res.status}).`, 502);
+  }
 
   const data = (await res.json().catch(() => null)) as
-    | { choices?: { message?: { content?: string | null }; finish_reason?: string }[] }
+    | { choices?: { message?: { content?: string | null; refusal?: string | null }; finish_reason?: string }[] }
     | null;
   const choice = data?.choices?.[0];
+  if (choice?.message?.refusal) throw new LlmError("The AI declined this request. Try rewording your answers.", 422);
   if (choice?.finish_reason === "length") {
     throw new LlmError("The AI ran out of room while writing. Please try again.", 502);
   }

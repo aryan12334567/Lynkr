@@ -1,221 +1,342 @@
 "use client";
 
-import { useState } from "react";
-import type { GenerateReply, ProfileInput } from "@/lib/schemas";
+import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { BadgeCheck, CalendarDays, House, IdCard, Library, PenLine, Send, Users } from "lucide-react";
+import type { Draft, ExternalContextPacket, Packet } from "@/lib/schemas";
+import type { ImportMode } from "./ExternalContext";
 import type { Relationship } from "@/lib/checker";
-import { newPlan, type Plan } from "@/lib/plan";
+import { newPlan } from "@/lib/plan";
+import { EMPTY_PACKET } from "@/lib/packet";
+import type { ImportedProfile } from "@/lib/linkedinExport";
+import { DOMAIN_LABEL, STAGE_LABEL } from "@/lib/roles";
+import type { DraftEdit, Saved } from "@/lib/store";
 import { WeekPlan } from "./WeekPlan";
 import { ConnectCoach } from "./ConnectCoach";
-import type { Connect } from "@/lib/connect";
 import { DraftCard } from "./DraftCard";
 import { Checker, RelationshipPicker } from "./Checker";
-import { Button, Card, Label } from "./ui";
+import { VaultReview } from "./VaultReview";
+import { ProfileFix } from "./ProfileFix";
+import { CommentHelper } from "./CommentHelper";
+import { Today } from "./Today";
+import { ConfirmReset, DemoPill, SavedHint, TrustNote, Wordmark } from "./chrome";
+import { Button, Card, ErrorNote, Label, SectionHead } from "./ui";
 
 const TABS = [
-  { id: "vault", label: "Story Vault" },
-  { id: "profile", label: "Profile fix" },
-  { id: "outreach", label: "Outreach" },
-  { id: "posts", label: "Posts & comments" },
-  { id: "plan", label: "This week" },
-  { id: "connect", label: "Connect" },
-  { id: "check", label: "Check a message" },
+  { id: "today", label: "Today", icon: House, sub: "What to do next, from what's already in your Story Vault." },
+  { id: "vault", label: "Story Vault", icon: Library, sub: "The facts every draft is built from." },
+  { id: "profile", label: "Profile fix", icon: IdCard, sub: "Section by section, against the role you want." },
+  { id: "outreach", label: "Outreach", icon: Send, sub: "First messages that match how well they know you." },
+  { id: "posts", label: "Posts & comments", icon: PenLine, sub: "From your own work, and for posts you found." },
+  { id: "plan", label: "This week", icon: CalendarDays, sub: "A small, steady plan. Nothing is posted for you." },
+  { id: "connect", label: "Connect", icon: Users, sub: "Who to look for, and one person at a time." },
+  { id: "check", label: "Check a message", icon: BadgeCheck, sub: "The person and the reason first, then the wording." },
 ] as const;
-type Tab = (typeof TABS)[number]["id"];
+export type Tab = (typeof TABS)[number]["id"];
+export const TAB_IDS: Tab[] = TABS.map((t) => t.id);
 
 const LADDER: Record<Relationship, string> = {
   stranger: "Ask one specific question about their work. Don't ask a stranger for a referral: it spends their reputation on someone they don't know.",
-  alumni: "Use the shared college and ask for a 15-minute chat. Save the referral ask for later.",
+  alumni: "Use the shared college and ask one question, or for a short chat. Save the referral ask for later.",
   knows_me: "Ask for a referral with the job ID, your resume and why you fit, and make it easy to say no.",
 };
 
-const KIND_LABEL: Record<string, string> = {
-  story: "Story",
-  number: "Number",
-  proof: "Proof",
-  skill: "Skill",
-  opinion: "Opinion",
-  constraint: "Constraint",
-  target: "Target",
-};
-
 export function Results({
-  result,
-  fills,
-  onFill,
-  onClearVault,
-  onRedo,
-  plan,
-  onPlan,
-  profile,
-  connect,
-  onConnect,
+  s,
+  setS,
+  mock,
+  error,
+  tab,
+  onTab,
+  onHome,
+  onRewrite,
+  onMoreQuestions,
+  onReset,
+  imported,
+  setImported,
+  jobDescription,
+  setJobDescription,
+  requirements,
+  setRequirements,
+  importMode,
 }: {
-  result: GenerateReply;
-  fills: Record<string, string[]>;
-  onFill: (id: string, f: string[]) => void;
-  onClearVault: () => void;
-  onRedo: () => void;
-  plan: Plan | null;
-  onPlan: (p: Plan) => void;
-  profile: ProfileInput;
-  connect: Connect;
-  onConnect: (c: Connect) => void;
+  s: Saved;
+  setS: React.Dispatch<React.SetStateAction<Saved>>;
+  mock: boolean | null;
+  error: string | null;
+  tab: Tab;
+  onTab: (t: Tab) => void;
+  onHome: () => void;
+  onRewrite: () => void;
+  onMoreQuestions: () => void;
+  onReset: () => void;
+  imported: ImportedProfile | null;
+  setImported: (p: ImportedProfile | null) => void;
+  jobDescription: string;
+  setJobDescription: (v: string) => void;
+  requirements: ExternalContextPacket | null;
+  setRequirements: (p: ExternalContextPacket | null) => void;
+  importMode: ImportMode;
 }) {
-  const [tab, setTab] = useState<Tab>("vault");
   const [rel, setRel] = useState<Relationship>("stranger");
-  const card = (id: string, kind: "post" | "comment" | "message", draft: GenerateReply["posts"][number]) => (
+  // The person described in Connect: in memory only, shared with the checker.
+  const [packet, setPacket] = useState<Packet>(EMPTY_PACKET);
+  const reduce = useReducedMotion();
+  // The weekly plan exists from the first visit, so Today and This week agree.
+  useEffect(() => {
+    if (!s.plan) setS((prev) => (prev.plan ? prev : { ...prev, plan: newPlan() }));
+  }, [s.plan, setS]);
+  const result = s.result!;
+  const profile = s.profile!;
+  const current = TABS.find((t) => t.id === tab)!;
+  // What a draft may draw on: confirmed facts, the background line and the target role.
+  const groundIn = [...s.facts.filter((f) => f.reviewStatus === "confirmed" && f.useInDrafts).map((f) => f.text), profile.background, profile.targetRole];
+
+  const onFill = (id: string, f: string[]) => setS((prev) => ({ ...prev, fills: { ...prev.fills, [id]: f } }));
+  const onEdit = (id: string, e: DraftEdit | null) =>
+    setS((prev) => {
+      const edits = { ...prev.edits };
+      if (e) edits[id] = e;
+      else delete edits[id];
+      return { ...prev, edits };
+    });
+
+  const card = (id: string, kind: "post" | "comment" | "message", draft: Draft) => (
     <DraftCard
       key={id}
       draft={draft}
       kind={kind}
       relationship={rel}
-      fills={fills[id] ?? []}
+      fills={s.fills[id] ?? []}
       onFill={(f) => onFill(id, f)}
+      edit={s.edits[id]}
+      onEdit={(e) => onEdit(id, e)}
+      facts={s.facts}
+      groundIn={groundIn}
     />
   );
 
+  function go(t: Tab) {
+    // The plan is built the first time it's needed.
+    if ((t === "plan" || t === "today") && !s.plan) setS((prev) => ({ ...prev, plan: prev.plan ?? newPlan() }));
+    onTab(t);
+  }
+
+  const summary = [profile.domain && profile.domain !== "not_sure" ? DOMAIN_LABEL[profile.domain] : "", profile.stage && profile.stage !== "other" ? STAGE_LABEL[profile.stage] : ""].filter(Boolean);
+
   return (
-    <div className="space-y-4">
-      <nav className="-mx-1 flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none]" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={(e) => {
-              // The plan is built the first time this tab opens, from the current drafts.
-              if (t.id === "plan" && !plan) onPlan(newPlan());
-              setTab(t.id);
-              // On phones the tab row scrolls sideways; keep the chosen tab visible.
-              e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
-            }}
-            className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${
-              tab === t.id ? "bg-ink text-bg" : "text-soft hover:bg-muted"
-            }`}
-          >
-            {t.label}
+    <div className="min-h-full lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)]">
+      <aside className="border-line bg-surface/70 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-r">
+        <div className="flex items-center justify-between gap-3 px-4 pt-5 sm:px-6 lg:block lg:px-5 lg:pt-7">
+          <button onClick={onHome} aria-label="Lynkr home page" className="rounded-md">
+            <Wordmark className="text-[1.45rem]" />
           </button>
-        ))}
-      </nav>
-
-      {tab === "vault" && (
-        <Card>
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-semibold">Facts from your own answers</h3>
-              <p className="text-sm text-soft">
-                Every draft is built only from these. Stored in this browser only.
-              </p>
+          {mock && (
+            <div className="lg:mt-4">
+              <DemoPill />
             </div>
-            <Button variant="danger" onClick={onClearVault}>
-              Clear everything
-            </Button>
-          </div>
-          {result.vault.length === 0 ? (
-            <p className="text-sm text-faint">No facts yet. Answer a few interview questions.</p>
-          ) : (
-            <ul className="space-y-2">
-              {result.vault.map((v, i) => (
-                <li key={i} className="flex gap-3 rounded-lg bg-muted p-3 text-sm">
-                  <span className="w-20 shrink-0 text-xs font-medium uppercase tracking-wide text-faint">
-                    {KIND_LABEL[v.kind] ?? v.kind}
-                  </span>
-                  <span>{v.text}</span>
-                </li>
-              ))}
-            </ul>
           )}
-        </Card>
-      )}
-
-      {tab === "profile" && (
-        <div className="space-y-4">
-          <Card>
-            <h3 className="mb-3 font-semibold">Headline options</h3>
-            <ol className="space-y-2 text-sm">
-              {result.profile.headlines.map((h, i) => (
-                <li key={i} className="rounded-lg bg-muted p-3">
-                  {h}
-                </li>
-              ))}
-            </ol>
-            <p className="mt-2 text-xs text-faint">Replace anything in [[brackets]] with your real detail.</p>
-          </Card>
-          {card("profile:about", "comment", { title: "About section", body: result.profile.about, why: "Built from your facts and the words recruiters search for." })}
-          <Card>
-            <h3 className="mb-3 font-semibold">Fix these on your profile</h3>
-            <ul className="list-disc space-y-1.5 pl-5 text-sm">
-              {result.profile.gaps.map((g, i) => (
-                <li key={i}>{g}</li>
-              ))}
-            </ul>
-          </Card>
         </div>
-      )}
-
-      {tab === "outreach" && (
-        <div className="space-y-4">
-          <Card>
-            <Label>Who are you messaging?</Label>
-            <RelationshipPicker value={rel} onChange={setRel} />
-            <p className="mt-3 text-sm text-soft">{LADDER[rel]}</p>
-          </Card>
-          {(() => {
-            // Ask ladder: the first message depends on how well they know you.
-            const rung = rel === "stranger" ? result.outreach.stranger : rel === "alumni" ? result.outreach.alumni : result.outreach.referral;
-            const id = rel === "stranger" ? "out:stranger" : rel === "alumni" ? "out:alumni" : "out:referral";
-            if (!rung) {
-              // Results saved before the ask ladder existed have no stranger/alumni drafts.
-              return (
-                <Card>
-                  <p className="text-sm">This message is new. Rewrite your drafts to get it; your answers are kept.</p>
-                  <Button className="mt-3" onClick={onRedo}>
-                    Rewrite drafts
-                  </Button>
-                </Card>
-              );
-            }
-            return card(id, "message", rung);
-          })()}
-          {card("out:follow", "message", result.outreach.follow_up)}
-          <details className="rounded-xl border border-line bg-surface p-4">
-            <summary className="cursor-pointer text-sm font-medium">Other drafts: cold message to a hiring manager</summary>
-            <div className="mt-4">{card("out:hm", "message", result.outreach.hiring_manager)}</div>
-          </details>
+        <div className="mx-5 mt-6 hidden rounded-xl border border-line bg-surface p-3.5 shadow-sm lg:block">
+          <p className="text-[0.78rem] text-faint">Working towards</p>
+          <p className="font-serif text-[1rem] font-bold leading-snug">{profile.targetRole}</p>
+          {summary.map((x) => (
+            <p key={x} className="text-[0.82rem] text-soft">
+              {x}
+            </p>
+          ))}
         </div>
-      )}
-
-      {tab === "posts" && (
-        <div className="space-y-4">
-          {result.posts.map((p, i) => card(`post:${i}`, "post", p))}
-          <h3 className="pt-2 font-semibold">Comments to leave on posts in your field</h3>
-          {result.comments.map((c, i) => card(`comment:${i}`, "comment", c))}
+        <nav
+          className="sticky top-0 z-20 mt-4 flex scroll-px-4 gap-1 overflow-x-auto border-b border-line bg-bg/90 px-4 py-2 backdrop-blur [scrollbar-width:none] sm:px-6 lg:static lg:mt-5 lg:flex-col lg:overflow-visible lg:border-0 lg:bg-transparent lg:px-3 lg:py-0 lg:backdrop-blur-none"
+          role="tablist"
+          aria-label="Your drafts and tools"
+        >
+          {TABS.map((t) => {
+            const I = t.icon;
+            const on = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={on}
+                onClick={(e) => {
+                  go(t.id);
+                  // On phones the tab row scrolls sideways; keep the chosen tab visible.
+                  e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+                }}
+                className={`relative flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-[0.93rem] transition-colors ${
+                  on ? "font-medium text-ink" : "text-soft hover:bg-muted hover:text-ink"
+                }`}
+              >
+                {on && (
+                  <motion.span
+                    layoutId="tab-pill"
+                    className="absolute inset-0 rounded-lg bg-surface shadow-sm ring-1 ring-line lg:shadow-[inset_3px_0_0_var(--marigold),var(--elev-sm)]"
+                    transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+                  />
+                )}
+                <I size={17} strokeWidth={1.8} className={`relative ${on ? "text-accent" : ""}`} aria-hidden />
+                <span className="relative">{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+        <div className="mt-8 hidden space-y-3 px-5 pb-8 lg:block">
+          <TrustNote mock={mock} />
+          <ConfirmReset onReset={onReset} className="-ml-2" />
         </div>
-      )}
+      </aside>
 
-      {tab === "plan" && plan && <WeekPlan plan={plan} onPlan={onPlan} result={result} fills={fills} />}
+      <main className="min-w-0 px-4 pb-16 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-line pb-5">
+            <div>
+              <h1 className="text-[1.75rem] font-extrabold leading-tight">{current.label}</h1>
+              <p className="mt-1 text-[0.95rem] text-soft">{current.sub}</p>
+            </div>
+            <SavedHint />
+          </div>
+          <ErrorNote message={error} />
 
-      {tab === "connect" && (
-        <ConnectCoach
-          result={result}
-          profile={profile}
-          connect={connect}
-          onConnect={onConnect}
-          onRedo={onRedo}
-          onGoTo={(t, r) => {
-            if (r) setRel(r);
-            setTab(t);
-          }}
-        />
-      )}
+            <motion.div
+              key={tab}
+              initial={reduce ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-4"
+            >
+              {tab === "today" && <Today s={s} go={go} />}
 
-      {tab === "check" && <Checker />}
+              {tab === "vault" && (
+                <VaultReview
+                  mode="manage"
+                  profile={profile}
+                  turns={s.turns}
+                  facts={s.facts}
+                  onFacts={(facts) => setS((prev) => ({ ...prev, facts }))}
+                  onProfile={(p) => setS((prev) => ({ ...prev, profile: p }))}
+                  busy={false}
+                  onWrite={onRewrite}
+                  onBack={onMoreQuestions}
+                  onClear={onReset}
+                />
+              )}
 
-      <div className="pt-2">
-        <Button variant="ghost" onClick={onRedo}>
-          Answer more questions and rewrite
-        </Button>
-      </div>
+              {tab === "profile" && (
+                <ProfileFix
+                  profile={profile}
+                  facts={s.facts}
+                  result={result}
+                  fills={s.fills}
+                  onFill={onFill}
+                  edits={s.edits}
+                  onEdit={onEdit}
+                  imported={imported}
+                  setImported={setImported}
+                  jobDescription={jobDescription}
+                  setJobDescription={setJobDescription}
+                  done={s.profileDone}
+                  onDone={(id, v) => setS((prev) => ({ ...prev, profileDone: { ...prev.profileDone, [id]: v } }))}
+                  onRewrite={onRewrite}
+                  mock={mock}
+                  requirements={requirements}
+                  setRequirements={setRequirements}
+                  importMode={importMode}
+                />
+              )}
+
+              {tab === "outreach" && (
+                <div className="space-y-4">
+                  <Card>
+                    <Label>Who are you messaging?</Label>
+                    <RelationshipPicker value={rel} onChange={setRel} />
+                    <p className="mt-3 max-w-[62ch] text-[0.95rem] text-soft">{LADDER[rel]}</p>
+                    <p className="mt-2 text-[0.9rem] text-soft">
+                      These are starting templates. For one specific person, use{" "}
+                      <button className="font-medium text-accent hover:underline" onClick={() => go("connect")}>
+                        Write to one person
+                      </button>{" "}
+                      in Connect: it checks the reason first.
+                    </p>
+                  </Card>
+                  {(() => {
+                    // Ask ladder: the first message depends on how well they know you.
+                    const rung = rel === "stranger" ? result.outreach.stranger : rel === "alumni" ? result.outreach.alumni : result.outreach.referral;
+                    const id = rel === "stranger" ? "out:stranger" : rel === "alumni" ? "out:alumni" : "out:referral";
+                    if (!rung) {
+                      // Results saved before the ask ladder existed have no stranger/alumni drafts.
+                      return (
+                        <Card>
+                          <p className="text-[0.95rem]">This message is new. Rewrite your drafts to get it; your answers are kept.</p>
+                          <Button className="mt-3" onClick={onRewrite}>
+                            Rewrite drafts
+                          </Button>
+                        </Card>
+                      );
+                    }
+                    return card(id, "message", rung);
+                  })()}
+                  {card("out:follow", "message", result.outreach.follow_up)}
+                  <details className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                    <summary className="cursor-pointer text-[0.95rem] font-medium">Other drafts: cold message to a hiring manager</summary>
+                    <div className="mt-4">{card("out:hm", "message", result.outreach.hiring_manager)}</div>
+                  </details>
+                </div>
+              )}
+
+              {tab === "posts" && (
+                <div className="space-y-8">
+                  <section className="space-y-4">
+                    <SectionHead title="Posts from your own work">
+                      Each starts with something you did. A closing question only belongs if you really want the answer.
+                    </SectionHead>
+                    {result.posts.map((p, i) => card(`post:${i}`, "post", p))}
+                  </section>
+                  <section id="comments" className="space-y-4">
+                    <CommentHelper profile={profile} facts={s.facts} mock={mock} kept={s.keptComments} onKeep={(k) => setS((prev) => ({ ...prev, keptComments: k }))} />
+                    <details className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
+                      <summary className="cursor-pointer text-[0.95rem] font-medium">Example comment patterns</summary>
+                      <div className="mt-4 space-y-4">{result.comments.map((c, i) => card(`comment:${i}`, "comment", c))}</div>
+                    </details>
+                  </section>
+                </div>
+              )}
+
+              {tab === "plan" && s.plan && (
+                <WeekPlan
+                  plan={s.plan}
+                  onPlan={(plan) => setS((prev) => ({ ...prev, plan }))}
+                  result={result}
+                  fills={s.fills}
+                  onOpenDraft={(draftId) => go(draftId.startsWith("out:") ? "outreach" : "posts")}
+                />
+              )}
+
+              {tab === "connect" && (
+                <ConnectCoach
+                  profile={profile}
+                  facts={s.facts}
+                  connect={s.connect}
+                  onConnect={(connect) => setS((prev) => ({ ...prev, connect }))}
+                  packet={packet}
+                  onPacket={setPacket}
+                  mock={mock}
+                  onGoTo={(t, r) => {
+                    if (r) setRel(r);
+                    go(t);
+                  }}
+                />
+              )}
+
+              {tab === "check" && <Checker facts={s.facts} packet={packet} mock={mock} />}
+            </motion.div>
+
+          <div className="pt-10 lg:hidden">
+            <TrustNote mock={mock} />
+            <ConfirmReset onReset={onReset} className="mt-2 -ml-2" />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

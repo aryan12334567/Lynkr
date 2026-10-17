@@ -53,11 +53,14 @@ export function WeekPlan({
   onPlan,
   result,
   fills,
+  onOpenDraft,
 }: {
   plan: Plan;
   onPlan: (p: Plan) => void;
   result: GenerateReply;
   fills: Record<string, string[]>;
+  /** Jump to the tab where this item's draft lives. */
+  onOpenDraft?: (draftId: string) => void;
 }) {
   const [view, setView] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0);
@@ -214,6 +217,11 @@ export function WeekPlan({
         )}
 
         <div className="mt-2 flex flex-wrap gap-3 text-xs">
+          {onOpenDraft && (
+            <button className="font-medium text-accent hover:underline" onClick={() => onOpenDraft(it.draftId)}>
+              Open the draft
+            </button>
+          )}
           <button className="text-accent hover:underline" onClick={() => downloadIcs(`lynkr-${it.id}.ics`, [ev])}>
             .ics
           </button>
@@ -258,9 +266,9 @@ export function WeekPlan({
           const list = items.filter((it) => it.day === day);
           return (
             <section key={day} aria-label={formatDay(day)} className="min-w-0">
-              <h4 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${day === today ? "text-accent" : "text-faint"}`}>
+              <h4 className={`mb-2 border-b pb-1 font-serif text-[0.95rem] font-bold ${day === today ? "border-marigold text-ink" : "border-line text-soft"}`}>
                 {formatDay(day)}
-                {day === today && " · today"}
+                {day === today && <span className="ml-1 font-sans text-[0.8rem] font-normal text-faint">today</span>}
               </h4>
               <div className="space-y-2">
                 {list.length === 0 ? <p className="text-xs text-faint">Free</p> : list.map(renderItem)}

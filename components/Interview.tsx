@@ -8,6 +8,15 @@ import { useSpeech } from "./useSpeech";
 
 const SKIPPED = "(skipped)";
 
+function MicIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </svg>
+  );
+}
+
 export function Interview({
   profile,
   turns,
@@ -65,65 +74,70 @@ export function Interview({
 
   return (
     <Card>
-      <div className="mb-4 flex items-center justify-between text-sm text-soft">
+      <div className="mb-5 flex items-center justify-between gap-3 text-[0.9rem] text-soft">
         <span>
-          Question {turns.length + 1} <span className="text-faint">· usually 6 to 8</span>
+          Question {turns.length + 1} <span className="text-faint">of about 7</span>
         </span>
-        <button onClick={onBack} className="text-faint hover:text-ink">
+        <Button variant="quiet" onClick={onBack}>
           Edit basics
-        </button>
+        </Button>
       </div>
-
-      {turns.length > 0 && (
-        <details className="mb-4 text-sm">
-          <summary className="cursor-pointer text-soft">Your answers so far ({turns.length})</summary>
-          <ol className="mt-2 space-y-2">
-            {turns.map((t, i) => (
-              <li key={i} className="rounded-lg bg-muted p-3">
-                <p className="text-soft">{t.q}</p>
-                <p>{t.a}</p>
-              </li>
-            ))}
-          </ol>
-        </details>
-      )}
 
       {loading && !current && <p className="animate-pulse text-soft">Thinking of the next question…</p>}
 
       {current && (
         <div className="space-y-4">
           <div>
-            <p className="text-lg font-medium">{current.question}</p>
-            {current.why && <p className="mt-1 text-sm text-faint">{current.why}</p>}
+            <p className="font-serif text-[1.3rem] font-bold leading-snug">{current.question}</p>
+            {current.why && <p className="mt-2 text-[0.92rem] text-faint">{current.why}</p>}
           </div>
+          <label className="sr-only" htmlFor="answer">
+            Your answer
+          </label>
           <textarea
-            className={`${inputCls} min-h-28`}
+            id="answer"
+            className={`${inputCls} min-h-32 text-[1rem]`}
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder={speech.supported ? "Type, or tap the mic and talk. You can edit before sending." : "Type your answer"}
+            placeholder={speech.supported ? "Type, or tap Speak and talk. You can edit before sending." : "Type your answer"}
             maxLength={1500}
             autoFocus
           />
-          {speech.error && <p className="text-sm text-warn">{speech.error}</p>}
+          {speech.error && <p className="text-[0.9rem] text-warn">{speech.error}</p>}
           <div className="flex flex-wrap gap-2">
             <Button disabled={!answer.trim()} onClick={() => send(answer.trim())}>
               Send answer
             </Button>
             {speech.supported && (
               <Button variant="ghost" onClick={speech.listening ? speech.stop : speech.start} aria-pressed={speech.listening}>
-                {speech.listening ? "● Stop mic" : "🎙 Speak"}
+                <MicIcon />
+                {speech.listening ? "Stop mic" : "Speak"}
               </Button>
             )}
             <Button variant="ghost" onClick={() => send(SKIPPED)}>
               Skip
             </Button>
             {answered >= 3 && (
-              <Button variant="ghost" onClick={() => onFinish(turns)} className="ml-auto">
-                Write my drafts now
+              <Button variant="quiet" onClick={() => onFinish(turns)} className="sm:ml-auto">
+                Review my facts now
               </Button>
             )}
           </div>
         </div>
+      )}
+
+      {turns.length > 0 && (
+        <details className="mt-6 border-t border-line pt-4 text-[0.92rem]">
+          <summary className="cursor-pointer text-soft">Your answers so far ({turns.length})</summary>
+          <ol className="mt-3 space-y-2">
+            {turns.map((t, i) => (
+              <li key={i} className="rounded-md bg-muted p-3">
+                <p className="text-soft">{t.q}</p>
+                <p className="mt-1">{t.a === SKIPPED ? <span className="text-faint">Skipped</span> : t.a}</p>
+              </li>
+            ))}
+          </ol>
+        </details>
       )}
 
       <div className="mt-4">

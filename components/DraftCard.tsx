@@ -1,124 +1,194 @@
 "use client";
 
-import { useState } from "react";
-import type { Draft } from "@/lib/schemas";
-import { openSlots, parseSlots, renderFilled } from "@/lib/slots";
+import { useId, useState } from "react";
+import type { Draft, StoryFact } from "@/lib/schemas";
+import { openSlots, renderFilled } from "@/lib/slots";
 import { scoreSpecificity } from "@/lib/specificity";
 import { checkMessage, type Relationship } from "@/lib/checker";
-import { Button, Card, inputCls } from "./ui";
+import type { DraftEdit } from "@/lib/store";
+import { BlankInputs, Button, SheetText, inputCls } from "./ui";
 import { Verdict } from "./Checker";
+import { unsupportedSentences } from "@/lib/grounding";
 
 const LINKEDIN_POST = "https://www.linkedin.com/feed/?shareActive=true";
+const HAS_BLANK = /\[\[[^\]]+\]\]/;
+
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Clipboard blocked (e.g. plain http on a phone): the text is still on screen to select.
+    return false;
+  }
+}
 
 export function DraftCard({
   draft,
   fills,
   onFill,
+  edit,
+  onEdit,
   kind,
   relationship,
+  facts = [],
+  groundIn,
 }: {
   draft: Draft;
   fills: string[];
   onFill: (fills: string[]) => void;
+  edit?: DraftEdit;
+  onEdit?: (e: DraftEdit | null) => void;
   /** post = can open LinkedIn's composer; message = outreach, gets the checker. */
-  kind: "post" | "comment" | "message";
+  kind: "post" | "comment" | "message" | "profile";
   relationship?: Relationship;
+  facts?: StoryFact[];
+  /** Text the draft may draw on (confirmed facts, background, role). Sentences far from it get flagged. */
+  groundIn?: string[];
 }) {
-  const [copied, setCopied] = useState(false);
-  const segments = parseSlots(draft.body);
-  const slots = segments.filter((s) => s.type === "slot");
+  const [copied, setCopied] = useState<"ok" | "blocked" | null>(null);
+  const [editing, setEditing] = useState(false);
+  const editId = useId();
   const left = openSlots(draft.body, fills);
-  const text = renderFilled(draft.body, fills);
+  const filled = renderFilled(draft.body, fills);
+  const text = edit ? edit.text : filled;
+  const editBlanks = edit ? HAS_BLANK.test(edit.text) : false;
+  const locked = edit ? editBlanks : left > 0;
+  const stale = edit && edit.base !== draft.body;
+  const used = (draft.factRefs ?? []).map((id) => facts.find((f) => f.id === id)).filter((f): f is StoryFact => !!f);
   const spec = scoreSpecificity(text);
-
-  function setSlot(i: number, v: string) {
-    const next = [...fills];
-    next[i] = v;
-    onFill(next);
-  }
+  const ctxFacts = used.map((f) => f.text);
+  // Check the draft as written (blanks excluded), not the user's own edit or fills.
+  const unsupported = groundIn && !edit ? unsupportedSentences(draft.body, groundIn) : [];
 
   async function copy(open: boolean) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard blocked: the text is still visible to select by hand.
-    }
+    const ok = await copyText(text);
+    setCopied(ok ? "ok" : "blocked");
+    setTimeout(() => setCopied(null), 2500);
     if (open) window.open(LINKEDIN_POST, "_blank", "noopener,noreferrer");
   }
 
   return (
-    <Card>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-semibold">{draft.title}</h3>
-        <span className="text-xs text-faint">{draft.why}</span>
-      </div>
+    <article className="rounded-2xl border border-line bg-surface shadow-sm p-5 sm:p-6">
+      <header className="mb-4">
+        <h3 className="text-[1.1rem] font-bold">{draft.title}</h3>
+        <p className="mt-0.5 text-[0.9rem] text-soft">{draft.why}</p>
+      </header>
 
-      <div className="mb-4 whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm leading-relaxed">
-        {segments.map((s, i) =>
-          s.type === "text" ? (
-            <span key={i}>{s.text}</span>
-          ) : (fills[s.index] ?? "").trim() ? (
-            <mark key={i} className="rounded bg-good/15 px-0.5 text-ink">
-              {fills[s.index]}
-            </mark>
-          ) : (
-            <mark key={i} className="rounded bg-warn/20 px-1 text-warn">
-              [{s.label}]
-            </mark>
-          ),
-        )}
-      </div>
+      {edit && !editing ? (
+        <div className="sheet">{edit.text}</div>
+      ) : editing ? (
+        <>
+          <label className="sr-only" htmlFor={editId}>
+            Edit the full text
+          </label>
+          <textarea
+            id={editId}
+            className={`${inputCls} min-h-44 font-serif leading-relaxed`}
+            defaultValue={text}
+            onChange={(e) => onEdit?.({ text: e.target.value, base: draft.body })}
+            autoFocus
+          />
+        </>
+      ) : (
+        <SheetText body={draft.body} fills={fills} />
+      )}
 
-      {slots.length > 0 && (
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          {slots.map((s) =>
-            s.type === "slot" ? (
-              <label key={s.index} className="block">
-                <span className="mb-1 block text-xs text-soft">{s.label}</span>
-                <input
-                  className={inputCls}
-                  value={fills[s.index] ?? ""}
-                  onChange={(e) => setSlot(s.index, e.target.value)}
-                  placeholder="Your real answer"
-                />
-              </label>
-            ) : null,
-          )}
+      {unsupported.length > 0 && (
+        <div className="mt-3 rounded-lg border border-warn/30 bg-warn/5 p-3 text-[0.88rem]" data-unsupported>
+          <p className="font-medium text-warn">
+            Check {unsupported.length === 1 ? "this sentence" : `these ${unsupported.length} sentences`}: {unsupported.length === 1 ? "it isn't" : "they aren't"} clearly in your facts
+          </p>
+          <ul className="mt-1.5 space-y-1 text-soft">
+            {unsupported.map((s) => (
+              <li key={s}>&quot;{s}&quot;</li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-faint">Keep it only if it&apos;s true. Edit the text to change or remove it.</p>
         </div>
       )}
 
-      {kind === "message" && left === 0 && relationship && (
-        <div className="mb-4">
-          <Verdict result={checkMessage(text, relationship)} compact />
+      {stale && <p className="mt-2 text-[0.88rem] text-warn">Your edit is from an earlier version of this draft. Reset to see the new one.</p>}
+
+      {!edit && left > 0 && (
+        <div className="mt-4">
+          <BlankInputs body={draft.body} fills={fills} onFill={onFill} />
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={left > 0} onClick={() => copy(false)}>
-          {copied ? "Copied" : "Copy"}
+      {used.length > 0 && (
+        <details className="mt-4 text-[0.88rem]">
+          <summary className="cursor-pointer text-soft">
+            Built from {used.length} of your fact{used.length === 1 ? "" : "s"}: {used.map((f) => f.id).join(", ")}
+          </summary>
+          <ul className="mt-2 space-y-1 text-soft">
+            {used.map((f) => (
+              <li key={f.id}>
+                <span className="font-serif font-bold text-accent">{f.id}</span> {f.text}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-faint">A pointer for your review, not proof that every sentence is right.</p>
+        </details>
+      )}
+
+      {kind === "message" && !locked && relationship && (
+        <div className="mt-4">
+          <Verdict result={checkMessage(text, relationship, { facts: ctxFacts.length ? ctxFacts : undefined })} compact />
+        </div>
+      )}
+
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <Button disabled={locked} onClick={() => copy(false)}>
+          {copied === "ok" ? "Copied" : "Copy"}
         </Button>
         {kind === "post" && (
-          <Button variant="ghost" disabled={left > 0} onClick={() => copy(true)}>
+          <Button variant="ghost" disabled={locked} onClick={() => copy(true)}>
             Copy and open LinkedIn
           </Button>
         )}
-        <span className="text-xs text-soft">
-          {left > 0
-            ? `Fill ${left} blank${left === 1 ? "" : "s"} to unlock copy. Only you know these facts.`
-            : kind !== "message" && (
-                <>
-                  Specificity hint:{" "}
-                  <strong className={spec.score >= 70 ? "text-good" : spec.score >= 45 ? "text-warn" : "text-bad"}>
-                    {spec.label}
-                  </strong>{" "}
-                  ({spec.numbers} numbers, {spec.names} names
-                  {spec.flagged.length > 0 && `, stock phrases: ${spec.flagged.join(", ")}`})
-                </>
-              )}
-        </span>
+        {onEdit && (left === 0 || edit) && !editing && (
+          <Button variant="quiet" onClick={() => setEditing(true)}>
+            Edit text
+          </Button>
+        )}
+        {editing && (
+          <Button
+            variant="quiet"
+            onClick={() => {
+              setEditing(false);
+              // Saving text identical to the generated draft isn't an edit.
+              if (edit && edit.text === filled && edit.base === draft.body) onEdit?.(null);
+            }}
+          >
+            Done editing
+          </Button>
+        )}
+        {edit && onEdit && (
+          <Button
+            variant="quiet"
+            onClick={() => {
+              onEdit(null);
+              setEditing(false);
+            }}
+          >
+            Reset to the draft
+          </Button>
+        )}
       </div>
-    </Card>
+      <p className="mt-2 text-[0.85rem] text-soft">
+        {copied === "blocked"
+          ? "This browser blocked copying here. Select the text above and copy it by hand."
+          : locked
+            ? edit
+              ? "Your edit still has a [[blank]]. Replace it, then you can copy."
+              : `Fill ${left} blank${left === 1 ? "" : "s"}, then you can copy. Only you know these facts.`
+            : kind === "post" || kind === "comment"
+              ? `Specificity hint: ${spec.label} (${spec.numbers} numbers, ${spec.names} names${spec.flagged.length ? `, stock phrases: ${spec.flagged.join(", ")}` : ""}). A rough hint, not a prediction of how it will do.`
+              : kind === "profile"
+                ? "Check every claim is true before you put it on your profile."
+                : "Check every claim is true before you send it."}
+      </p>
+    </article>
   );
 }

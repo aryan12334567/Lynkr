@@ -127,3 +127,23 @@ Also hardened (from the plan's security rules):
 
 Known limit, not fixed:
 - Per-visitor limits key on `x-forwarded-for`, which a client can set unless a hosting proxy overwrites it. The daily cap and the provider's spend limit are the real protection. Recheck on whatever host Lynkr is deployed to.
+
+## Job-page import (Apify enrichment plan)
+
+Date: 2026-10-17. Plan `docs/plans/2026-10-17-1516-feat-apify-allowed-source-enrichment-plan.md`.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Source policy (U1, A2) | Done | Unit tests: accepts single postings on job-boards.greenhouse.io, boards.greenhouse.io, jobs.lever.co, jobs.ashbyhq.com; rejects LinkedIn, lnkd.in, social and other job sites, http, credentials, ports, IPs, localhost, list pages, apply and embed paths, over-long URLs. Each allowlist entry carries review date, owner and robots.txt note. |
+| Workable | Left out | robots.txt allows postings, but pages are built by JavaScript, so a single-page fetch returns no posting text. Paste works instead. |
+| Safe extraction (A3) | Done | Hostile fixture with an email footer, phone number, named contact, LinkedIn link and an "ignore previous instructions" line: none reach the packet. Strict schema rejects extra fields such as raw HTML. |
+| Real layouts | 11 of 12 usable | 12 public postings (Greenhouse 4, Lever 2, Ashby 6) fetched directly to stand in for Apify, same extraction code: 11 gave a usable title and requirements, 1 (no lists on the page) returned a clear "paste instead" error, 0 contact-data leaks. One Greenhouse link redirected to the company's own site and was refused. Above the plan's 9 of 10 bar. |
+| Review gate and provenance (A4, A5) | Done | Browser test EN1 to EN4 and a live check on the Vercel preview: nothing is cited until "Use these requirements"; findings then name the imported page, domain and fetch date; items can be removed first. |
+| Privacy (A7, R8) | Done | The packet lives in memory only (not localStorage); the page is discarded on the server; the only log line is an aggregate (status, category, ms, domain), with no path, query or text. |
+| Token stays server-side (R11) | Done | Production build: no browser bundle contains the Apify host, the Actor id or any key name. Adapter tests check the token is only in the Authorization header. |
+| Demo mode (R12, A8) | Done | Demo returns the fictional fixture; adapter tests prove no key or kill switch means zero network calls. |
+| Limits and kill switch (R13) | Done | 5 imports per visitor per day, 100 per day overall, 60 s Actor timeout, 75 s request timeout, APIFY_ENABLED=0. Spend cap agreed at $5/month, to be set in the Apify console. |
+| Live Apify run | **Blocked** | The key in `.env.local` is rejected by Apify ("authentication token is not valid", 44 characters; Apify keys are normally longer). Median latency and cost per run are not measured yet. |
+| Deployed site | **Demo mode** | The Vercel preview has no AI or Apify variables set, and Deployment Protection requires a Vercel login. |
+
+Note: server code now logs two things only, both without user content: AI provider errors (status and the provider's error text, never the key) and the aggregate import line above.

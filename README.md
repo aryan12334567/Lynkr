@@ -43,10 +43,23 @@ LYNKR_BROWSER=msedge npm run test:e2e   # same, on Microsoft Edge
 ## Environment
 Copy `.env.example` to `.env.local` (never commit it) and fill in one option:
 
+- **OpenAI:** `OPENAI_API_KEY` and `LLM_MODEL` (default `gpt-5-mini`).
 - **Anthropic:** `ANTHROPIC_API_KEY` (model `claude-opus-5-5`, override with `LYNKR_MODEL`).
 - **Any OpenAI-compatible endpoint** (OpenRouter, a local server, etc.): `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`.
 
-With neither set, or `LYNKR_MOCK=1`, the app runs in demo mode: the whole flow works using the user's own answers and blanks, with no AI calls. Set a spend limit with your provider; the in-app limits (`LYNKR_DAILY_CAP`) are best-effort only.
+With no key set, or `LYNKR_MOCK=1`, the app runs in demo mode: the whole flow works using the user's own answers and blanks, with no AI calls. Set a spend limit with your provider; the in-app limits (`LYNKR_DAILY_CAP`) are best-effort only.
+
+On Vercel, add the same variables under Project, Settings, Environment Variables. `/api/status` shows whether the deployed site is in AI or demo mode.
+
+### Import a job posting (optional, Apify)
+Profile fix can read one public job posting from Greenhouse, Lever or Ashby and turn it into a short list of role requirements the user reviews before anything uses them. Plan: [`docs/plans/2026-10-17-1516-feat-apify-allowed-source-enrichment-plan.md`](docs/plans/2026-10-17-1516-feat-apify-allowed-source-enrichment-plan.md).
+
+- `APIFY_API_KEY` (or `APIFY_TOKEN`): server-only. Runs the fixed `apify/cheerio-scraper` configuration on exactly one page.
+- `APIFY_ENABLED=0`: kill switch. Turns the import off without removing the key; users get the paste box.
+- `APIFY_DAILY_CAP` (default 100) and `APIFY_PER_VISITOR_DAILY` (default 5): best-effort daily limits. Also set a monthly spend limit in the Apify console (agreed cap: $5/month).
+- Demo mode uses a built-in fictional page and makes no Apify call.
+
+What it will and won't do: the allowlist is code (`lib/sourcePolicy.ts`), not user input. LinkedIn, social sites, other job sites, private addresses and pages that redirect off the list are refused before or during the fetch. Names, emails, phone numbers, links and text addressed to an AI are removed. The page itself is never stored, logged, returned to the browser or sent to the AI; only the reviewed requirements are, and only after the user approves them. Pasting a job description always works as a fallback.
 
 ## Layout
 ```
@@ -56,6 +69,7 @@ app/api/generate    all drafts, from confirmed facts only
 app/api/connect     one-person note or message (contact decision first)
 app/api/comment     comment on a post the user pasted
 app/api/review      optional AI edits for the checker
+app/api/enrich      import one allowlisted job posting (Apify), returns reviewed-field packet only
 app/api/status      demo mode / provider / model
 app/api/plan        adjust the weekly plan by chat
 lib/                schemas, prompts, llm wrapper, mock engine, checker, store, limits, slots, specificity

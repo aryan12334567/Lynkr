@@ -29,12 +29,17 @@ test("checker: flags and exact spans", () => {
     assert.ok(bad.flags.some((f) => f.phrase === p), `missing flag ${p}`);
   }
   const f = bad.flags.find((x) => x.phrase === "kindly revert")!;
-  assert.equal(f.match, "kindly revert");
-  assert.equal("Hello sir, kindly revert urgently. Please refer me for any job.".slice(f.index!, f.index! + f.match!.length), "kindly revert");
+  // The flagged span is the whole "kindly revert ..." clause, located exactly in the text.
+  assert.equal(f.match, "kindly revert urgently.");
+  assert.equal("Hello sir, kindly revert urgently. Please refer me for any job.".slice(f.index!, f.index! + f.match!.length), f.match);
   // The smallest edit replaces only that span.
   const t2 = "Hi Asha, kindly revert. Thanks";
   const f2 = checkMessage(t2, "alumni").flags.find((x) => x.phrase === "kindly revert")!;
   assert.equal(applyFlag(t2, f2), "Hi Asha, would you be open to it? Thanks");
+  // A clause after "kindly revert" goes with it, and a sentence start is capitalised.
+  const t4 = "Hi Asha, I built a dashboard for 300 users. Kindly revert on any opening?";
+  const f4 = checkMessage(t4, "alumni").flags.find((x) => x.phrase === "kindly revert")!;
+  assert.equal(applyFlag(t4, f4), "Hi Asha, I built a dashboard for 300 users. Would you be open to it?");
   const t3 = "Hi Asha, I hope this message finds you well. I built a dashboard.";
   const f3 = checkMessage(t3, "alumni").flags.find((x) => x.phrase === "hope this finds you well")!;
   assert.equal(applyFlag(t3, f3), "Hi Asha, I built a dashboard.");

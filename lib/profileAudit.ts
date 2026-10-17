@@ -63,9 +63,12 @@ export function splitPasted(text: string): { headline: string; about: string } {
 }
 
 /** Terms from the role pack that appear in a pasted job description. */
+/** Role-pack words too general to be a skill gap on their own ("quality", "testing"). */
+const GENERIC_TERMS = new Set(["quality", "testing", "communication", "outreach", "analytics", "metrics", "experiments", "documentation", "campaigns", "project work", "industry research", "report writing", "statistics"]);
+
 export function jdTerms(jd: string): string[] {
   if (!jd.trim()) return [];
-  const all = [...new Set(ROLES.flatMap((r) => r.terms))];
+  const all = [...new Set(ROLES.flatMap((r) => r.terms))].filter((t) => !GENERIC_TERMS.has(t.toLowerCase()));
   return all.filter((t) => has(jd, t));
 }
 
@@ -294,7 +297,7 @@ export function auditProfile(input: AuditInput): ProfileFinding[] {
     add({
       section: "Skills",
       status: "consider",
-      observedSignal: `The job description asks for ${jdGaps.slice(0, 5).join(", ")}.`,
+      observedSignal: `${approved && !jobDescription.trim() ? "The job posting" : "The job description"} asks for ${jdGaps.slice(0, 5).join(", ")}.`,
       issue: "These aren't in your skills or your answers.",
       whyForThisGoal: "Treat them as things to learn. Don't list a skill until you've used it.",
       evidenceRefs: [jdSource],

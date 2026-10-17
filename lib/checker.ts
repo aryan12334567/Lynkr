@@ -51,7 +51,8 @@ export type CheckContext = {
 };
 
 const BAD_PHRASES: { re: RegExp; phrase: string; tip: string; severity: Severity; replacement?: string }[] = [
-  { re: /\bkindly revert\b/i, phrase: "kindly revert", tip: "Say what you want plainly.", severity: "fix", replacement: "would you be open to it?" },
+  // The whole "kindly revert ..." clause goes, so the fix never leaves "would you be open to it? on any opening?".
+  { re: /\bkindly revert\b[^.?!\n]*[.?!]?/i, phrase: "kindly revert", tip: "Say what you want plainly.", severity: "fix", replacement: "would you be open to it?" },
   { re: /\burgent(ly)?\b|\basap\b/i, phrase: "urgent / ASAP", tip: "Your deadline is not their problem. Remove it.", severity: "fix", replacement: "" },
   { re: /\bplease do the needful\b/i, phrase: "do the needful", tip: "Name the exact thing you are asking for.", severity: "fix", replacement: "[[the exact thing you are asking for]]" },
   { re: /\bi (deserve|am entitled)\b/i, phrase: "I deserve", tip: "Entitled phrasing reads badly. Show fit instead.", severity: "fix" },
@@ -193,7 +194,11 @@ export function checkMessage(text: string, rel: Relationship, ctx: CheckContext 
 export function applyFlag(text: string, f: Flag): string {
   if (f.match === undefined || f.index === undefined || f.replacement === undefined) return text;
   if (text.slice(f.index, f.index + f.match.length) !== f.match) return text;
-  return (text.slice(0, f.index) + f.replacement + text.slice(f.index + f.match.length))
+  // Capitalise the replacement when it starts a sentence.
+  const before = text.slice(0, f.index);
+  const startsSentence = /(^|[.?!]\s*|\n\s*)$/.test(before);
+  const rep = startsSentence && f.replacement ? f.replacement.charAt(0).toUpperCase() + f.replacement.slice(1) : f.replacement;
+  return (before + rep + text.slice(f.index + f.match.length))
     .replace(/[ \t]{2,}/g, " ")
     .replace(/ ([,.?!])/g, "$1")
     .replace(/([?!])\./g, "$1")

@@ -2,7 +2,11 @@
 
 A free "get-noticed" coach for Indian freshers and early-career job seekers, built on UpLinked's published stack and feature set, with some UpLinked features removed and new ones added, shaped by Reddit pain-point research.
 
-## Status (2026-10-16)
+## Status (2026-10-17)
+- **2026-10-17:** the four `prod/` plans are built (summary `research/prod-implementation.md`), plus a redesign (landing page, app shell, Today, tracker board, navigation with addresses and Back), real AI via OpenAI `gpt-5-mini` (checked locally on 5 fictional profiles; drafts get server-side guards and a "check this sentence" flag), and the job-page import from the Apify plan (Greenhouse, Lever, Ashby only; results in `research/validation-report.md`).
+- **Deployed as a Vercel preview** from branch `feat/continue-lynkr-release`, behind Vercel Deployment Protection and in demo mode (no AI or Apify variables set there). The Apify key in `.env.local` is rejected by Apify. Agreed Apify cap: $5/month, 100 runs/day, 5 per visitor per day.
+
+### Earlier status (2026-10-16)
 - **Direction approved by Aryan on 2026-10-16:** build on UpLinked's infrastructure, remove certain UpLinked features, add the features below. Aryan said "just build" (G3 go) on 2026-10-16.
 - **Phase 1 slice built and verified in demo (mock) mode, 2026-10-16:** Setup → interview (typing, mic where supported, skip, edit) → Story Vault, Profile fix, Outreach (with inline checker verdict), Posts & comments (copy locked until blanks are filled, specificity hint), Check a message. State persists in localStorage across reloads; "Clear everything" wipes it. Clicked through end to end in Chrome at desktop and 390px widths; `tsc`, `eslint` and `next build` clean. Screenshots in `docs/`.
 - Fixed during the test: the referral, hiring-manager and follow-up templates failed Lynkr's own checker (no ask / no polite out), so templates and prompt now require one yes/no ask plus an easy out; vault labels shifted after a skipped question; added a `target` vault kind for "who to reach".

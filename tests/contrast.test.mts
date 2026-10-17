@@ -19,6 +19,18 @@ const ratio = (a: string, b: string) => {
   return (x + 0.05) / (y + 0.05);
 };
 
+// The night palette the product renders in.
+const night = Object.fromEntries(
+  [...(css.match(/\.theme-night\s*\{([^}]*)\}/)?.[1] ?? "").matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi)].map((x) => [x[1], x[2]]),
+);
+
+test("night palette text reaches 4.5:1 on bg, surface and muted, and on buttons", () => {
+  for (const fg of ["ink", "soft", "faint", "accent", "good", "warn", "bad"]) {
+    for (const bg of ["bg", "surface", "muted"]) assert.ok(ratio(night[fg], night[bg]) >= 4.5, `night ${fg} on ${bg}`);
+  }
+  for (const btn of ["accent", "accent-strong", "ink"]) assert.ok(ratio(night.bg, night[btn]) >= 4.5, `night bg text on ${btn}`);
+});
+
 test("text colours reach 4.5:1 on bg, surface and muted in both themes", () => {
   assert.equal(themes.length, 2, "expected light and dark :root blocks");
   for (const [i, t] of themes.entries()) {

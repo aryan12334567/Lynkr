@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ArrowRight,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { InkThreads } from "./InkThreads";
 import { Wordmark } from "./chrome";
+import { useLandingMotion, useLenis, useMagnetic, useSpotlight } from "./motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -62,11 +63,12 @@ function HeroWindow() {
       aria-label="A sample Lynkr screen: a message with blanks the user fills in"
       role="img"
     >
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-lg">
+      <div className="pointer-events-none absolute -inset-x-10 -inset-y-8 -z-10 rounded-[3rem] bg-[radial-gradient(60%_60%_at_50%_40%,rgba(122,132,255,0.35),transparent_70%)] blur-2xl" aria-hidden />
+      <div className="edge overflow-hidden rounded-2xl border border-line bg-surface/90 shadow-lg backdrop-blur-xl">
         <div className="flex items-center gap-2 border-b border-line bg-muted/60 px-4 py-2.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-line" />
-          <span className="h-2.5 w-2.5 rounded-full bg-line" />
-          <span className="h-2.5 w-2.5 rounded-full bg-line" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#ff6b5e]/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-marigold/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
           <span className="mx-auto rounded-md bg-surface px-3 py-0.5 text-[0.75rem] text-faint">lynkr / outreach</span>
         </div>
         <div className="grid sm:grid-cols-[11rem_1fr]">
@@ -91,7 +93,7 @@ function HeroWindow() {
           </div>
           <div className="p-5 sm:p-7">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-serif text-[1.05rem] font-bold">First message to a stranger</p>
+              <p className="font-serif text-[1.15rem] font-medium">First message to a stranger</p>
               <span className="rounded-full border border-good/40 bg-good/10 px-2 py-0.5 text-[0.72rem] text-good">Good reason to contact</span>
             </div>
             <div className="sheet mt-4 text-[0.92rem] sm:text-[0.98rem]">
@@ -124,7 +126,7 @@ function HeroWindow() {
         initial={reduce ? false : { opacity: 0, x: -16 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.7, ease: EASE, delay: 0.9 }}
-        className="absolute -left-4 bottom-10 hidden w-60 rounded-xl border border-line bg-surface p-3 text-[0.78rem] shadow-md lg:block xl:-left-16"
+        className="edge absolute -left-4 bottom-10 hidden w-60 rounded-xl border border-line bg-surface/95 p-3 backdrop-blur-xl text-[0.78rem] shadow-md lg:block xl:-left-16"
       >
         <div className="flex items-center gap-2">
           <span className="font-serif font-bold text-accent">F1</span>
@@ -139,7 +141,7 @@ function HeroWindow() {
         initial={reduce ? false : { opacity: 0, x: 16 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.7, ease: EASE, delay: 1.2 }}
-        className="absolute -right-4 -top-12 hidden w-56 rounded-xl border border-line bg-surface p-3 text-[0.78rem] shadow-md lg:block xl:-right-14"
+        className="edge absolute -right-4 -top-12 hidden w-56 rounded-xl border border-line bg-surface/95 p-3 backdrop-blur-xl text-[0.78rem] shadow-md lg:block xl:-right-14"
       >
         <p className="flex items-center gap-1.5 font-medium">
           <ShieldCheck size={14} className="text-accent" aria-hidden /> Checked before you send
@@ -165,8 +167,8 @@ function HeroWindow() {
 function StepVisual({ n }: { n: number }) {
   if (n === 0)
     return (
-      <div className="h-full rounded-xl border border-line bg-surface p-4 shadow-sm">
-        <p className="font-serif text-[0.95rem] font-bold leading-snug">What did you personally do on that project?</p>
+      <div className="h-full edge rounded-xl border border-line bg-surface p-4 shadow-md">
+        <p className="font-serif text-[1.02rem] font-medium leading-snug">What did you personally do on that project?</p>
         <div className="mt-3 flex items-center gap-2">
           <div className="h-9 flex-1 rounded-md border border-line bg-bg px-3 py-2 text-[0.8rem] text-faint">I wrote the SQL myself…</div>
           <span className="grid h-9 w-9 place-items-center rounded-md border border-line text-soft">
@@ -177,7 +179,7 @@ function StepVisual({ n }: { n: number }) {
     );
   if (n === 1)
     return (
-      <div className="h-full space-y-2 rounded-xl border border-line bg-surface p-4 shadow-sm">
+      <div className="edge h-full space-y-2.5 rounded-xl border border-line bg-surface p-4 shadow-md">
         {[
           ["F1", "Built a sponsor dashboard", "Confirmed", "good"],
           ["F2", "Wrote the SQL myself", "Confirmed", "good"],
@@ -192,7 +194,7 @@ function StepVisual({ n }: { n: number }) {
       </div>
     );
   return (
-    <div className="h-full rounded-xl border border-line bg-surface p-4 shadow-sm">
+    <div className="edge h-full rounded-xl border border-line bg-surface p-4 shadow-md">
       <div className="sheet text-[0.8rem] leading-relaxed">
         Your point about <mark className="filled">metric definitions</mark> matches what I saw building our fest dashboard.
       </div>
@@ -213,11 +215,11 @@ const STEPS = [
 
 function Tile({ title, children, body, className = "" }: { title: string; body: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm ${className}`}>
-      <div className="flex-1 bg-gradient-to-b from-muted/70 to-surface p-5">{children}</div>
-      <div className="border-t border-line p-5">
-        <h3 className="text-[1.05rem] font-bold">{title}</h3>
-        <p className="mt-1 text-[0.92rem] text-soft">{body}</p>
+    <div data-reveal-item className={`spot edge group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface/80 transition-colors duration-500 hover:border-accent/40 ${className}`}>
+      <div className="flex-1 bg-[radial-gradient(120%_90%_at_50%_0%,rgba(122,132,255,0.10),transparent_60%)] p-5 transition-transform duration-700 ease-out group-hover:-translate-y-0.5 sm:p-6">{children}</div>
+      <div className="p-5 pt-0 sm:p-6 sm:pt-0">
+        <h3 className="text-[1.3rem]">{title}</h3>
+        <p className="mt-1.5 text-[0.95rem] text-soft">{body}</p>
       </div>
     </div>
   );
@@ -239,9 +241,11 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   const reduce = useReducedMotion();
   return (
     <div className="border-b border-line">
-      <button className="flex w-full items-center justify-between gap-4 py-5 text-left text-[1.05rem] font-medium" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <button className="flex w-full items-center justify-between gap-4 py-5 text-left text-[1.05rem] font-medium transition-colors hover:text-accent-strong" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         {q}
-        <ChevronDown size={18} className={`shrink-0 text-soft transition-transform duration-300 ${open ? "rotate-180" : ""}`} aria-hidden />
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line transition-all duration-300 ${open ? "rotate-180 border-accent/50 text-accent" : "text-soft"}`}>
+          <ChevronDown size={16} aria-hidden />
+        </span>
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -262,6 +266,17 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 /* ---------- Page ---------- */
 
+const PROMISES = ["No LinkedIn login", "No profile scraping", "Nothing posted for you", "Only facts you confirmed", "Blanks, never guesses", "Free for freshers", "Works on your phone"];
+
+const STATS = [
+  ["7", "tools, one Story Vault"],
+  ["200", "characters, the most a connection note gets"],
+  ["0", "passwords asked, ever"],
+];
+
+const EYEBROW = "text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-marigold";
+const H2 = "text-[2.3rem] leading-[1.05] sm:text-[3.4rem]";
+
 export function Landing({
   onStart,
   onCheck,
@@ -274,108 +289,175 @@ export function Landing({
   /** Saved progress in this browser: "drafts" if drafts exist, "flow" if partway through. */
   resume?: "drafts" | "flow" | null;
 }) {
+  const root = useRef<HTMLDivElement>(null);
+  const magnet = useRef<HTMLDivElement>(null);
+  useLenis();
+  useLandingMotion(root);
+  useSpotlight(root);
+  useMagnetic(magnet, 0.2);
+
   const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : "Start free";
   const cta = (label = primary) => (
-    <button onClick={onStart} className="inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-6 text-[1rem] font-medium text-bg shadow-md transition-colors hover:bg-accent-strong">
-      {label} <ArrowRight size={17} aria-hidden />
+    <button
+      onClick={onStart}
+      className="group inline-flex min-h-12 items-center gap-2 rounded-full bg-ink px-6 text-[1rem] font-semibold text-bg shadow-[0_10px_40px_-10px_rgba(170,179,255,0.55)] transition-[box-shadow,background-color] duration-300 hover:bg-white hover:shadow-[0_14px_50px_-8px_rgba(170,179,255,0.75)]"
+    >
+      {label} <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
     </button>
   );
 
   return (
-    <div className="w-full">
-      <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/80 backdrop-blur-md">
+    <div ref={root} className="theme-night grain w-full">
+      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-bg/70 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6" aria-label="Main">
-          <Wordmark className="text-[1.45rem]" />
-          <div className="ml-auto hidden items-center gap-6 text-[0.95rem] text-soft md:flex">
-            <a href="#how" className="hover:text-ink">
-              How it works
-            </a>
-            <a href="#features" className="hover:text-ink">
-              What you get
-            </a>
-            <a href="#never" className="hover:text-ink">
-              Privacy
-            </a>
-            <a href="#faq" className="hover:text-ink">
-              Questions
-            </a>
+          <Wordmark className="text-[1.5rem] !font-semibold" />
+          <div className="ml-auto hidden items-center gap-7 text-[0.92rem] text-soft md:flex">
+            {[
+              ["#how", "How it works"],
+              ["#features", "What you get"],
+              ["#never", "Privacy"],
+              ["#faq", "Questions"],
+            ].map(([href, label]) => (
+              <a
+                key={href}
+                href={href}
+                className="relative transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:text-ink hover:after:scale-x-100"
+              >
+                {label}
+              </a>
+            ))}
           </div>
-          <button onClick={onStart} className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-[0.9rem] font-medium text-bg md:ml-0">
+          <button
+            onClick={onStart}
+            className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-4 text-[0.9rem] font-medium text-ink transition-colors hover:bg-white/[0.12] md:ml-0"
+          >
             {resume ? (resume === "drafts" ? "My drafts" : "Continue") : "Start free"} <ArrowRight size={15} aria-hidden />
           </button>
         </nav>
       </header>
 
       <main id="main">
-        <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pt-24">
-          <div className="paper-grid pointer-events-none absolute inset-0" aria-hidden />
-          <InkThreads
-            dark={false}
-            className="pointer-events-none absolute -top-24 left-1/2 h-[52rem] w-[110rem] -translate-x-1/2 opacity-50 [mask-image:linear-gradient(to_bottom,#000_45%,transparent_92%)] dark:hidden"
-          />
-          <InkThreads className="pointer-events-none absolute -top-24 left-1/2 hidden h-[52rem] w-[110rem] -translate-x-1/2 opacity-60 [mask-image:linear-gradient(to_bottom,#000_40%,transparent_90%)] dark:block" />
-          <div className="relative mx-auto max-w-3xl text-center">
-            <p className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 text-[0.85rem] text-soft shadow-sm">
+        {/* Hero */}
+        <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 sm:pb-24 sm:pt-24">
+          <div className="pointer-events-none absolute inset-0" aria-hidden>
+            <div data-parallax="0.25" className="absolute left-1/2 top-[-18rem] h-[44rem] w-[70rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(99,110,255,0.42),transparent)] blur-3xl" />
+            <div className="absolute right-[-10rem] top-[12rem] h-[26rem] w-[26rem] rounded-full bg-[radial-gradient(closest-side,rgba(242,178,51,0.14),transparent)] blur-3xl" />
+            <div className="paper-grid absolute inset-0" />
+          </div>
+          <InkThreads className="pointer-events-none absolute -top-24 left-1/2 h-[52rem] w-[110rem] -translate-x-1/2 opacity-50 [mask-image:linear-gradient(to_bottom,#000_40%,transparent_90%)]" />
+          <div className="relative mx-auto max-w-4xl text-center">
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EASE }}
+              className="edge inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.82rem] text-soft backdrop-blur"
+            >
               <Sparkles size={14} className="text-marigold" aria-hidden /> Free for freshers and early-career job seekers in India
-            </p>
-            <h1 className="mt-6 text-[2.6rem] font-extrabold leading-[1.06] tracking-tight sm:text-[4rem]">Write to one person. Sound like you.</h1>
-            <p className="mx-auto mt-6 max-w-[56ch] text-[1.1rem] text-soft">
+            </motion.p>
+            <h1 data-split="load" className="mt-7 text-[3rem] font-normal leading-[1] tracking-[-0.035em] sm:text-[5.4rem]">
+              Write to one person. <br className="hidden sm:block" />
+              Sound like <span className="ink-accent">you.</span>
+            </h1>
+            <motion.p
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: EASE, delay: 0.55 }}
+              className="mx-auto mt-7 max-w-[54ch] text-[1.05rem] leading-relaxed text-soft sm:text-[1.15rem]"
+            >
               Lynkr interviews you about one real piece of work, keeps the facts in your Story Vault, and drafts your LinkedIn profile, messages
               and posts from them. Anything it doesn&apos;t know stays a blank only you can fill.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              {cta()}
-              <button onClick={onCheck} className="inline-flex min-h-12 items-center gap-2 rounded-full border border-line bg-surface px-5 text-[1rem] font-medium shadow-sm hover:border-accent/50">
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, ease: EASE, delay: 0.7 }}
+              className="mt-9 flex flex-wrap items-center justify-center gap-3"
+            >
+              <div ref={magnet}>{cta()}</div>
+              <button
+                onClick={onCheck}
+                className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 text-[1rem] font-medium backdrop-blur transition-colors hover:border-accent/50 hover:bg-white/[0.08]"
+              >
                 <BadgeCheck size={17} className="text-accent" aria-hidden /> Check a message
               </button>
-            </div>
+            </motion.div>
             <p className="mt-4 text-[0.85rem] text-faint">No sign-up. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
           </div>
-          <div className="relative mt-16">
+          <div data-tilt className="relative mt-14 sm:mt-20">
             <HeroWindow />
           </div>
         </section>
 
-        <section id="how" className="scroll-mt-20 px-4 py-24 sm:px-6">
+        {/* Promise ticker */}
+        <div
+          className="ticker-wrap relative overflow-hidden border-y border-white/[0.06] bg-white/[0.02] py-4 [mask-image:linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]"
+          role="region"
+          aria-label="What Lynkr promises"
+        >
+          <div className="ticker flex w-max gap-10 whitespace-nowrap text-[0.95rem] text-soft">
+            {[...PROMISES, ...PROMISES].map((p, i) => (
+              <span key={i} className="inline-flex items-center gap-10" aria-hidden={i >= PROMISES.length}>
+                {p}
+                <span className="h-1 w-1 rounded-full bg-marigold" />
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* How it works */}
+        <section id="how" className="relative scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto max-w-6xl">
-            <h2 className="max-w-[22ch] text-[2rem] font-extrabold leading-tight sm:text-[2.6rem]">Three steps from one story to a message you&apos;d actually send.</h2>
-            <ol className="mt-12 grid gap-10 md:grid-cols-3">
-              {STEPS.map(([t, d], i) => (
-                <li key={t}>
-                  <div className="h-48">
-                    <StepVisual n={i} />
-                  </div>
-                  <div className="mt-6 flex items-baseline gap-3">
-                    <span className="font-serif text-[1.6rem] font-extrabold leading-none text-accent">{i + 1}</span>
-                    <h3 className="text-[1.15rem] font-bold">{t}</h3>
-                  </div>
-                  <p className="mt-2 max-w-[42ch] text-soft">{d}</p>
-                </li>
-              ))}
-            </ol>
+            <p className={EYEBROW}>How it works</p>
+            <h2 data-split className={`mt-4 max-w-[20ch] ${H2}`}>
+              Three steps from one story to a message you&apos;d <span className="ink-accent">actually send.</span>
+            </h2>
+            <div className="relative mt-14">
+              <ol data-reveal className="grid gap-12 md:grid-cols-3 md:gap-8">
+                {STEPS.map(([t, d], i) => (
+                  <li key={t} data-reveal-item>
+                    <div className="md:h-48">
+                      <StepVisual n={i} />
+                    </div>
+                    <div className="mt-8 flex items-center gap-3">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-accent/40 bg-bg font-serif text-[1.05rem] text-accent shadow-[0_0_24px_-4px_rgba(170,179,255,0.6)]">
+                        {i + 1}
+                      </span>
+                      <h3 className="text-[1.4rem]">{t}</h3>
+                    </div>
+                    <p className="mt-3 max-w-[40ch] text-soft">{d}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </section>
 
-        <section id="features" className="scroll-mt-20 bg-surface px-4 py-24 sm:px-6">
+        {/* Features */}
+        <section id="features" className="relative scroll-mt-20 px-4 pb-20 sm:px-6 sm:pb-28">
           <div className="mx-auto max-w-6xl">
-            <div className="max-w-2xl">
-              <h2 className="text-[2rem] font-extrabold leading-tight sm:text-[2.6rem]">Everything a fresher needs to get noticed, nothing that fakes it.</h2>
-              <p className="mt-4 text-[1.05rem] text-soft">Seven tools, one Story Vault. Every draft points back to the facts it used.</p>
+            <div className="grid items-end gap-6 md:grid-cols-[1.4fr_1fr]">
+              <div>
+                <p className={EYEBROW}>What you get</p>
+                <h2 data-split className={`mt-4 ${H2}`}>
+                  Everything a fresher needs to get noticed, <span className="ink-accent">nothing that fakes it.</span>
+                </h2>
+              </div>
+              <p className="text-[1.05rem] text-soft md:pb-2">Seven tools, one Story Vault. Every draft points back to the facts it used.</p>
             </div>
-            <div className="mt-12 grid gap-4 md:grid-cols-6">
+            <div data-reveal className="mt-12 grid gap-4 md:grid-cols-6">
               <Tile className="md:col-span-4" title="Profile fix" body="Your headline, About and every section checked against the role you want. Top three fixes first, each with what it's based on.">
-                <div className="rounded-xl border border-line bg-surface p-4 text-[0.82rem] shadow-sm">
+                <div className="rounded-xl border border-line bg-bg/60 p-4 text-[0.85rem]">
                   <div className="flex items-center gap-2">
-                    <span className="font-serif text-[1rem] font-extrabold text-accent">1.</span>
-                    <span className="font-bold">Headline</span>
-                    <span className="rounded-full border border-bad/40 bg-bad/10 px-2 py-0.5 text-bad">Fix first</span>
+                    <span className="font-serif text-[1.05rem] text-accent">1.</span>
+                    <span className="font-semibold">Headline</span>
+                    <span className="rounded-full border border-bad/40 bg-bad/10 px-2 py-0.5 text-[0.75rem] text-bad">Fix first</span>
                   </div>
-                  <p className="mt-2 text-soft line-through decoration-bad/50">Commerce student | Hardworking</p>
-                  <p className="mt-1 font-serif">Data analyst | Power BI dashboard tracking 40 sponsors | SQL</p>
+                  <p className="mt-2 text-soft line-through decoration-bad/60">Commerce student | Hardworking</p>
+                  <p className="mt-1 font-serif text-[1.02rem]">Data analyst | Power BI dashboard tracking 40 sponsors | SQL</p>
                 </div>
               </Tile>
               <Tile className="md:col-span-2" title="Message checker" body="Marks the exact words to change and fixes them in one click.">
-                <div className="sheet text-[0.8rem] leading-relaxed">
+                <div className="sheet text-[0.85rem] leading-relaxed">
                   Hello <mark className="blank">sir</mark>, <mark className="blank">kindly revert</mark> on the analyst role.
                 </div>
               </Tile>
@@ -388,8 +470,8 @@ export function Landing({
               <Tile className="md:col-span-2" title="This week" body="Three messages, two comments, one post on a Monday to Friday plan, with calendar reminders.">
                 <div className="grid grid-cols-5 gap-1.5 text-[0.7rem]">
                   {["Mon", "Tue", "Wed", "Thu", "Fri"].map((d, i) => (
-                    <div key={d} className="rounded-md border border-line bg-surface p-1.5">
-                      <p className="font-serif font-bold">{d}</p>
+                    <div key={d} className="rounded-md border border-line bg-bg/60 p-1.5">
+                      <p className="font-serif">{d}</p>
                       <span className={`mt-1 block h-1.5 rounded-full ${i === 1 ? "bg-marigold" : "bg-accent/60"}`} />
                       {i % 2 === 0 && <span className="mt-1 block h-1.5 rounded-full bg-accent/25" />}
                     </div>
@@ -397,21 +479,35 @@ export function Landing({
                 </div>
               </Tile>
               <Tile className="md:col-span-2" title="Comment helper" body="Paste a post you found, add your own point, get one comment. Or a clear &quot;skip this one&quot;.">
-                <div className="rounded-lg border-l-2 border-accent/50 bg-surface px-3 py-2 text-[0.8rem] text-soft">&quot;Most dashboards fail because nobody agrees on the metric definitions.&quot;</div>
+                <div className="rounded-lg border-l-2 border-accent/50 bg-bg/60 px-3 py-2 text-[0.82rem] text-soft">&quot;Most dashboards fail because nobody agrees on the metric definitions.&quot;</div>
                 <div className="mt-2 flex items-center gap-1.5 text-[0.78rem] text-good">
                   <MessageSquareText size={13} aria-hidden /> 41 words, uses your fact F1
                 </div>
               </Tile>
             </div>
+
+            <dl data-reveal className="mt-14 grid grid-cols-3 gap-px overflow-hidden rounded-2xl border border-line bg-line">
+              {STATS.map(([n, label]) => (
+                <div key={label} data-reveal-item className="flex flex-col-reverse justify-end bg-bg px-3 py-5 sm:px-6 sm:py-7">
+                  <dt className="mt-2 text-[0.78rem] leading-snug text-soft sm:text-[0.92rem]">{label}</dt>
+                  <dd className="font-serif text-[2.2rem] leading-none tracking-tight text-ink sm:text-[3rem]">{n}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </section>
 
-        <section id="never" className="relative scroll-mt-20 overflow-hidden bg-night px-4 py-28 text-[#eceef9] sm:px-6">
-          <InkThreads className="pointer-events-none absolute inset-0 h-full w-full opacity-90" />
+        {/* Never */}
+        <section id="never" className="relative scroll-mt-20 overflow-hidden border-y border-white/[0.06] bg-night-2/60 px-4 py-20 sm:px-6 sm:py-28">
+          <InkThreads className="pointer-events-none absolute inset-0 h-full w-full opacity-70" />
+          <div className="pointer-events-none absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-marigold/50 to-transparent" aria-hidden />
           <div className="relative mx-auto max-w-6xl">
-            <h2 className="max-w-[18ch] text-[2rem] font-extrabold leading-tight sm:text-[2.8rem]">Some things Lynkr will never do.</h2>
-            <p className="mt-4 max-w-[52ch] text-[1.05rem] text-[#b8bcd6]">It drafts. You decide what&apos;s true and what gets sent.</p>
-            <ul className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2">
+            <p className={EYEBROW}>Privacy</p>
+            <h2 data-split className={`mt-4 max-w-[18ch] ${H2}`}>
+              Some things Lynkr will <span className="ink-accent">never do.</span>
+            </h2>
+            <p className="mt-5 max-w-[52ch] text-[1.05rem] text-soft">It drafts. You decide what&apos;s true and what gets sent.</p>
+            <ul data-reveal className="mt-12 grid gap-4 sm:grid-cols-2">
               {[
                 [Lock, "Ask for your LinkedIn login", "No password, no cookies, no connected account. Ever."],
                 [EyeOff, "Scrape profiles or name strangers", "It suggests kinds of people to look for. You find and choose them."],
@@ -420,10 +516,12 @@ export function Landing({
               ].map(([Icon, t, d]) => {
                 const I = Icon as typeof Lock;
                 return (
-                  <li key={t as string} className="bg-night-2/80 p-7 backdrop-blur-sm">
-                    <I size={22} className="text-marigold" aria-hidden />
-                    <p className="mt-4 text-[1.1rem] font-medium">{t as string}</p>
-                    <p className="mt-1 text-[0.95rem] text-[#b8bcd6]">{d as string}</p>
+                  <li key={t as string} data-reveal-item className="spot edge rounded-2xl border border-line bg-bg/60 p-6 backdrop-blur-sm sm:p-7">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-marigold/30 bg-marigold/10">
+                      <I size={20} className="text-marigold" aria-hidden />
+                    </span>
+                    <p className="mt-5 font-serif text-[1.3rem]">{t as string}</p>
+                    <p className="mt-1.5 text-[0.95rem] text-soft">{d as string}</p>
                   </li>
                 );
               })}
@@ -431,9 +529,15 @@ export function Landing({
           </div>
         </section>
 
-        <section id="faq" className="scroll-mt-20 px-4 py-24 sm:px-6">
+        {/* FAQ */}
+        <section id="faq" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1fr_1.4fr]">
-            <h2 className="text-[2rem] font-extrabold leading-tight sm:text-[2.6rem]">Questions people ask first.</h2>
+            <div>
+              <p className={EYEBROW}>Questions</p>
+              <h2 data-split className={`mt-4 ${H2}`}>
+                Questions people <span className="ink-accent">ask first.</span>
+              </h2>
+            </div>
             <div className="border-t border-line">
               {FAQ.map(([q, a]) => (
                 <FaqItem key={q} q={q} a={a} />
@@ -442,28 +546,32 @@ export function Landing({
           </div>
         </section>
 
-        <section className="px-4 pb-24 sm:px-6">
-          <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-line bg-surface px-6 py-16 text-center shadow-md sm:px-12">
-            <InkThreads dark={false} className="pointer-events-none absolute inset-0 h-full w-full opacity-60 dark:hidden" />
-            <InkThreads className="pointer-events-none absolute inset-0 hidden h-full w-full opacity-50 dark:block" />
+        {/* Final call to action */}
+        <section className="px-4 pb-20 sm:px-6 sm:pb-28">
+          <div data-reveal className="edge relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-line bg-surface px-6 py-16 text-center sm:px-12 sm:py-24">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_100%,rgba(99,110,255,0.4),transparent_70%)]" aria-hidden />
+            <div className="pointer-events-none absolute left-1/2 top-[60%] h-[20rem] w-[20rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(242,178,51,0.18),transparent)] blur-2xl" aria-hidden />
+            <InkThreads className="pointer-events-none absolute inset-0 h-full w-full opacity-60" />
             <div className="relative">
-              <h2 className="mx-auto max-w-[20ch] text-[2rem] font-extrabold leading-tight sm:text-[2.6rem]">Start with one thing you actually did.</h2>
-              <p className="mx-auto mt-4 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install, nothing to sign up for.</p>
-              <div className="mt-8 flex justify-center">{cta(resume ? primary : "Start the interview")}</div>
+              <h2 data-split className="mx-auto max-w-[18ch] text-[2.3rem] leading-[1.05] sm:text-[3.8rem]">
+                Start with one thing you <span className="ink-accent">actually did.</span>
+              </h2>
+              <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install, nothing to sign up for.</p>
+              <div className="mt-9 flex justify-center">{cta(resume ? primary : "Start the interview")}</div>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-line px-4 py-10 sm:px-6">
+      <footer className="border-t border-white/[0.06] px-4 py-10 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6">
           <div>
-            <Wordmark className="text-[1.3rem]" />
+            <Wordmark className="text-[1.35rem] !font-semibold" />
             <p className="mt-2 max-w-[48ch] text-[0.88rem] text-faint">
               A free LinkedIn coach for Indian freshers. Not affiliated with LinkedIn. Your data stays in your browser.
             </p>
           </div>
-          <button onClick={onCheck} className="text-[0.9rem] text-soft hover:text-ink">
+          <button onClick={onCheck} className="text-[0.9rem] text-soft transition-colors hover:text-ink">
             Check a message without signing up
           </button>
         </div>

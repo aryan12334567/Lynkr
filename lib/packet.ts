@@ -138,9 +138,11 @@ function clip(s: string, n: number): string {
   return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
 }
 
+/** The user's ask as its own sentence: capitalised, ending in a question mark. */
 const asQuestion = (s: string) => {
   const t = s.trim().replace(/[.!\s]+$/, "");
-  return t.endsWith("?") ? t : `${t}?`;
+  const q = t.endsWith("?") ? t : `${t}?`;
+  return q.charAt(0).toUpperCase() + q.slice(1);
 };
 
 function bridgeSentence(p: Packet): string {

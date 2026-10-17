@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CommentReply, ProfileInput, StoryFact } from "@/lib/schemas";
 import { COMMENT_MAX_WORDS, COMMENT_MIN_WORDS, wordCount } from "@/lib/comment";
 import { postJson } from "@/lib/store";
+import { unsupportedSentences } from "@/lib/grounding";
 import { copyText } from "./DraftCard";
 import { Button, Card, ErrorNote, Label, Pill, inputCls } from "./ui";
 
@@ -63,6 +64,8 @@ export function CommentHelper({
   }
 
   const n = wordCount(text);
+  // Sentences in the AI's comment that don't come from what the user gave. The excerpt is in memory only.
+  const unsupported = reply?.status === "draft" && !mock ? unsupportedSentences(reply.body, [perspective, excerpt, ...chosen.map((f) => f.text)]) : [];
   const used = reply ? confirmed.filter((f) => reply.factRefs.includes(f.id)) : [];
 
   return (
@@ -140,6 +143,18 @@ export function CommentHelper({
               </label>
               <textarea id="comment-text" className="sheet w-full min-h-32 resize-y" value={text} onChange={(e) => setText(e.target.value)} />
               <p className="text-[0.88rem] text-soft">{reply.whyItFits}</p>
+              {unsupported.length > 0 && (
+                <div className="rounded-lg border border-warn/30 bg-warn/5 p-3 text-[0.88rem]" data-unsupported>
+                  <p className="font-medium text-warn">
+                    Check {unsupported.length === 1 ? "this sentence" : `these ${unsupported.length} sentences`}: not clearly from your thought, your facts or the post
+                  </p>
+                  <ul className="mt-1.5 space-y-1 text-soft">
+                    {unsupported.map((s) => (
+                      <li key={s}>&quot;{s}&quot;</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {used.length > 0 && <p className="text-[0.85rem] text-faint">Uses {used.map((f) => `${f.id}: ${f.text.slice(0, 50)}`).join("; ")}</p>}
               <div className="flex flex-wrap items-center gap-3">
                 <Button

@@ -13,9 +13,11 @@ Phase 1 works end to end in demo mode (no AI key): setup, interview, Story Vault
 
 **This week:** your weekly actions (default 3 messages, 2 comments, 1 post) on a Mon–Fri calendar in IST, each linked to one of your drafts and tagged by type. Move items through Draft → Scheduled → Posted/Sent, change the plan by typing ("2 posts, no comments", "posts at 8am"), get reminders via `.ics`, Google Calendar or an in-tab notification, and see when a follow-up is due. Nothing is posted for you. Spec, evidence and test results are in `research/`.
 
-| Story Vault | Copy stays locked until you fill the blanks | Message checker |
+**Prod plans (October 2026):** a reviewable Story Vault (no draft uses a fact you haven't confirmed), an evidence-first interview, full-text draft editing, a comment helper for posts you found, checker v2 (contact decision first, channel limits, exact-span edits), a one-person relevance packet, a funnel tracker with honest denominators, a role-specific profile diagnosis, and an in-browser LinkedIn export import. Details and what's still open: [`research/prod-implementation.md`](research/prod-implementation.md).
+
+| Check your facts | Posts and the comment helper | Message checker |
 |---|---|---|
-| ![Story Vault](docs/vault.png) | ![Posts](docs/posts.png) | ![Checker](docs/checker.png) |
+| ![Review facts](docs/review.png) | ![Posts](docs/posts.png) | ![Checker](docs/checker.png) |
 
 | This week | Month view |
 |---|---|
@@ -49,7 +51,11 @@ With neither set, or `LYNKR_MOCK=1`, the app runs in demo mode: the whole flow w
 ## Layout
 ```
 app/api/interview   next interview question
-app/api/generate    all drafts
+app/api/vault       candidate Story Vault facts for review
+app/api/generate    all drafts, from confirmed facts only
+app/api/connect     one-person note or message (contact decision first)
+app/api/comment     comment on a post the user pasted
+app/api/review      optional AI edits for the checker
 app/api/status      demo mode / provider / model
 app/api/plan        adjust the weekly plan by chat
 lib/                schemas, prompts, llm wrapper, mock engine, checker, store, limits, slots, specificity

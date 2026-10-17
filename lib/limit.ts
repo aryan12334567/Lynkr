@@ -1,6 +1,6 @@
 /**
  * Best-effort in-memory limits. They protect the API budget on a single
- * server instance; the real cap is the spend limit set in the Anthropic console.
+ * server instance; the real caps are the spend limits set with each provider.
  */
 type Bucket = { count: number; reset: number };
 const buckets = new Map<string, Bucket>();
@@ -24,10 +24,20 @@ export function clientIp(req: Request): string {
   return (fwd ? fwd.split(",")[0].trim() : req.headers.get("x-real-ip")) || "unknown";
 }
 
-export type LimitKind = "interview" | "generate";
+export type LimitKind = "interview" | "generate" | "enrich";
 
 /** Returns an error message if the request should be refused, else null. */
 export function checkLimits(req: Request, kind: LimitKind): string | null {
+  if (kind === "enrich") {
+    // Job-page imports cost money per run: 5 per visitor per day, and a daily total (APIFY_DAILY_CAP, default 100).
+    if (!hit(`ip:enrich:${clientIp(req)}`, Number(process.env.APIFY_PER_VISITOR_DAILY) || 5, DAY)) {
+      return "You've imported a lot of pages today. Paste the job description instead.";
+    }
+    if (!hit("global:enrich:day", Number(process.env.APIFY_DAILY_CAP) || 100, DAY)) {
+      return "Today's import limit is used up. Paste the job description instead.";
+    }
+    return null;
+  }
   const perHour = kind === "interview" ? 40 : 6;
   const dailyCap = Number(process.env.LYNKR_DAILY_CAP) || 400;
   if (!hit(`ip:${kind}:${clientIp(req)}`, perHour, HOUR)) {

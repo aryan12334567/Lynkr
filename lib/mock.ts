@@ -1,145 +1,253 @@
-import type { GenerateReply, InterviewReply, ProfileInput, Turn, VaultItem } from "./schemas";
-import { mockLookFor } from "./connect";
+import type { CommentReply, FactRef, GenerateReply, InterviewReply, ProfileInput, Turn, VaultReply } from "./schemas";
+import { AUDIENCE_LABEL } from "./roles";
+import { whoLine } from "./packet";
 
 /**
- * Mock engine: runs the full flow with no API key. It only rearranges what the
+ * Demo engine: runs the whole flow with no API key. It only rearranges what the
  * person typed and leaves blanks for everything else, so it never invents facts.
+ * Interview design: prod/lynkr-posts-comments-intelligence-execution-plan.md §3.1.
  */
-const QUESTIONS: { q: string; why: string }[] = [
-  {
-    q: "What is one thing you built, wrote or organised that you are proud of? Describe exactly what you did.",
-    why: "Recruiters remember things you did, not adjectives.",
-  },
-  {
-    q: "What number goes with it? Users, hours saved, marks, rupees, people reached, anything countable.",
-    why: "A single real number makes a post feel true.",
-  },
-  {
-    q: "Which part of the target role does that work prove you can do?",
-    why: "This links your proof to the job you want.",
-  },
-  {
-    q: "Tell me about one time something went wrong. What did you change afterwards?",
-    why: "Specific setbacks read as honest, not performed.",
-  },
-  {
-    q: "What is hard or unusual about your background, such as college tier, no internship or a switch of field?",
-    why: "We write around it instead of hiding it.",
-  },
-  {
-    q: "Name two or three companies or kinds of people you most want to reach.",
-    why: "So the outreach message can be aimed, not generic.",
-  },
-];
+export const SKIPPED = "(skipped)";
 
-export function mockInterview(turns: Turn[]): InterviewReply {
-  if (turns.length >= QUESTIONS.length) return { done: true, question: "", why: "" };
-  const n = QUESTIONS[turns.length];
-  return { done: false, question: n.q, why: n.why };
+type Key = "project" | "contribution" | "challenge" | "evidence" | "evidence_more" | "learning" | "setback" | "observation" | "reach";
+
+function questions(role: string): Record<Key, { q: string; why: string }> {
+  return {
+    project: {
+      q: `Choose one project or task related to ${role} work. What was it, and what did you personally do?`,
+      why: "One real example is enough. Everything else builds on it.",
+    },
+    contribution: { q: "Which part did you handle yourself?", why: "So the drafts say what you did, not what the team did." },
+    challenge: { q: "What was difficult or uncertain about it? What choice did you make?", why: "A real decision shows how you think." },
+    evidence: {
+      q: "What changed because of your work? If you didn't measure a result, what proof or artifact can you point to? \"Not measured\" is a fine answer.",
+      why: "Proof can be a number, a link, a report or a demo. Never made up.",
+    },
+    evidence_more: { q: "What changed, or what artifact could someone inspect?", why: "One concrete detail makes the post believable." },
+    learning: { q: `What did you learn, notice or question? Why might someone in ${role} care?`, why: "This is the useful point of a post." },
+    setback: { q: "Optional: what went wrong at some point, and what did you change afterwards?", why: "Skip it if nothing comes to mind. We won't invent one." },
+    observation: { q: "Optional: what have you personally noticed about this field? Where did you see it?", why: "Only something you saw yourself. Skip if you have nothing first-hand." },
+    reach: { q: "Who do you most want to reach? Kinds of people or companies. No names needed.", why: "So outreach and search suggestions fit your goal." },
+  };
 }
 
+const ORDER: Key[] = ["project", "challenge", "evidence", "learning", "setback", "observation", "reach"];
+const MAX_FOLLOW_UPS = 2;
+
+/** Which demo question each turn answered (by exact question text). Unknown questions return null. */
+export function turnKeys(profile: ProfileInput, turns: Turn[]): (Key | null)[] {
+  const qs = questions(profile.targetRole);
+  const byText = new Map(Object.entries(qs).map(([k, v]) => [v.q, k as Key]));
+  return turns.map((t) => byText.get(t.q) ?? null);
+}
+
+const answered = (a: string | undefined) => !!a && a !== SKIPPED;
+const needsContribution = (a: string) => /\b(we|our|team)\b/i.test(a) && !/\bI\b|\bmy\b|\bmyself\b/.test(a);
+const needsEvidence = (a: string) => !/\d/.test(a) && !/not measured|didn'?t measure|no (result|number)|link|github|report|demo|dashboard|deck|repo|screenshot|video|published|deployed|live/i.test(a);
+
+export function mockInterview(profile: ProfileInput, turns: Turn[]): InterviewReply {
+  const qs = questions(profile.targetRole);
+  const keys = turnKeys(profile, turns);
+  const answerOf = (k: Key) => turns[keys.indexOf(k)]?.a;
+  const asked = (k: Key) => keys.includes(k);
+  const followUps = keys.filter((k) => k === "contribution" || k === "evidence_more").length;
+  const ask = (k: Key): InterviewReply => ({ done: false, question: qs[k].q, why: qs[k].why });
+
+  for (const k of ORDER) {
+    if (!asked(k)) return ask(k);
+    const a = answerOf(k);
+    if (k === "project" && answered(a) && !asked("contribution") && followUps < MAX_FOLLOW_UPS && needsContribution(a!)) return ask("contribution");
+    if (k === "evidence" && answered(a) && !asked("evidence_more") && followUps < MAX_FOLLOW_UPS && needsEvidence(a!)) return ask("evidence_more");
+  }
+  return { done: true, question: "", why: "" };
+}
+
+/** Shorten at a word boundary so a clipped fact never ends mid-word. */
 function clip(s: string, n: number): string {
   const t = s.replace(/\s+/g, " ").trim();
-  return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n - 1);
+  const space = cut.lastIndexOf(" ");
+  return (space > n * 0.5 ? cut.slice(0, space) : cut).replace(/[,;:\s]+$/, "") + "…";
 }
 
-function kindOf(a: string, i: number): VaultItem["kind"] {
-  if (/\d/.test(a) && i === 1) return "number";
-  if (i === 0 || i === 2) return "proof";
-  if (i === 3) return "story";
-  if (i === 4) return "constraint";
-  if (i === 5) return "target";
-  return /\d/.test(a) ? "number" : "skill";
+const KIND_OF: Record<Key, VaultReply["facts"][number]["kind"]> = {
+  project: "project",
+  contribution: "contribution",
+  challenge: "challenge",
+  evidence: "evidence",
+  evidence_more: "evidence",
+  learning: "learning",
+  setback: "challenge",
+  observation: "opinion",
+  reach: "target",
+};
+
+/** Candidate facts: one per answer, in the person's own words, each pointing at its answer. */
+export function mockVault(profile: ProfileInput, turns: Turn[]): VaultReply {
+  const keys = turnKeys(profile, turns);
+  const facts: VaultReply["facts"] = [];
+  turns.forEach((t, i) => {
+    if (!answered(t.a)) return;
+    const k = keys[i];
+    const kind = k ? KIND_OF[k] : /\d/.test(t.a) ? "evidence" : "project";
+    facts.push({ kind, text: clip(t.a, 220), sourceTurnIds: [i + 1] });
+  });
+  facts.push({ kind: "constraint", text: clip(profile.background, 220), sourceTurnIds: [] });
+  return { facts };
 }
 
-export function mockGenerate(profile: ProfileInput, turns: Turn[]): GenerateReply {
-  const ans = turns.map((t) => t.a);
-  const a = (i: number, fallback: string) => (ans[i] && ans[i] !== "(skipped)" ? ans[i] : fallback);
+/** Lower-case the first letter so a fact reads mid-sentence, unless it starts with "I" or an acronym. */
+function mid(s: string): string {
+  const t = s.trim().replace(/[.\s]+$/, "");
+  if (/^(I\b|[A-Z]{2,})/.test(t)) return t;
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+
+export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateReply {
   const role = profile.targetRole;
-  const built = a(0, "[[what you built or did]]");
-  const num = a(1, "[[the number that goes with it]]");
-  const proves = a(2, "[[which part of the job it proves]]");
-  const wrong = a(3, "[[something that went wrong and what you changed]]");
-  const hard = a(4, profile.background);
-  const targets = a(5, "[[2-3 companies you want to reach]]");
-
-  // Label by the question's original position, so a skipped question doesn't shift the labels.
-  const vault: VaultItem[] = turns
-    .map((t, i) => ({ a: t.a, i }))
-    .filter((t) => t.a !== "(skipped)")
-    .map((t) => ({ kind: kindOf(t.a, t.i), text: clip(t.a, 160) }));
+  const of = (k: FactRef["kind"]) => facts.find((f) => f.kind === k) ?? null;
+  const project = of("project");
+  const contribution = of("contribution");
+  const evidence = of("evidence");
+  const challenge = of("challenge");
+  const learning = of("learning");
+  const opinion = of("opinion");
+  const constraint = of("constraint");
+  const refs = (...fs: (FactRef | null)[]) => fs.filter((f): f is FactRef => !!f).map((f) => f.id);
+  const t = (f: FactRef | null, blank: string, n = 200) => (f ? clip(f.text, n).replace(/[.\s]+$/, "") : `[[${blank}]]`);
+  const readers = profile.audiences.filter((a) => a !== "not_sure").map((a) => AUDIENCE_LABEL[a].toLowerCase());
+  const forReaders = readers.length ? `Written for ${readers.join(" and ")}.` : `Written for people working in or hiring for ${role}.`;
+  const who = whoLine(profile);
 
   return {
-    vault,
     profile: {
       headlines: [
-        `${role} aspirant | ${clip(profile.background, 40)} | [[one proof point with a number]]`,
-        `Building towards ${role} | [[your strongest project in 6 words]]`,
-        `${role} | ${clip(built, 50)}`,
+        `${role} | ${t(project, "your strongest project in a few words", 60)} | ${t(evidence, "one result or proof", 40)}`,
+        `${profile.specialization ? `${role}, ${profile.specialization}` : role} | ${clip(profile.background, 50)}`,
+        `Working towards ${role} | ${t(contribution ?? project, "what you build or do", 60)}`,
       ],
-      about: `I am looking for ${role} roles. ${clip(built, 220)} ${clip(num, 160)} I want to work on [[the kind of problems you want]] and I am based in [[city]]. You can reach me at [[email or best way to contact you]].`,
-      gaps: [
-        "Add one project or piece of work to your Featured section with a link.",
-        "Put the exact role you want in your headline so recruiter search can find you.",
-        "Replace a generic About with one concrete result and how to contact you.",
-      ],
+      about: [
+        `I'm working towards ${role} roles${profile.market ? ` in ${profile.market}` : ""}.`,
+        project ? `Recently: ${mid(t(project, "", 200))}.` : "Recently: [[one project or task you're proud of]].",
+        contribution ? `My part: ${mid(t(contribution, "", 160))}.` : "",
+        evidence ? `What changed: ${mid(t(evidence, "", 160))}.` : "What changed: [[a result, or something people can look at]].",
+        learning ? `What I took from it: ${mid(t(learning, "", 160))}.` : "",
+        `I want to work on [[the kind of problems you want]]. You can reach me at [[the contact route you want to share]].`,
+      ]
+        .filter(Boolean)
+        .join(" "),
     },
     outreach: {
       stranger: {
         title: "First message to a stranger",
         why: "One real question, no favour asked.",
-        body: `Hi [[their first name]], I read [[one specific thing they posted or built]]. I'm asking because I'm working towards ${role} roles. ${clip(built, 110)} One question: [[your one specific question about their work]]? No worries if you're busy.`,
+        body: `Hi [[their first name]], I read [[one specific thing they posted or built]]. ${who} ${project ? `${clip(project.text, 110).replace(/[.\s]+$/, "")}.` : ""} One question: [[your one specific question about their work]]? No worries if you're busy.`.replace(/\s+/g, " "),
+        factRefs: refs(project),
       },
       alumni: {
         title: "Message to someone from your college",
         why: "Shared college plus a small, clear ask.",
-        body: `Hi [[their first name]], I'm a [[your year and course]] at [[your college]], where you studied too. I'm working towards ${role} roles. ${clip(built, 110)} Would you be open to a 15-minute call next week about how you got into [[their team or role]]? No worries if it's not a good time.`,
+        body: `Hi [[their first name]], I'm a [[your year and course]] at [[your college]], where you studied too. ${who} ${project ? `${clip(project.text, 110).replace(/[.\s]+$/, "")}.` : ""} Would you be open to a 15-minute call next week about how you got into [[their team or role]]? No worries if it's not a good time.`.replace(/\s+/g, " "),
+        factRefs: refs(project),
       },
       referral: {
         title: "Referral request",
         why: "Short, specific, easy to say no to.",
-        body: `Hi [[their first name]], I am applying for [[role title]] at [[company]] ([[job ID or link]]). ${clip(built, 140)} ${clip(proves, 120)} My resume is attached. Would you be comfortable referring me? If it is not a fit, no worries at all.`,
+        body: `Hi [[their first name]], I'm applying for [[role title]] at [[company]] ([[job ID or link]]). ${t(project, "one thing you built or did", 140)}. ${evidence ? `${t(evidence, "", 120)}.` : ""} My resume is attached. Would you be comfortable referring me? If it's not a fit, no worries at all.`.replace(/\s+/g, " "),
+        factRefs: refs(project, evidence),
       },
       hiring_manager: {
         title: "Message to a hiring manager",
         why: "One specific thing about their team, one proof, one small ask.",
-        body: `Hi [[their first name]], I saw [[something specific about their team]]. ${clip(built, 120)} Could I send you a two-line summary of it? No worries if not.`,
+        body: `Hi [[their first name]], I saw [[something specific about their team]]. ${t(project, "one thing you built or did", 120)}. Could I send you a two-line summary of it? No worries if not.`,
+        factRefs: refs(project),
       },
       follow_up: {
         title: "Follow-up in 5 to 7 days",
         why: "Adds something new instead of just following up.",
         body: `Hi [[their first name]], since I wrote, [[one new thing you did or learned]]. Would it help if I shared it? No worries if now is not a good time.`,
+        factRefs: [],
       },
     },
     posts: [
       {
         title: "Proof of work",
-        why: "Starts with the thing you did and a real number.",
-        body: `I recently ${clip(built, 200)}\n\nThe number that matters: ${clip(num, 150)}\n\nWhat it showed me about ${role}: ${clip(proves, 160)}\n\nNext I want to [[what you will do next]].`,
+        why: `Starts with the work itself. ${forReaders}`,
+        body: [
+          project ? `${t(project, "")}.` : "[[the project or task, in one sentence]]",
+          contribution ? `My part: ${mid(t(contribution, ""))}.` : "My part: [[what you did yourself]]",
+          evidence ? `What changed: ${mid(t(evidence, ""))}.` : "What changed: [[a result, or the artifact someone can look at]]",
+          learning ? `What I took from it: ${mid(t(learning, ""))}.` : `What I'd tell someone starting in ${role}: [[one plain sentence]]`,
+        ].join("\n\n"),
+        factRefs: refs(project, contribution, evidence, learning),
       },
-      {
-        title: "A setback and the change",
-        why: "A specific mistake reads as honest, not performed.",
-        body: `${clip(wrong, 260)}\n\nWhat I changed: [[the one change you made]]\n\nWhat I would tell someone starting out: [[one plain sentence]]`,
-      },
-      {
-        title: "An observation from the field",
-        why: "Anchors an opinion in your own experience.",
-        body: `Something I noticed while trying to get into ${role}: [[what you noticed]].\n\nIt connects to my own experience: ${clip(hard, 200)}\n\nI am looking to speak with people at ${clip(targets, 120)} about [[the specific question]].`,
-      },
+      challenge
+        ? {
+            title: "A setback and the change",
+            why: `A specific decision reads as honest, not performed. ${forReaders}`,
+            body: `${t(challenge, "")}.\n\nWhat I changed: [[the one change you made]]\n\nWhat I'd do differently now: [[one plain sentence]]`,
+            factRefs: refs(challenge),
+          }
+        : {
+            title: "A setback and the change",
+            why: "Your answers have no setback in them. Fill this only if you have a real one, or skip it.",
+            body: "[[something that went wrong, in your words]]\n\nWhat I changed: [[the one change you made]]",
+            factRefs: [],
+          },
+      opinion
+        ? {
+            title: "An observation from the field",
+            why: `Anchored in something you saw yourself. ${forReaders}`,
+            body: `Something I noticed while working towards ${role} roles: ${mid(t(opinion, ""))}.\n\nWhere I saw it: [[where you saw it]]\n\n${constraint ? `It connects to my own situation: ${mid(t(constraint, "", 160))}.` : ""}`.trim(),
+            factRefs: refs(opinion, constraint),
+          }
+        : {
+            title: "An observation from the field",
+            why: "Your answers have no first-hand observation. Don't post this unless you have one.",
+            body: `Something I noticed while working towards ${role} roles: [[what you saw yourself]]\n\nWhere I saw it: [[where]]`,
+            factRefs: [],
+          },
     ],
     comments: [
       {
-        title: "Comment on a post in your field",
-        why: "Adds one concrete experience.",
-        body: `The point about [[what the post said]] matches what I saw when ${clip(built, 120)} [[one specific detail]].`,
+        title: "Example: add one experience",
+        why: "A pattern, not a ready comment. Use the comment helper above for a real post.",
+        body: `The point about [[what the post said]] matches what I saw when ${project ? mid(clip(project.text, 120)).replace(/[.\s]+$/, "") : "[[what you did]]"}: [[one specific detail]].`,
+        factRefs: refs(project),
       },
       {
-        title: "Comment that asks a real question",
-        why: "A specific question starts a conversation.",
+        title: "Example: ask a real question",
+        why: "A pattern, not a ready comment. Only ask if you really want the answer.",
         body: `When you said [[what the post said]], how did you [[specific thing you want to know]]? I ran into [[your specific problem]].`,
+        factRefs: [],
       },
     ],
-    connect: { look_for: mockLookFor(profile, turns) },
+  };
+}
+
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+const wordCount = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
+
+/**
+ * Demo comment: honest about what it is. It does not interpret the post; it quotes the line
+ * the user chose and uses their own words or the fact they picked.
+ */
+export function mockComment(excerpt: string, anchor: string, perspective: string, facts: FactRef[]): CommentReply {
+  const own = perspective.trim() || facts[0]?.text.trim() || "";
+  if (!own) {
+    return { status: "skip", body: "", postAnchor: "", factRefs: [], whyItFits: "There's no point of your own to add yet. Write one thought, pick a fact, or skip this post." };
+  }
+  if (!anchor.trim() || !norm(excerpt).includes(norm(anchor))) {
+    return { status: "skip", body: "", postAnchor: "", factRefs: [], whyItFits: "In demo mode, copy the exact line from the post you're responding to." };
+  }
+  const second = perspective.trim() && facts[0] ? ` ${clip(facts[0].text, 160).replace(/[.\s]+$/, "")}.` : "";
+  const body = `On "${clip(anchor, 120)}": ${own.replace(/[.\s]+$/, "")}.${second}`;
+  return {
+    status: "draft",
+    body,
+    postAnchor: anchor.trim(),
+    factRefs: facts.slice(0, 1).map((f) => f.id),
+    whyItFits: `Demo template: it quotes the line you picked and uses your own words. Lynkr didn't interpret the post. ${wordCount(body)} words.`,
   };
 }

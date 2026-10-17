@@ -1,29 +1,28 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Martel, Mukta } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const martel = Martel({
+  variable: "--font-martel",
   subsets: ["latin"],
+  weight: ["400", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const mukta = Mukta({
+  variable: "--font-mukta",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
   title: "Lynkr",
-  description: "Get replies on LinkedIn without sounding like AI. Free for Indian freshers.",
+  description: "Write to one person on LinkedIn and sound like yourself. Free for Indian freshers and early-career job seekers.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en-IN" className={`${martel.variable} ${mukta.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

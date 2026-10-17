@@ -25,9 +25,12 @@ export type FetchFailure = "config" | "auth" | "quota" | "timeout" | "provider" 
 
 export class FetchError extends Error {
   category: FetchFailure;
-  constructor(category: FetchFailure) {
+  /** Apify's own error type (e.g. "full-permission-actor-not-approved"), for the owner's logs. Never page content. */
+  detail: string;
+  constructor(category: FetchFailure, detail = "") {
     super(category);
     this.category = category;
+    this.detail = detail.replace(/[^a-z0-9-]/gi, "").slice(0, 60);
   }
 }
 
@@ -73,13 +76,19 @@ export async function fetchPageViaApify(url: string, fetchImpl: typeof fetch = f
   } catch (e) {
     throw new FetchError((e as Error).name === "TimeoutError" || (e as Error).name === "AbortError" ? "timeout" : "provider");
   }
-  if (res.status === 401) throw new FetchError("auth");
-  if (res.status === 402 || res.status === 429) throw new FetchError("quota");
-  if (res.status === 408) throw new FetchError("timeout");
+  if (res.status === 401) throw new FetchError("auth", "invalid-token");
+  if (res.status === 402 || res.status === 429) throw new FetchError("quota", `status-${res.status}`);
+  if (res.status === 408) throw new FetchError("timeout", "run-timeout");
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    if (res.status === 403 && /limit|usage|credit|plan/i.test(detail)) throw new FetchError("quota");
-    throw new FetchError("provider");
+    const body = await res.text().catch(() => "");
+    let type = `status-${res.status}`;
+    try {
+      type = (JSON.parse(body) as { error?: { type?: string } }).error?.type || type;
+    } catch {}
+    if (res.status === 403 && /limit|usage|credit|plan/i.test(body) && !/permission/i.test(type)) throw new FetchError("quota", type);
+    // e.g. the Actor's permissions haven't been approved in the Apify console: an owner setup step.
+    if (res.status === 403) throw new FetchError("auth", type);
+    throw new FetchError("provider", type);
   }
   const items = (await res.json().catch(() => null)) as { refused?: string; html?: string; status?: number }[] | null;
   const item = Array.isArray(items) ? items[0] : null;

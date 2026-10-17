@@ -10,8 +10,8 @@ import { checkLimits } from "@/lib/limit";
 export const maxDuration = 90;
 
 /** Aggregate-only log line: no URL path, query, page text or token. */
-function log(status: string, category: string, ms: number, domain = "") {
-  console.info(JSON.stringify({ event: "lynkr.enrich", status, category, ms, domain }));
+function log(status: string, category: string, ms: number, domain = "", detail = "") {
+  console.info(JSON.stringify({ event: "lynkr.enrich", status, category, ms, domain, ...(detail ? { detail } : {}) }));
 }
 
 /**
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     return Response.json({ packet, demo: false });
   } catch (err) {
     const category = err instanceof FetchError || err instanceof ExtractError ? err.category : "provider";
-    log("failed", category, Date.now() - t0, policy.host);
+    log("failed", category, Date.now() - t0, policy.host, err instanceof FetchError ? err.detail : "");
     const status = category === "quota" ? 429 : category === "timeout" ? 504 : category === "no_requirements" || category === "redirected" || category === "empty" ? 422 : 502;
     return Response.json({ error: FAILURE_MESSAGE[category], fallback: true }, { status });
   }

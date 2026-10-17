@@ -65,6 +65,10 @@ test("adapter: every failure has its own safe category", async () => {
   assert.equal(await cat(run(403, "Monthly usage limit exceeded")), "quota");
   assert.equal(await cat(run(408, {})), "timeout");
   assert.equal(await cat(run(500, {})), "provider");
+  // An unapproved Actor is an owner setup problem, reported with Apify's error type for the logs.
+  const denied = await withEnv({ APIFY_API_KEY: "k" }, () => fetchPageViaApify(URL1, fake(403, { error: { type: "full-permission-actor-not-approved", message: "approve" } }))).catch((e) => e);
+  assert.equal(denied.category, "auth");
+  assert.equal(denied.detail, "full-permission-actor-not-approved");
   assert.equal(await cat(run(201, [])), "empty");
   assert.equal(await cat(run(201, "not json")), "empty");
   assert.equal(await cat(run(201, [{ refused: "redirected" }])), "redirected");

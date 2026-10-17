@@ -43,3 +43,6 @@ next-env.d.ts
 
 # raw REA captures of third-party pages (evidence only, not redistributed)
 research/evidence/
+
+# Aryan's private reviewer brief for GitHub Copilot: never commit
+Copilot.md

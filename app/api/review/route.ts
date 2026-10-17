@@ -23,7 +23,11 @@ export async function POST(req: Request) {
   try {
     const reply = cleanStrings(await callStructured({ system: REVIEW_SYSTEM, user: reviewUser(text, channel, intent, relationship, anchor, facts, tone), schema: ReviewReply, effort: "low", maxTokens: 2000 }));
     // Only edits that point at real text in the message.
-    return Response.json({ ...reply, edits: reply.edits.filter((e) => e.find && text.includes(e.find)).slice(0, 4) } satisfies ReviewReply);
+    // Only edits that change a real phrase: no single-character "finds", no sign-offs or name placeholders added.
+    const edits = reply.edits.filter(
+      (e) => e.find.trim().length >= 6 && text.includes(e.find) && e.replace.trim() !== e.find.trim() && !/\b(thanks|regards|best),?\s*\[\[|\[\[your ?name\]\]/i.test(e.replace),
+    );
+    return Response.json({ ...reply, edits: edits.slice(0, 4) } satisfies ReviewReply);
   } catch (err) {
     if (err instanceof LlmError) return Response.json({ error: err.message }, { status: err.status });
     return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });

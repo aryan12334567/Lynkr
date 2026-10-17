@@ -139,6 +139,7 @@ test("C5b demo note: fits 200 characters, uses only picked facts, never fills ga
   assert.ok(n.body.length <= 200, `length ${n.body.length}: ${n.body}`);
   assert.match(n.body, /^Hi \[\[their first name\]\]/);
   assert.match(n.body, /survey data/);
+  assert.match(n.body, /How do you decide which outliers to drop\?/, "the ask starts its own sentence with a capital");
   assert.doesNotMatch(n.body, /refer|job|opening|hire|admire|impressive/i);
   for (const id of n.factRefs) assert.equal(id, "F1");
   const missing = composeNote(profile, packet({ bridge: "public_work", anchor: "", ask: "a question" }), []);

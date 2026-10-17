@@ -7,6 +7,7 @@ import { checkLimits } from "@/lib/limit";
 import { cleanStrings } from "@/lib/clean";
 import { AUDIENCE_LABEL, DOMAIN_LABEL } from "@/lib/roles";
 import { validComment } from "@/lib/comment";
+import { unsupportedSentences } from "@/lib/grounding";
 
 export const maxDuration = 60;
 
@@ -41,11 +42,29 @@ export async function POST(req: Request) {
   const ids = new Set(facts.map((f) => f.id));
   const user = commentUser(targetRole, DOMAIN_LABEL[domain], audiences.map((a) => AUDIENCE_LABEL[a]).join(", "), industry, excerpt, facts, perspective);
   try {
-    // One retry if the model's comment fails the checks, then an honest skip.
+    // One retry if the model's comment fails the checks or adds details that aren't in the person's
+    // thought, facts or the post. A comment that only fails the grounding check on the second try is
+    // returned anyway: the screen flags those sentences for the person to check.
+    const sources = [perspective, excerpt, ...facts.map((f) => f.text)];
+    let fallback: CommentReply | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
-      const reply = cleanStrings(await callStructured({ system: COMMENT_SYSTEM, user, schema: CommentReply, effort: "medium", maxTokens: 2000 }));
-      if (!validComment(reply, excerpt, ids)) return Response.json(reply);
+      const reply = cleanStrings(
+        await callStructured({
+          system: COMMENT_SYSTEM,
+          user: attempt ? `${user}\n\nYour last comment added details the person never gave. Use only their thought and facts.` : user,
+          schema: CommentReply,
+          effort: "medium",
+          maxTokens: 2000,
+        }),
+      );
+      if (validComment(reply, excerpt, ids)) continue;
+      if (reply.status === "draft" && unsupportedSentences(reply.body, sources).length) {
+        fallback = reply;
+        continue;
+      }
+      return Response.json(reply);
     }
+    if (fallback) return Response.json(fallback);
     return Response.json({
       status: "skip",
       body: "",

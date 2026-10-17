@@ -42,7 +42,11 @@ export async function POST(req: Request) {
     const rule = CHANNEL_RULES[packet.channel];
     const size = (b: string) => (rule.unit === "chars" ? b.length : b.trim() ? b.trim().split(/\s+/).length : 0);
     // One message for one channel: no labels like "email:", nothing over the limit.
-    const bad = (r: ConnectReply) => r.fitStatus === "ready_for_review" && (size(r.body) > rule.max || /\b(connection_note|linkedin_message|inmail|email)\s*:/i.test(r.body));
+    // Lynkr's own check already found a good reason to write, so "needs context" from the model is a
+    // miss, not a verdict: retry, then fall back. A "do not send" from the model is respected.
+    const bad = (r: ConnectReply) =>
+      r.fitStatus === "needs_context" ||
+      (r.fitStatus === "ready_for_review" && (size(r.body) > rule.max || /\b(connection_note|linkedin_message|inmail|email)\s*:/i.test(r.body)));
     let reply: ConnectReply | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       const r = cleanStrings(
@@ -50,7 +54,9 @@ export async function POST(req: Request) {
           system: CONNECT_SYSTEM,
           user:
             connectUser(profile, facts, packet, text) +
-            (attempt ? `\n\nYour last draft broke the rules. Write ONE ${CHANNEL_RULES[packet.channel].label} only, at most ${rule.max} ${rule.unit === "chars" ? "characters" : "words"}, with no labels.` : ""),
+            (attempt
+              ? `\n\nYour last draft broke the rules. The anchor and the ask above are specific enough: set fitStatus "ready_for_review" and write ONE ${CHANNEL_RULES[packet.channel].label} only, at most ${rule.max} ${rule.unit === "chars" ? "characters" : "words"}, with no labels. Drop the fact sentence if that is what it takes to fit.`
+              : ""),
           schema: ConnectReply,
           effort: "low",
           maxTokens: 2000,

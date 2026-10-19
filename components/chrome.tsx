@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "./ui";
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
@@ -49,6 +50,62 @@ export function SavedHint() {
       </svg>
       Saved in this browser
     </span>
+  );
+}
+
+/**
+ * "Support Lynkr" opens a Dodo checkout in test mode. It only appears when the server has a Dodo key
+ * set, so the demo without one looks exactly as before. Paying unlocks nothing.
+ */
+export function SupportButton({ className = "" }: { className?: string }) {
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let live = true;
+    fetch("/api/support")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (live && d?.enabled === true) setEnabled(true);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  if (!enabled) return null;
+
+  async function open() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await fetch("/api/support", { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && typeof d.url === "string") {
+        window.location.assign(d.url);
+        return;
+      }
+      setError(typeof d.error === "string" ? d.error : "Couldn't open checkout. Please try again.");
+    } catch {
+      setError("Couldn't open checkout. Check your connection and try again.");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className={className}>
+      <Button variant="ghost" onClick={open} disabled={busy}>
+        {busy ? "Opening checkout..." : "Support Lynkr"}
+      </Button>
+      <p className="mt-1 text-[0.82rem] text-faint">Test mode: no real money moves. Lynkr stays free either way.</p>
+      {error && (
+        <p role="alert" className="mt-1 text-[0.85rem] text-bad">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

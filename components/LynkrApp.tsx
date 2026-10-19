@@ -12,7 +12,7 @@ import { VaultReview } from "./VaultReview";
 import { Results, TAB_IDS, type Tab } from "./Results";
 import { Checker } from "./Checker";
 import { Landing } from "./Landing";
-import { ConfirmReset, DemoPill, SavedHint, TrustNote, Wordmark } from "./chrome";
+import { ConfirmReset, DemoPill, SavedHint, SupportButton, TrustNote, Wordmark } from "./chrome";
 import { Button, Card, ErrorNote } from "./ui";
 
 const STEPS = ["Basics", "Interview", "Check your facts", "Drafts"] as const;
@@ -188,6 +188,7 @@ export function LynkrApp() {
         <Checker facts={s.facts} mock={mock} />
         <footer className="mt-12 border-t border-line pt-6">
           <TrustNote mock={mock} />
+          <SupportButton className="mt-4" />
         </footer>
       </div>
     );
@@ -313,6 +314,7 @@ export function LynkrApp() {
         <footer className="mt-12 border-t border-line pt-6">
           <TrustNote mock={mock} />
           <ConfirmReset onReset={reset} className="mt-3" />
+          <SupportButton className="mt-4" />
         </footer>
       </div>
     </div>

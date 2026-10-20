@@ -370,7 +370,7 @@ export function Landing({
               transition={{ duration: 0.8, ease: EASE }}
               className="edge inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.82rem] text-soft backdrop-blur"
             >
-              <Sparkles size={14} className="text-marigold" aria-hidden /> For freshers and early-career job seekers in India
+              <Sparkles size={14} className="text-marigold" aria-hidden /> Get found on LinkedIn
             </motion.p>
             <h1 data-split="load" className="mt-7 text-[3rem] font-normal leading-[1] tracking-[-0.035em] sm:text-[5.4rem]">
               Write to one person. <br className="hidden sm:block" />

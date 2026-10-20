@@ -1,3 +1,4 @@
+import { requireLicense } from "@/lib/billing";
 import { PlanChatReply, PlanChatRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
@@ -10,6 +11,9 @@ export const maxDuration = 60;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function POST(req: Request) {
+  // Paid access: a no-op unless LYNKR_PAYWALL=1.
+  const locked = await requireLicense(req);
+  if (locked) return locked;
   const read = await readJson(req, BODY_LIMIT.plan);
   if ("error" in read) return read.error;
   const body = read.body;

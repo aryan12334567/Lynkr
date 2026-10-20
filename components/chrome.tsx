@@ -52,6 +52,19 @@ export function SavedHint() {
   );
 }
 
+/** Links every public page must carry: Dodo and customers look for these in the footer. */
+export function LegalLinks({ className = "" }: { className?: string }) {
+  const link = "text-soft underline-offset-4 transition-colors hover:text-ink hover:underline";
+  return (
+    <nav aria-label="Legal" className={`flex flex-wrap gap-x-5 gap-y-1 text-[0.88rem] ${className}`}>
+      <a className={link} href="/terms">Terms of Service</a>
+      <a className={link} href="/privacy">Privacy Policy</a>
+      <a className={link} href="/refunds">Refunds and cancellation</a>
+      <a className={link} href="/contact">Contact</a>
+    </nav>
+  );
+}
+
 export function DemoPill() {
   return (
     <span className="inline-block rounded-full border border-warn/40 bg-warn/10 px-3 py-1 text-[0.82rem] text-warn">

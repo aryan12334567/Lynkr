@@ -1,3 +1,4 @@
+import { requireLicense } from "@/lib/billing";
 import { VaultReply, VaultRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
@@ -10,6 +11,9 @@ export const maxDuration = 60;
 
 /** Step 1 of drafting: candidate facts with the answers they came from. The user reviews them before anything is written. */
 export async function POST(req: Request) {
+  // Paid access: a no-op unless LYNKR_PAYWALL=1.
+  const locked = await requireLicense(req);
+  if (locked) return locked;
   const read = await readJson(req, BODY_LIMIT.vault);
   if ("error" in read) return read.error;
   const parsed = VaultRequest.safeParse(read.body);

@@ -1,3 +1,4 @@
+import { requireLicense } from "@/lib/billing";
 import { EnrichRequest, ExternalContextPacket } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
 import { isMock } from "@/lib/llm";
@@ -19,6 +20,9 @@ function log(status: string, category: string, ms: number, domain = "", detail =
  * then extraction to a small packet the user reviews. The page is discarded here.
  */
 export async function POST(req: Request) {
+  // Paid access: a no-op unless LYNKR_PAYWALL=1.
+  const locked = await requireLicense(req);
+  if (locked) return locked;
   const t0 = Date.now();
   const read = await readJson(req, BODY_LIMIT.enrich);
   if ("error" in read) return read.error;

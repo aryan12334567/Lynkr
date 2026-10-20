@@ -385,3 +385,17 @@ body.paused *::after {
 .ink-accent:has(.split-word) {
   background: none;
 }
+
+/* Sign-up showcase: columns of promises drifting up (and one down). Duplicated content loops at -50%. */
+@keyframes auth-col {
+  to {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+.auth-col {
+  animation: auth-col 38s linear infinite;
+}
+.auth-col-reverse {
+  animation-direction: reverse;
+  animation-duration: 46s;
+}

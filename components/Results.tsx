@@ -19,6 +19,8 @@ import { VaultReview } from "./VaultReview";
 import { ProfileFix } from "./ProfileFix";
 import { CommentHelper } from "./CommentHelper";
 import { Today } from "./Today";
+import { AccountMenu } from "./AccountMenu";
+import type { Account } from "@/lib/auth-client";
 import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } from "./chrome";
 import { Button, Card, ErrorNote, Label, SectionHead } from "./ui";
 
@@ -59,6 +61,7 @@ export function Results({
   requirements,
   setRequirements,
   importMode,
+  account = null,
 }: {
   s: Saved;
   setS: React.Dispatch<React.SetStateAction<Saved>>;
@@ -77,6 +80,8 @@ export function Results({
   requirements: ExternalContextPacket | null;
   setRequirements: (p: ExternalContextPacket | null) => void;
   importMode: ImportMode;
+  /** The signed-in account, if any: shown with billing and sign-out. */
+  account?: Account | null;
 }) {
   const [rel, setRel] = useState<Relationship>("stranger");
   // The person described in Connect: in memory only, shared with the checker.
@@ -182,6 +187,7 @@ export function Results({
           })}
         </nav>
         <div className="mt-8 hidden space-y-3 px-5 pb-8 lg:block">
+          <AccountMenu account={account} />
           <TrustNote mock={mock} />
           <ConfirmReset onReset={onReset} className="-ml-2" />
           <LegalLinks />
@@ -333,6 +339,7 @@ export function Results({
             </motion.div>
 
           <div className="pt-10 lg:hidden">
+            <AccountMenu account={account} className="mb-4" />
             <TrustNote mock={mock} />
             <ConfirmReset onReset={onReset} className="mt-2 -ml-2" />
             <LegalLinks className="mt-3" />

@@ -25,6 +25,7 @@ import {
 import { InkThreads } from "./InkThreads";
 import { LegalLinks, Wordmark } from "./chrome";
 import { SITE } from "@/lib/site";
+import type { Account } from "@/lib/auth-client";
 import { useLandingMotion, useLenis, useMagnetic, useSpotlight } from "./motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -284,6 +285,7 @@ export function Landing({
   onCheck,
   mock,
   access = "open",
+  account = null,
   resume = null,
 }: {
   onStart: () => void;
@@ -291,6 +293,8 @@ export function Landing({
   mock: boolean | null;
   /** "paid": the app needs a subscription. "subscribed": this browser has an active key. "open": no paywall (local development). */
   access?: "open" | "paid" | "subscribed";
+  /** Lynkr accounts: when they're on and nobody is signed in, the main buttons lead to sign-up. */
+  account?: Account | null;
   /** Saved progress in this browser: "drafts" if drafts exist, "flow" if partway through. */
   resume?: "drafts" | "flow" | null;
 }) {
@@ -302,9 +306,12 @@ export function Landing({
   useMagnetic(magnet, 0.2);
 
   const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : access === "paid" ? "Get access" : "Start the interview";
+  // New visitors with accounts switched on create an account first; everyone else carries on as before.
+  const toSignup = access === "paid" && !resume && account?.accounts === true && !account.signedIn;
+  const start = () => (toSignup ? window.location.assign("/signup") : onStart());
   const cta = (label = primary) => (
     <button
-      onClick={onStart}
+      onClick={start}
       className="group inline-flex min-h-12 items-center gap-2 rounded-full bg-ink px-6 text-[1rem] font-semibold text-bg shadow-[0_10px_40px_-10px_rgba(170,179,255,0.55)] transition-[box-shadow,background-color] duration-300 hover:bg-white hover:shadow-[0_14px_50px_-8px_rgba(170,179,255,0.75)]"
     >
       {label} <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
@@ -333,11 +340,16 @@ export function Landing({
               </a>
             ))}
           </div>
+          {account?.accounts && !account.signedIn && (
+            <a href="/login" className="ml-auto text-[0.92rem] text-soft transition-colors hover:text-ink md:ml-0">
+              Sign in
+            </a>
+          )}
           <button
-            onClick={onStart}
-            className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-4 text-[0.9rem] font-medium text-ink transition-colors hover:bg-white/[0.12] md:ml-0"
+            onClick={start}
+            className={`${account?.accounts && !account.signedIn ? "" : "ml-auto md:ml-0"} inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-4 text-[0.9rem] font-medium text-ink transition-colors hover:bg-white/[0.12]`}
           >
-            {resume ? (resume === "drafts" ? "My drafts" : "Continue") : access === "paid" ? "Get access" : "Start"} <ArrowRight size={15} aria-hidden />
+            {resume ? (resume === "drafts" ? "My drafts" : "Continue") : toSignup ? "Get started" : access === "paid" ? "Get access" : "Start"} <ArrowRight size={15} aria-hidden />
           </button>
         </nav>
       </header>

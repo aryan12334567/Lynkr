@@ -19,6 +19,14 @@ export default function Privacy() {
         </p>
       </Section>
 
+      <Section title="Your account">
+        <p>
+          If you create an account, Lynkr stores your name, email address, whether your email is confirmed, a securely hashed password (never the password itself) or the Google account you signed in with, your sign-in
+          sessions (with the IP address and browser they came from) and the id of your Dodo Payments customer record. This is kept in Lynkr&apos;s database so you can sign in on any device and so we can check your
+          subscription. Your Story Vault and drafts are not stored in your account. We email you only to confirm your address, reset your password or send a sign-in link you asked for.
+        </p>
+      </Section>
+
       <Section title="What is sent to write your drafts">
         <p>
           When you answer interview questions, confirm facts, paste a post or a job description, or upload a screenshot for Connect Coach, that text or image is sent through Lynkr&apos;s server to an AI provider
@@ -52,13 +60,16 @@ export default function Privacy() {
           <li>OpenAI: writes drafts from what you submit.</li>
           <li>Dodo Payments: payments, tax, invoices and license keys.</li>
           <li>Vercel: hosting.</li>
+          <li>Neon: the database that holds accounts.</li>
+          <li>Resend: sends account emails.</li>
+          <li>Google: only if you choose &quot;Continue with Google&quot;.</li>
           <li>Apify: reads a public job page, only if you use the import.</li>
         </ul>
       </Section>
 
       <Section title="Your choices and requests">
         <p>
-          You can delete your saved work at any time in the app, and you can ask us about any personal data we hold, such as emails you send us, by writing to <ContactEmail />. Lynkr is for people aged 18 and over.
+          You can delete your saved work at any time in the app. To delete your account, or to ask about any personal data we hold, such as your account details or emails you send us, write to <ContactEmail />. Lynkr is for people aged 18 and over.
         </p>
       </Section>
 

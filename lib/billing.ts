@@ -3,11 +3,13 @@ import DodoPayments from "dodopayments";
 /**
  * Lynkr is a paid subscription sold through Dodo Payments (Merchant of Record).
  *
- * How access works, with no accounts or database:
- *  1. The person subscribes at a Dodo checkout. Dodo emails them a license key for the product.
- *  2. They paste the key into Lynkr. The server activates it for their browser (one "instance").
- *  3. Every AI route re-validates key + instance with Dodo (cached briefly). For subscription keys Dodo
- *     switches the key off itself when the subscription is cancelled, expired, paused or on hold.
+ * How access works. Either one unlocks the app:
+ *  A. Account (when DATABASE_URL is set, see lib/auth.ts): the person signs up, subscribes through a checkout
+ *     tied to their account, and every AI route asks Dodo whether that customer has an active subscription
+ *     to the product (cached briefly; Dodo webhooks clear the cache).
+ *  B. License key: Dodo emails a key after checkout; the person pastes it and the server activates it for their
+ *     browser. Every AI route re-validates key + instance with Dodo (cached briefly). Dodo switches the key off
+ *     itself when the subscription is cancelled, expired, paused or on hold.
  *
  * Safety defaults:
  *  - The paywall is ON in production builds (next build / Vercel) and OFF in local development. Override with
@@ -27,6 +29,8 @@ export type DodoEnvironment = keyof typeof BASE_URL;
 export function dodoEnvironment(): DodoEnvironment {
   return process.env.DODO_ENVIRONMENT === "live_mode" ? "live_mode" : "test_mode";
 }
+
+export const dodoBaseUrl = (): string => BASE_URL[dodoEnvironment()];
 
 export const isProduction = (): boolean => process.env.NODE_ENV === "production";
 
@@ -144,11 +148,42 @@ export async function deactivateLicense(key: string, instanceId: string): Promis
 export const LICENSE_HEADER = "x-lynkr-license";
 export const INSTANCE_HEADER = "x-lynkr-instance";
 
-/** Gate for every AI route: null means carry on, otherwise return the 402 response. Off unless LYNKR_PAYWALL=1. */
+// ---- account subscriptions ----
+
+const subs = new Map<string, { ok: boolean; at: number }>();
+
+/** Called from Dodo webhooks: the next check asks Dodo again. */
+export function forgetSubscription(customerId: string | undefined): void {
+  if (customerId) subs.delete(customerId);
+}
+
+/** True only if Dodo lists an active subscription to the Lynkr product for this customer. Fails closed. */
+export async function subscriptionActive(customerId: string | null): Promise<boolean> {
+  if (!customerId || testPaymentsBlocked() || !process.env.DODO_PAYMENTS_API_KEY?.trim()) return false;
+  const now = Date.now();
+  const hit = subs.get(customerId);
+  if (hit && now - hit.at < (hit.ok ? VALID_TTL : INVALID_TTL)) return hit.ok;
+  try {
+    const client = new DodoPayments({ bearerToken: process.env.DODO_PAYMENTS_API_KEY, baseURL: dodoBaseUrl(), maxRetries: 1, timeout: 10_000 });
+    const page = await client.subscriptions.list({ customer_id: customerId, status: "active", ...(billingProductId() ? { product_id: billingProductId() } : {}) });
+    const ok = page.items.length > 0;
+    if (subs.size > 5000) subs.clear();
+    subs.set(customerId, { ok, at: now });
+    return ok;
+  } catch {
+    return Boolean(hit?.ok && now - hit.at < OUTAGE_GRACE);
+  }
+}
+
+/** Gate for every AI route: null means carry on, otherwise return the 402 response. See paywallEnabled(). */
 export async function requireLicense(req: Request): Promise<Response | null> {
   if (!paywallEnabled()) return null;
   const key = req.headers.get(LICENSE_HEADER)?.trim() ?? "";
   const instance = req.headers.get(INSTANCE_HEADER)?.trim() ?? "";
   if (key && instance && key.length <= 200 && instance.length <= 100 && (await validateLicense(key, instance))) return null;
+  // Imported here, not at the top: lib/auth imports this file.
+  const { sessionUser } = await import("./auth");
+  const user = await sessionUser(req);
+  if (user && (await subscriptionActive(user.dodoCustomerId))) return null;
   return Response.json({ error: "An active subscription is needed. Subscribe, or enter your license key.", code: "subscription_required" }, { status: 402 });
 }

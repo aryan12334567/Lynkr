@@ -14,6 +14,7 @@ import { Checker } from "./Checker";
 import { Landing } from "./Landing";
 import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } from "./chrome";
 import { Paywall } from "./Paywall";
+import { loadAccount, type Account } from "@/lib/auth-client";
 import { Button, Card, ErrorNote } from "./ui";
 
 const STEPS = ["Basics", "Interview", "Check your facts", "Drafts"] as const;
@@ -76,7 +77,14 @@ export function LynkrApp() {
   const [license, setLicense] = useState<License | null>(loadLicense);
   // The server refused the saved key: the subscription ended, a payment failed, or Dodo was unreachable.
   const [lapsed, setLapsed] = useState(false);
-  const locked = paywall === true && (!license || lapsed);
+  // The signed-in account (null while loading). An active subscription on it unlocks the app like a key does.
+  const [account, setAccount] = useState<Account | null>(null);
+  const entitled = (!!license && !lapsed) || account?.subscribed === true;
+  const locked = paywall === true && !entitled;
+
+  useEffect(() => {
+    loadAccount().then(setAccount);
+  }, []);
 
   useEffect(() => {
     fetch("/api/status")
@@ -95,9 +103,10 @@ export function LynkrApp() {
 
   /** Asks the server whether the saved key is still valid, and locks or unlocks the app to match. */
   async function recheck(): Promise<boolean> {
-    const ok = license ? await keyIsValid(license) : false;
+    const [ok, a] = await Promise.all([license ? keyIsValid(license) : Promise.resolve(false), loadAccount()]);
     setLapsed(!ok);
-    return ok;
+    setAccount(a);
+    return ok || a.subscribed;
   }
 
   // Check a saved key once the server says the paywall is on, and lock again if any call is refused.
@@ -106,7 +115,11 @@ export function LynkrApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paywall]);
   useEffect(() => {
-    const lock = () => setLapsed(true);
+    // A refused call: the key lapsed, or the account's subscription ended. Ask again about both.
+    const lock = () => {
+      setLapsed(true);
+      loadAccount().then(setAccount);
+    };
     window.addEventListener(LOCKED_EVENT, lock);
     return () => window.removeEventListener(LOCKED_EVENT, lock);
   }, []);
@@ -226,7 +239,7 @@ export function LynkrApp() {
 
   // ---- screens ----
 
-  if (route.name !== "home" && paywall === null) {
+  if (route.name !== "home" && (paywall === null || account === null)) {
     return (
       <p role="status" className="p-8 text-soft">
         Loading...
@@ -239,6 +252,7 @@ export function LynkrApp() {
       <Paywall
         checkout={checkout}
         stored={license}
+        account={account}
         notice={license && lapsed ? "We couldn't confirm your subscription, so Lynkr is locked for now." : null}
         onUnlocked={(l) => {
           setLicense(l);
@@ -255,7 +269,8 @@ export function LynkrApp() {
     return (
       <Landing
         mock={mock}
-        access={paywall === true ? (license && !lapsed ? "subscribed" : "paid") : "open"}
+        access={paywall === true ? (entitled ? "subscribed" : "paid") : "open"}
+        account={account}
         resume={hasDrafts ? "drafts" : s.profile ? "flow" : null}
         onStart={() => go(hasDrafts && s.stage === "results" ? { name: "app", tab: "today" } : { name: "start" })}
         onCheck={() => go({ name: "check" })}
@@ -301,6 +316,7 @@ export function LynkrApp() {
         requirements={requirements}
         setRequirements={setRequirements}
         importMode={importMode}
+        account={account}
       />
     );
   }

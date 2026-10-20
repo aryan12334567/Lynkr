@@ -9,8 +9,13 @@ import DodoPayments from "dodopayments";
  *  3. Every AI route re-validates key + instance with Dodo (cached briefly). For subscription keys Dodo
  *     switches the key off itself when the subscription is cancelled, expired, paused or on hold.
  *
- * Safety defaults: the Dodo environment is TEST unless DODO_ENVIRONMENT=live_mode is set on purpose, and
- * the paywall only turns on when LYNKR_PAYWALL=1. Validation fails closed.
+ * Safety defaults:
+ *  - The paywall is ON in production builds (next build / Vercel) and OFF in local development. Override with
+ *    LYNKR_PAYWALL=1 (force on) or LYNKR_PAYWALL=0 (force off).
+ *  - The Dodo environment is TEST unless DODO_ENVIRONMENT=live_mode is set on purpose. Test-mode license keys
+ *    can be created by anyone with a test card, so in production a TEST environment is refused (checkout and
+ *    license activation both fail) unless LYNKR_ALLOW_TEST_PAYMENTS=1 is set, e.g. for a preview deployment.
+ *  - Validation fails closed.
  */
 const BASE_URL = {
   test_mode: "https://test.dodopayments.com",
@@ -23,13 +28,22 @@ export function dodoEnvironment(): DodoEnvironment {
   return process.env.DODO_ENVIRONMENT === "live_mode" ? "live_mode" : "test_mode";
 }
 
-export const paywallEnabled = (): boolean => process.env.LYNKR_PAYWALL === "1";
+export const isProduction = (): boolean => process.env.NODE_ENV === "production";
+
+export function paywallEnabled(): boolean {
+  const v = process.env.LYNKR_PAYWALL;
+  if (v === "0") return false;
+  return v === "1" || isProduction();
+}
+
+/** True when a production deployment is pointed at Dodo's test environment without an explicit opt-in. */
+export const testPaymentsBlocked = (): boolean => isProduction() && dodoEnvironment() === "test_mode" && process.env.LYNKR_ALLOW_TEST_PAYMENTS !== "1";
 
 /** The Dodo subscription product (pdt_...) that a license key must belong to. */
 export const billingProductId = (): string => process.env.DODO_PRODUCT_ID?.trim() || "";
 
 /** Checkout needs a server API key and the product id. */
-export const checkoutConfigured = (): boolean => Boolean(process.env.DODO_PAYMENTS_API_KEY?.trim()) && Boolean(billingProductId());
+export const checkoutConfigured = (): boolean => Boolean(process.env.DODO_PAYMENTS_API_KEY?.trim()) && Boolean(billingProductId()) && !testPaymentsBlocked();
 
 /** Where Dodo sends the person after paying or cancelling. */
 export function checkoutReturnUrl(origin: string): string {
@@ -75,6 +89,7 @@ export type ActivateResult = { ok: true; instanceId: string } | { ok: false; rea
 
 /** Activates a key for one browser. Refuses keys that belong to a different Dodo product. */
 export async function activateLicense(key: string, deviceName: string): Promise<ActivateResult> {
+  if (testPaymentsBlocked()) return { ok: false, reason: "unavailable" };
   try {
     const r = await publicClient().licenses.activate({ license_key: key, name: deviceName });
     const want = billingProductId();
@@ -95,6 +110,7 @@ const OUTAGE_GRACE = 24 * 60 * 60_000; // if Dodo is unreachable, keep someone w
 
 /** True only if Dodo says this key + browser instance is currently valid. Fails closed. */
 export async function validateLicense(key: string, instanceId: string): Promise<boolean> {
+  if (testPaymentsBlocked()) return false;
   const id = `${key}\u0000${instanceId}`;
   const now = Date.now();
   const hit = cache.get(id);

@@ -11,22 +11,25 @@ import {
   paywallEnabled,
   requireLicense,
   safeCheckoutUrl,
+  testPaymentsBlocked,
   validateLicense,
 } from "../lib/billing";
 
-const ENV_KEYS = ["DODO_PAYMENTS_API_KEY", "DODO_PRODUCT_ID", "DODO_PAYMENTS_BASE_URL", "DODO_ENVIRONMENT", "LYNKR_PAYWALL"] as const;
+const ENV_KEYS = ["DODO_PAYMENTS_API_KEY", "DODO_PRODUCT_ID", "DODO_PAYMENTS_BASE_URL", "DODO_ENVIRONMENT", "LYNKR_PAYWALL", "LYNKR_ALLOW_TEST_PAYMENTS", "NODE_ENV"] as const;
 type Env = Partial<Record<(typeof ENV_KEYS)[number], string>>;
 
 async function withEnv(values: Env, run: () => Promise<void> | void) {
-  const saved = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
-  for (const k of ENV_KEYS) delete process.env[k];
-  Object.assign(process.env, values);
+  // NODE_ENV is typed read-only by Next's types; the tests need to set it.
+  const env = process.env as Record<string, string | undefined>;
+  const saved = Object.fromEntries(ENV_KEYS.map((k) => [k, env[k]]));
+  for (const k of ENV_KEYS) delete env[k];
+  Object.assign(env, values);
   try {
     await run();
   } finally {
     for (const k of ENV_KEYS) {
-      if (saved[k] === undefined) delete process.env[k];
-      else process.env[k] = saved[k];
+      if (saved[k] === undefined) delete env[k];
+      else env[k] = saved[k];
     }
   }
 }
@@ -63,6 +66,37 @@ test("billing: defaults are safe (test environment, paywall off, checkout off)",
   await withEnv({ LYNKR_PAYWALL: "true" }, () => assert.equal(paywallEnabled(), false));
   await withEnv({ DODO_ENVIRONMENT: "live_mode" }, () => assert.equal(dodoEnvironment(), "live_mode"));
   await withEnv({ DODO_ENVIRONMENT: "live" }, () => assert.equal(dodoEnvironment(), "test_mode"));
+});
+
+test("billing: the paywall is on in production by default, off in development, and can be forced either way", async () => {
+  await withEnv({ NODE_ENV: "production" }, () => assert.equal(paywallEnabled(), true));
+  await withEnv({ NODE_ENV: "production", LYNKR_PAYWALL: "0" }, () => assert.equal(paywallEnabled(), false));
+  await withEnv({ NODE_ENV: "development" }, () => assert.equal(paywallEnabled(), false));
+  await withEnv({ NODE_ENV: "development", LYNKR_PAYWALL: "1" }, () => assert.equal(paywallEnabled(), true));
+});
+
+test("billing: production refuses Dodo's test environment unless explicitly allowed, so test cards can't unlock the app", async () => {
+  await withEnv({ NODE_ENV: "production" }, () => assert.equal(testPaymentsBlocked(), true));
+  await withEnv({ NODE_ENV: "production", LYNKR_ALLOW_TEST_PAYMENTS: "1" }, () => assert.equal(testPaymentsBlocked(), false));
+  await withEnv({ NODE_ENV: "production", DODO_ENVIRONMENT: "live_mode" }, () => assert.equal(testPaymentsBlocked(), false));
+  await withEnv({ NODE_ENV: "development" }, () => assert.equal(testPaymentsBlocked(), false));
+  // Checkout is reported unavailable while blocked, even with a key and product set.
+  const keyed = { DODO_PAYMENTS_API_KEY: "k", DODO_PRODUCT_ID: "pdt_1" };
+  await withEnv({ ...keyed, NODE_ENV: "production" }, () => assert.equal(checkoutConfigured(), false));
+  await withEnv({ ...keyed, NODE_ENV: "production", DODO_ENVIRONMENT: "live_mode" }, () => assert.equal(checkoutConfigured(), true));
+  // License calls are refused without ever contacting Dodo.
+  await withEnv({ NODE_ENV: "production" }, async () => {
+    await withFetch(() => json({ valid: true }), async (calls) => {
+      assert.equal(await validateLicense("K-TESTCARD", "i1"), false);
+      assert.deepEqual(await activateLicense("K-TESTCARD", "browser"), { ok: false, reason: "unavailable" });
+      assert.equal(calls.length, 0);
+    });
+  });
+  // The gate itself stays closed in production with no key, whatever the Dodo settings.
+  await withEnv({ NODE_ENV: "production" }, async () => {
+    const res = await requireLicense(new Request("http://localhost/api/generate", { method: "POST" }));
+    assert.equal(res?.status, 402);
+  });
 });
 
 test("billing: return url and checkout link handling", () => {

@@ -1,3 +1,4 @@
+import { requireLicense } from "@/lib/billing";
 import { InterviewReply, InterviewRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
@@ -13,6 +14,9 @@ const MAX_QUESTIONS = 9;
 const MIN_QUESTIONS = 4;
 
 export async function POST(req: Request) {
+  // Paid access: a no-op unless LYNKR_PAYWALL=1.
+  const locked = await requireLicense(req);
+  if (locked) return locked;
   const read = await readJson(req, BODY_LIMIT.interview);
   if ("error" in read) return read.error;
   const body = read.body;

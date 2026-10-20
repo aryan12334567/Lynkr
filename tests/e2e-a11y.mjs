@@ -28,12 +28,12 @@ const focusedName = () =>
 
 try {
   await page.goto(BASE);
-  // Keyboard: Tab to "Start free" on the landing page and press Enter.
-  await page.getByRole("button", { name: "Start free" }).first().waitFor();
+  // Keyboard: Tab to "Start" on the landing page and press Enter.
+  await page.getByRole("button", { name: "Start", exact: true }).first().waitFor();
   let onStart = false;
   for (let i = 0; i < 10 && !onStart; i++) {
     await page.keyboard.press("Tab");
-    onStart = (await focusedName()).startsWith("Start free");
+    onStart = (await focusedName()).startsWith("Start");
   }
   await page.keyboard.press("Enter");
   await page.getByLabel("Target role").waitFor();

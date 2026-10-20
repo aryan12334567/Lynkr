@@ -73,7 +73,7 @@ try {
   // Setup with the content profile, then the evidence-first interview.
   await page.goto(BASE);
   // L0: the landing page leads into setup.
-  await page.getByRole("button", { name: "Start free" }).first().click();
+  await page.getByRole("button", { name: "Start", exact: true }).first().click();
   await page.getByLabel("Target role").fill("Data analyst");
   const suggested = await page.getByLabel(/Closest field/).inputValue();
   await page.getByLabel("Your background in one or two lines").fill("Final-year B.Com, tier-3 college in Pune, self-taught SQL");

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import type { ExternalContextPacket, GenerateReply, ProfileInput, StoryFact, Turn, VaultReply } from "@/lib/schemas";
 import type { ImportMode } from "./ExternalContext";
-import { clear, draftFacts, EMPTY, load, postJson, save, type Saved } from "@/lib/store";
+import { clear, clearLicense, draftFacts, EMPTY, load, loadLicense, LOCKED_EVENT, postJson, save, type License, type Saved } from "@/lib/store";
 import { importedText, type ImportedProfile } from "@/lib/linkedinExport";
 import { Setup } from "./Setup";
 import { Interview } from "./Interview";
@@ -12,7 +12,8 @@ import { VaultReview } from "./VaultReview";
 import { Results, TAB_IDS, type Tab } from "./Results";
 import { Checker } from "./Checker";
 import { Landing } from "./Landing";
-import { ConfirmReset, DemoPill, SavedHint, SupportButton, TrustNote, Wordmark } from "./chrome";
+import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } from "./chrome";
+import { Paywall } from "./Paywall";
 import { Button, Card, ErrorNote } from "./ui";
 
 const STEPS = ["Basics", "Interview", "Check your facts", "Drafts"] as const;
@@ -42,6 +43,21 @@ function parseRoute(hash: string, s: Saved): Route {
 
 const toHash = (r: Route) => (r.name === "app" ? `#app/${r.tab}` : `#${r.name}`);
 
+/** True only if the server confirms this key and browser instance are active. */
+async function keyIsValid(l: License): Promise<boolean> {
+  try {
+    const r = await fetch("/api/license", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "validate", key: l.key, instanceId: l.instanceId }),
+    });
+    const d = (await r.json().catch(() => ({}))) as { valid?: boolean };
+    return r.ok && d.valid === true;
+  } catch {
+    return false;
+  }
+}
+
 export function LynkrApp() {
   const [s, setS] = useState<Saved>(load);
   const skipNextSave = useRef(false);
@@ -54,16 +70,61 @@ export function LynkrApp() {
   // An imported job page: memory only, never saved, separate from the Story Vault.
   const [requirements, setRequirements] = useState<ExternalContextPacket | null>(null);
   const [importMode, setImportMode] = useState<ImportMode>(null);
+  // Paid access. `paywall` stays null until the server answers, and the app never opens before that.
+  const [paywall, setPaywall] = useState<boolean | null>(null);
+  const [checkout, setCheckout] = useState(false);
+  const [license, setLicense] = useState<License | null>(loadLicense);
+  // The server refused the saved key: the subscription ended, a payment failed, or Dodo was unreachable.
+  const [lapsed, setLapsed] = useState(false);
+  const locked = paywall === true && (!license || lapsed);
 
   useEffect(() => {
     fetch("/api/status")
       .then((r) => r.json())
-      .then((d: { mock: boolean; importFromLink?: ImportMode }) => {
+      .then((d: { mock: boolean; importFromLink?: ImportMode; paywall?: boolean; checkout?: boolean }) => {
         setMock(d.mock);
         setImportMode(d.importFromLink ?? null);
+        setPaywall(d.paywall === true);
+        setCheckout(d.checkout === true);
       })
-      .catch(() => setMock(null));
+      .catch(() => {
+        setMock(null);
+        setPaywall(true); // fail closed: if the server can't say, don't open the app
+      });
   }, []);
+
+  /** Asks the server whether the saved key is still valid, and locks or unlocks the app to match. */
+  async function recheck(): Promise<boolean> {
+    const ok = license ? await keyIsValid(license) : false;
+    setLapsed(!ok);
+    return ok;
+  }
+
+  // Check a saved key once the server says the paywall is on, and lock again if any call is refused.
+  useEffect(() => {
+    if (paywall === true && license) keyIsValid(license).then((ok) => setLapsed(!ok));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paywall]);
+  useEffect(() => {
+    const lock = () => setLapsed(true);
+    window.addEventListener(LOCKED_EVENT, lock);
+    return () => window.removeEventListener(LOCKED_EVENT, lock);
+  }, []);
+
+  /** Sign this browser out: frees its activation and forgets the key. */
+  function forgetLicense() {
+    const l = license;
+    clearLicense();
+    setLicense(null);
+    setLapsed(false);
+    if (l) {
+      fetch("/api/license", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "deactivate", key: l.key, instanceId: l.instanceId }),
+      }).catch(() => {});
+    }
+  }
 
   useEffect(() => {
     if (skipNextSave.current) {
@@ -165,10 +226,36 @@ export function LynkrApp() {
 
   // ---- screens ----
 
+  if (route.name !== "home" && paywall === null) {
+    return (
+      <p role="status" className="p-8 text-soft">
+        Loading...
+      </p>
+    );
+  }
+
+  if (route.name !== "home" && locked) {
+    return (
+      <Paywall
+        checkout={checkout}
+        stored={license}
+        notice={license && lapsed ? "We couldn't confirm your subscription, so Lynkr is locked for now." : null}
+        onUnlocked={(l) => {
+          setLicense(l);
+          setLapsed(false);
+        }}
+        onRecheck={recheck}
+        onForget={forgetLicense}
+        onBack={() => go({ name: "home" })}
+      />
+    );
+  }
+
   if (route.name === "home") {
     return (
       <Landing
         mock={mock}
+        access={paywall === true ? (license && !lapsed ? "subscribed" : "paid") : "open"}
         resume={hasDrafts ? "drafts" : s.profile ? "flow" : null}
         onStart={() => go(hasDrafts && s.stage === "results" ? { name: "app", tab: "today" } : { name: "start" })}
         onCheck={() => go({ name: "check" })}
@@ -188,7 +275,7 @@ export function LynkrApp() {
         <Checker facts={s.facts} mock={mock} />
         <footer className="mt-12 border-t border-line pt-6">
           <TrustNote mock={mock} />
-          <SupportButton className="mt-4" />
+          <LegalLinks className="mt-4" />
         </footer>
       </div>
     );
@@ -314,7 +401,7 @@ export function LynkrApp() {
         <footer className="mt-12 border-t border-line pt-6">
           <TrustNote mock={mock} />
           <ConfirmReset onReset={reset} className="mt-3" />
-          <SupportButton className="mt-4" />
+          <LegalLinks className="mt-4" />
         </footer>
       </div>
     </div>

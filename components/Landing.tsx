@@ -23,7 +23,8 @@ import {
   Users,
 } from "lucide-react";
 import { InkThreads } from "./InkThreads";
-import { Wordmark } from "./chrome";
+import { LegalLinks, Wordmark } from "./chrome";
+import { SITE } from "@/lib/site";
 import { useLandingMotion, useLenis, useMagnetic, useSpotlight } from "./motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -228,7 +229,8 @@ function Tile({ title, children, body, className = "" }: { title: string; body: 
 /* ---------- FAQ ---------- */
 
 const FAQ = [
-  ["Is it free?", "Yes. Lynkr is free for freshers and early-career job seekers. There's no account to create."],
+  ["How much does it cost?", `${SITE.price} per ${SITE.period}, plus applicable taxes. You subscribe first, then use Lynkr. Cancel any time, and your first payment can be refunded within ${SITE.refundDays} days.`],
+  ["Is there a free trial?", "No. Access starts when you subscribe. Dodo Payments emails you a license key, and you enter it in Lynkr. There's no separate account to create."],
   ["Will it sound like AI wrote it?", "It writes only from facts you confirm, in plain words, and leaves blanks for anything it doesn't know. You can edit every line before you copy it."],
   ["Does it log in to my LinkedIn?", "No. Lynkr never asks for your LinkedIn password and never opens LinkedIn pages. You copy each draft and send it yourself."],
   ["What happens to my answers?", "Your Story Vault, drafts and tracker stay in your browser. Posts you paste and profile files you import are used once and never saved."],
@@ -266,7 +268,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 /* ---------- Page ---------- */
 
-const PROMISES = ["No LinkedIn login", "No profile scraping", "Nothing posted for you", "Only facts you confirmed", "Blanks, never guesses", "Free for freshers", "Works on your phone"];
+const PROMISES = ["No LinkedIn login", "No profile scraping", "Nothing posted for you", "Only facts you confirmed", "Blanks, never guesses", `${SITE.price} a ${SITE.period}, cancel any time`, "Works on your phone"];
 
 const STATS = [
   ["7", "tools, one Story Vault"],
@@ -281,11 +283,14 @@ export function Landing({
   onStart,
   onCheck,
   mock,
+  access = "open",
   resume = null,
 }: {
   onStart: () => void;
   onCheck: () => void;
   mock: boolean | null;
+  /** "paid": the app needs a subscription. "subscribed": this browser has an active key. "open": no paywall (local development). */
+  access?: "open" | "paid" | "subscribed";
   /** Saved progress in this browser: "drafts" if drafts exist, "flow" if partway through. */
   resume?: "drafts" | "flow" | null;
 }) {
@@ -296,7 +301,7 @@ export function Landing({
   useSpotlight(root);
   useMagnetic(magnet, 0.2);
 
-  const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : "Start free";
+  const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : access === "paid" ? "Get access" : "Start the interview";
   const cta = (label = primary) => (
     <button
       onClick={onStart}
@@ -315,6 +320,7 @@ export function Landing({
             {[
               ["#how", "How it works"],
               ["#features", "What you get"],
+              ["#pricing", "Pricing"],
               ["#never", "Privacy"],
               ["#faq", "Questions"],
             ].map(([href, label]) => (
@@ -331,7 +337,7 @@ export function Landing({
             onClick={onStart}
             className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-4 text-[0.9rem] font-medium text-ink transition-colors hover:bg-white/[0.12] md:ml-0"
           >
-            {resume ? (resume === "drafts" ? "My drafts" : "Continue") : "Start free"} <ArrowRight size={15} aria-hidden />
+            {resume ? (resume === "drafts" ? "My drafts" : "Continue") : access === "paid" ? "Get access" : "Start"} <ArrowRight size={15} aria-hidden />
           </button>
         </nav>
       </header>
@@ -352,7 +358,7 @@ export function Landing({
               transition={{ duration: 0.8, ease: EASE }}
               className="edge inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.82rem] text-soft backdrop-blur"
             >
-              <Sparkles size={14} className="text-marigold" aria-hidden /> Free for freshers and early-career job seekers in India
+              <Sparkles size={14} className="text-marigold" aria-hidden /> For freshers and early-career job seekers in India
             </motion.p>
             <h1 data-split="load" className="mt-7 text-[3rem] font-normal leading-[1] tracking-[-0.035em] sm:text-[5.4rem]">
               Write to one person. <br className="hidden sm:block" />
@@ -374,14 +380,16 @@ export function Landing({
               className="mt-9 flex flex-wrap items-center justify-center gap-3"
             >
               <div ref={magnet}>{cta()}</div>
-              <button
-                onClick={onCheck}
-                className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 text-[1rem] font-medium backdrop-blur transition-colors hover:border-accent/50 hover:bg-white/[0.08]"
-              >
-                <BadgeCheck size={17} className="text-accent" aria-hidden /> Check a message
-              </button>
+              {access !== "paid" && (
+                <button
+                  onClick={onCheck}
+                  className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 text-[1rem] font-medium backdrop-blur transition-colors hover:border-accent/50 hover:bg-white/[0.08]"
+                >
+                  <BadgeCheck size={17} className="text-accent" aria-hidden /> Check a message
+                </button>
+              )}
             </motion.div>
-            <p className="mt-4 text-[0.85rem] text-faint">No sign-up. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
+            <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period} plus taxes. Cancel any time. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
           </div>
           <div data-tilt className="relative mt-14 sm:mt-20">
             <HeroWindow />
@@ -529,6 +537,31 @@ export function Landing({
           </div>
         </section>
 
+        {/* Pricing */}
+        <section id="pricing" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+          <div className="mx-auto max-w-6xl">
+            <p className={EYEBROW}>Pricing</p>
+            <h2 data-split className={`mt-4 max-w-[18ch] ${H2}`}>
+              One plan. <span className="ink-accent">Pay first, then use it.</span>
+            </h2>
+            <div data-reveal className="edge mt-12 max-w-xl rounded-2xl border border-line bg-surface p-6 sm:p-8">
+              <p className="font-serif text-[3rem] leading-none">
+                {SITE.price} <span className="text-[1.1rem] text-soft">per {SITE.period}, plus applicable taxes</span>
+              </p>
+              <ul className="mt-6 space-y-2.5 text-[0.98rem] text-soft">
+                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Every tool: interview, Story Vault, profile fix, outreach, posts, Connect and the weekly plan</li>
+                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Cancel any time; access runs to the end of the month you paid for</li>
+                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Your first payment can be refunded within {SITE.refundDays} days</li>
+                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> No free tier and no free trial. Payments are handled by Dodo Payments, our Merchant of Record</li>
+              </ul>
+              <div className="mt-7">{cta(access === "subscribed" ? "Open Lynkr" : access === "paid" ? "Get access" : primary)}</div>
+              <p className="mt-4 text-[0.85rem] text-faint">
+                See the <a className="underline underline-offset-4 hover:text-ink" href="/terms">Terms</a>, <a className="underline underline-offset-4 hover:text-ink" href="/refunds">refund policy</a> and <a className="underline underline-offset-4 hover:text-ink" href="/privacy">privacy policy</a>.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* FAQ */}
         <section id="faq" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
           <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1fr_1.4fr]">
@@ -556,8 +589,8 @@ export function Landing({
               <h2 data-split className="mx-auto max-w-[18ch] text-[2.3rem] leading-[1.05] sm:text-[3.8rem]">
                 Start with one thing you <span className="ink-accent">actually did.</span>
               </h2>
-              <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install, nothing to sign up for.</p>
-              <div className="mt-9 flex justify-center">{cta(resume ? primary : "Start the interview")}</div>
+              <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install. {SITE.price} a {SITE.period} plus taxes, cancel any time.</p>
+              <div className="mt-9 flex justify-center">{cta(resume || access === "paid" ? primary : "Start the interview")}</div>
             </div>
           </div>
         </section>
@@ -568,11 +601,12 @@ export function Landing({
           <div>
             <Wordmark className="text-[1.35rem] !font-semibold" />
             <p className="mt-2 max-w-[48ch] text-[0.88rem] text-faint">
-              A free LinkedIn coach for Indian freshers. Not affiliated with LinkedIn. Your data stays in your browser.
+              A LinkedIn drafting tool for Indian freshers. Not affiliated with LinkedIn. Your data stays in your browser.
             </p>
+            <LegalLinks className="mt-4" />
           </div>
           <button onClick={onCheck} className="text-[0.9rem] text-soft transition-colors hover:text-ink">
-            Check a message without signing up
+            {access === "paid" ? "Get access" : "Check a message"}
           </button>
         </div>
       </footer>

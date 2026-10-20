@@ -19,7 +19,7 @@ import { VaultReview } from "./VaultReview";
 import { ProfileFix } from "./ProfileFix";
 import { CommentHelper } from "./CommentHelper";
 import { Today } from "./Today";
-import { ConfirmReset, DemoPill, SavedHint, SupportButton, TrustNote, Wordmark } from "./chrome";
+import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } from "./chrome";
 import { Button, Card, ErrorNote, Label, SectionHead } from "./ui";
 
 const TABS = [
@@ -184,7 +184,7 @@ export function Results({
         <div className="mt-8 hidden space-y-3 px-5 pb-8 lg:block">
           <TrustNote mock={mock} />
           <ConfirmReset onReset={onReset} className="-ml-2" />
-          <SupportButton />
+          <LegalLinks />
         </div>
       </aside>
 
@@ -335,7 +335,7 @@ export function Results({
           <div className="pt-10 lg:hidden">
             <TrustNote mock={mock} />
             <ConfirmReset onReset={onReset} className="mt-2 -ml-2" />
-            <SupportButton className="mt-3" />
+            <LegalLinks className="mt-3" />
           </div>
         </div>
       </main>

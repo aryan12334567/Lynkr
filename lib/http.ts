@@ -29,5 +29,6 @@ export const BODY_LIMIT = {
   enrich: 2 * 1024, // one URL
   review: 16 * 1024,
   plan: 4 * 1024,
+  license: 2 * 1024, // a license key and a browser instance id
   connect: 6 * 1024 * 1024, // screenshot up to 4 MB, base64-encoded
 } as const;

@@ -109,13 +109,50 @@ export function draftFacts(facts: StoryFact[]) {
   return facts.filter((f) => f.reviewStatus === "confirmed" && f.useInDrafts).map((f) => ({ id: f.id, kind: f.kind, text: f.text.slice(0, 400) }));
 }
 
+// ---- paid access: the license key and this browser's activation id live apart from the saved work,
+// so "Start over" never signs you out of a subscription you've paid for.
+const LICENSE_STORAGE = "lynkr.license.v1";
+
+export type License = { key: string; instanceId: string };
+
+export function loadLicense(): License | null {
+  try {
+    const raw = localStorage.getItem(LICENSE_STORAGE);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<License>;
+    return typeof v.key === "string" && typeof v.instanceId === "string" && v.key && v.instanceId ? { key: v.key, instanceId: v.instanceId } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLicense(l: License): void {
+  try {
+    localStorage.setItem(LICENSE_STORAGE, JSON.stringify(l));
+  } catch {}
+}
+
+export function clearLicense(): void {
+  try {
+    localStorage.removeItem(LICENSE_STORAGE);
+  } catch {}
+}
+
+/** Fired when the server says a subscription is needed, so the app can show the paywall. */
+export const LOCKED_EVENT = "lynkr-locked";
+
 export async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const license = loadLicense();
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(license ? { "x-lynkr-license": license.key, "x-lynkr-instance": license.instanceId } : {}),
+    },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 402) window.dispatchEvent(new Event(LOCKED_EVENT));
   if (!res.ok) throw new Error((data as { error?: string }).error || "Something went wrong. Please try again.");
   return data as T;
 }

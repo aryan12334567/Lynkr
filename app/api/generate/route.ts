@@ -1,3 +1,4 @@
+import { requireLicense } from "@/lib/billing";
 import { GenerateReply, GenerateRequest, type FactRef, type ProfileInput } from "@/lib/schemas";
 import { cleanStrings } from "@/lib/clean";
 import { packetForPrompt } from "@/lib/requirements";
@@ -61,6 +62,9 @@ function stripFactIds(reply: GenerateReply): GenerateReply {
 }
 
 export async function POST(req: Request) {
+  // Paid access: a no-op unless LYNKR_PAYWALL=1.
+  const locked = await requireLicense(req);
+  if (locked) return locked;
   const read = await readJson(req, BODY_LIMIT.generate);
   if ("error" in read) return read.error;
   const parsed = GenerateRequest.safeParse(read.body);

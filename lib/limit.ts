@@ -24,7 +24,7 @@ export function clientIp(req: Request): string {
   return (fwd ? fwd.split(",")[0].trim() : req.headers.get("x-real-ip")) || "unknown";
 }
 
-export type LimitKind = "interview" | "generate" | "enrich" | "support";
+export type LimitKind = "interview" | "generate" | "enrich" | "checkout" | "license";
 
 /** Returns an error message if the request should be refused, else null. */
 export function checkLimits(req: Request, kind: LimitKind): string | null {
@@ -38,10 +38,15 @@ export function checkLimits(req: Request, kind: LimitKind): string | null {
     }
     return null;
   }
-  if (kind === "support") {
-    // Opening a checkout costs nothing but creates a record at Dodo: 5 per visitor per hour, 100 per day in total.
-    if (!hit(`ip:support:${clientIp(req)}`, 5, HOUR)) return "Too many checkout attempts. Please try again later.";
-    if (!hit("global:support:day", 100, DAY)) return "Support checkout is busy today. Please try again tomorrow.";
+  if (kind === "checkout") {
+    // Opening a checkout costs nothing but creates a record at Dodo: 5 per visitor per hour, 200 per day in total.
+    if (!hit(`ip:checkout:${clientIp(req)}`, 5, HOUR)) return "Too many checkout attempts. Please try again later.";
+    if (!hit("global:checkout:day", 200, DAY)) return "Checkout is busy today. Please try again tomorrow.";
+    return null;
+  }
+  if (kind === "license") {
+    // Unlocking with a key: enough for typos and a few devices, too few to guess keys.
+    if (!hit(`ip:license:${clientIp(req)}`, 30, HOUR)) return "Too many attempts. Please try again in an hour.";
     return null;
   }
   const perHour = kind === "interview" ? 40 : 6;

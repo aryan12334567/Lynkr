@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "./ui";
+import { useState } from "react";
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
@@ -53,59 +52,16 @@ export function SavedHint() {
   );
 }
 
-/**
- * "Support Lynkr" opens a Dodo checkout in test mode. It only appears when the server has a Dodo key
- * set, so the demo without one looks exactly as before. Paying unlocks nothing.
- */
-export function SupportButton({ className = "" }: { className?: string }) {
-  const [enabled, setEnabled] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let live = true;
-    fetch("/api/support")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (live && d?.enabled === true) setEnabled(true);
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  if (!enabled) return null;
-
-  async function open() {
-    setBusy(true);
-    setError("");
-    try {
-      const r = await fetch("/api/support", { method: "POST" });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok && typeof d.url === "string") {
-        window.location.assign(d.url);
-        return;
-      }
-      setError(typeof d.error === "string" ? d.error : "Couldn't open checkout. Please try again.");
-    } catch {
-      setError("Couldn't open checkout. Check your connection and try again.");
-    }
-    setBusy(false);
-  }
-
+/** Links every public page must carry: Dodo and customers look for these in the footer. */
+export function LegalLinks({ className = "" }: { className?: string }) {
+  const link = "text-soft underline-offset-4 transition-colors hover:text-ink hover:underline";
   return (
-    <div className={className}>
-      <Button variant="ghost" onClick={open} disabled={busy}>
-        {busy ? "Opening checkout..." : "Support Lynkr"}
-      </Button>
-      <p className="mt-1 text-[0.82rem] text-faint">Test mode: no real money moves. Lynkr stays free either way.</p>
-      {error && (
-        <p role="alert" className="mt-1 text-[0.85rem] text-bad">
-          {error}
-        </p>
-      )}
-    </div>
+    <nav aria-label="Legal" className={`flex flex-wrap gap-x-5 gap-y-1 text-[0.88rem] ${className}`}>
+      <a className={link} href="/terms">Terms of Service</a>
+      <a className={link} href="/privacy">Privacy Policy</a>
+      <a className={link} href="/refunds">Refunds and cancellation</a>
+      <a className={link} href="/contact">Contact</a>
+    </nav>
   );
 }
 

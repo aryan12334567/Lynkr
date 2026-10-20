@@ -247,7 +247,7 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
             <>
               {mode === "signup" && (
                 <p className="edge inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[0.8rem] text-soft">
-                  <Sparkles size={13} className="text-marigold" aria-hidden /> Built for Indian freshers
+                  <Sparkles size={13} className="text-marigold" aria-hidden /> Get found on LinkedIn
                 </p>
               )}
               <h1 className="mt-4 text-[2.4rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.7rem]">{title}</h1>

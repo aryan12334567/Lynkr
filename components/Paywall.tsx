@@ -164,7 +164,7 @@ export function Paywall({
         <Card>
           <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-marigold">Lynkr subscription</p>
           <h1 className="mt-2 text-[2rem] font-extrabold leading-tight sm:text-[2.4rem]">
-            {SITE.price} <span className="text-[1.1rem] font-medium text-soft">per {SITE.period}, plus applicable taxes</span>
+            {SITE.price} <span className="text-[1.1rem] font-medium text-soft">a {SITE.period}, taxes included</span>
           </h1>
           <p className="mt-2 max-w-[58ch] text-soft">
             {accounts

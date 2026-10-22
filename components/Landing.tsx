@@ -230,7 +230,7 @@ function Tile({ title, children, body, className = "" }: { title: string; body: 
 /* ---------- FAQ ---------- */
 
 const FAQ = [
-  ["How much does it cost?", `${SITE.price} per ${SITE.period}, plus applicable taxes. You subscribe first, then use Lynkr. Cancel any time, and your first payment can be refunded within ${SITE.refundDays} days.`],
+  ["How much does it cost?", `${SITE.price} a ${SITE.period}, taxes included. You subscribe first, then use Lynkr. Cancel any time, and your first payment can be refunded within ${SITE.refundDays} days.`],
   ["Is there a free trial?", "No. Access starts when you subscribe. Dodo Payments emails you a license key, and you enter it in Lynkr. There's no separate account to create."],
   ["Will it sound like AI wrote it?", "It writes only from facts you confirm, in plain words, and leaves blanks for anything it doesn't know. You can edit every line before you copy it."],
   ["Does it log in to my LinkedIn?", "No. Lynkr never asks for your LinkedIn password and never opens LinkedIn pages. You copy each draft and send it yourself."],
@@ -401,7 +401,7 @@ export function Landing({
                 </button>
               )}
             </motion.div>
-            <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period} plus taxes. Cancel any time. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
+            <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period}, taxes included. Cancel any time. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
           </div>
           <div data-tilt className="relative mt-14 sm:mt-20">
             <HeroWindow />
@@ -558,7 +558,7 @@ export function Landing({
             </h2>
             <div data-reveal className="edge mt-12 max-w-xl rounded-2xl border border-line bg-surface p-6 sm:p-8">
               <p className="font-serif text-[3rem] leading-none">
-                {SITE.price} <span className="text-[1.1rem] text-soft">per {SITE.period}, plus applicable taxes</span>
+                {SITE.price} <span className="text-[1.1rem] text-soft">a {SITE.period}, taxes included</span>
               </p>
               <ul className="mt-6 space-y-2.5 text-[0.98rem] text-soft">
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Every tool: interview, Story Vault, profile fix, outreach, posts, Connect and the weekly plan</li>
@@ -601,7 +601,7 @@ export function Landing({
               <h2 data-split className="mx-auto max-w-[18ch] text-[2.3rem] leading-[1.05] sm:text-[3.8rem]">
                 Start with one thing you <span className="ink-accent">actually did.</span>
               </h2>
-              <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install. {SITE.price} a {SITE.period} plus taxes, cancel any time.</p>
+              <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install. {SITE.price} a {SITE.period}, taxes included. Cancel any time.</p>
               <div className="mt-9 flex justify-center">{cta(resume || access === "paid" ? primary : "Start the interview")}</div>
             </div>
           </div>

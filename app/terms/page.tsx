@@ -21,7 +21,7 @@ export default function Terms() {
 
       <Section title="2. Subscription and payment">
         <p>
-          Lynkr costs {SITE.price} per {SITE.period}, plus applicable taxes calculated at checkout. You pay first, then use Lynkr: there is no free tier and no free trial. Payments are processed by Dodo Payments,
+          Lynkr costs {SITE.price} per {SITE.period}, including applicable taxes (GST). You pay first, then use Lynkr: there is no free tier and no free trial. Payments are processed by Dodo Payments,
           which acts as the Merchant of Record for Lynkr purchases. We never receive your card details.
         </p>
         <p>

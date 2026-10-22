@@ -7,7 +7,7 @@ export const SITE = {
   /** Individual who operates Lynkr (shown on Terms, Privacy and Contact). */
   operator: "Aryan Subramanya J",
   country: "India",
-  /** Shown as "₹499 per month plus applicable taxes": taxes are added at checkout. */
+  /** Shown as "₹499 a month, taxes included": the price at checkout already includes GST. */
   price: "₹499",
   period: "month",
   refundDays: 7,

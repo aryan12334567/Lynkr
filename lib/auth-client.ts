@@ -1,15 +1,41 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { magicLinkClient } from "better-auth/client/plugins";
+import { emailOTPClient, oneTapClient } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
 import { dodopaymentsClient } from "@dodopayments/better-auth/client";
 
 /** Browser side of Lynkr accounts. Same origin, so the session cookie goes with every request. */
-export const authClient = createAuthClient({ plugins: [magicLinkClient(), dodopaymentsClient()] });
+export const authClient = createAuthClient({ plugins: [emailOTPClient(), passkeyClient(), dodopaymentsClient()] });
 
-export type Account = { accounts: boolean; google: boolean; signedIn: boolean; email: string | null; subscribed: boolean };
+export type Account = {
+  accounts: boolean;
+  google: boolean;
+  /** Public Google client ID, for One Tap. */
+  googleClientId: string | null;
+  apple: boolean;
+  signedIn: boolean;
+  email: string | null;
+  subscribed: boolean;
+};
 
-export const NO_ACCOUNT: Account = { accounts: false, google: false, signedIn: false, email: null, subscribed: false };
+export const NO_ACCOUNT: Account = { accounts: false, google: false, googleClientId: null, apple: false, signedIn: false, email: null, subscribed: false };
+
+/** True when this browser can create and use passkeys (fingerprint, face or device PIN). */
+export const passkeysSupported = (): boolean => typeof window !== "undefined" && typeof window.PublicKeyCredential === "function";
+
+let oneTapStarted = false;
+/**
+ * Google One Tap: the "Continue as …" prompt for people already signed in to Google in this browser.
+ * Created on demand because the client ID comes from the server. Shown at most once per page load;
+ * after a successful sign-in the page goes to `callbackURL`.
+ */
+export function startOneTap(clientId: string, callbackURL: string) {
+  if (oneTapStarted) return;
+  oneTapStarted = true;
+  const client = createAuthClient({ plugins: [oneTapClient({ clientId, autoSelect: false, cancelOnTapOutside: true, context: "signin" })] });
+  client.oneTap({ callbackURL }).catch(() => {});
+}
 
 export async function loadAccount(): Promise<Account> {
   try {

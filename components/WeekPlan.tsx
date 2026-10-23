@@ -266,7 +266,7 @@ export function WeekPlan({
           const list = items.filter((it) => it.day === day);
           return (
             <section key={day} aria-label={formatDay(day)} className="min-w-0">
-              <h4 className={`mb-2 border-b pb-1 font-serif text-[0.95rem] font-bold ${day === today ? "border-marigold text-ink" : "border-line text-soft"}`}>
+              <h4 className={`mb-2 border-b pb-1 font-serif text-[0.95rem] font-bold ${day === today ? "border-accent text-ink" : "border-line text-soft"}`}>
                 {formatDay(day)}
                 {day === today && <span className="ml-1 font-sans text-[0.8rem] font-normal text-faint">today</span>}
               </h4>

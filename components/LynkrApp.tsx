@@ -326,7 +326,7 @@ export function LynkrApp() {
   const generating = s.stage === "generating";
   return (
     <div className="relative min-h-full">
-      <div className="paper-grid pointer-events-none absolute inset-x-0 top-0 h-80" aria-hidden />
+      
       <div className="relative mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:px-6">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <HomeLink onHome={() => go({ name: "home" })} />

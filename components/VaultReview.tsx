@@ -62,7 +62,7 @@ export function VaultReview({
           {onClear && <ConfirmReset onReset={onClear} label="Clear everything" />}
         </div>
         {pending > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md bg-marigold-wash px-4 py-3 text-[0.92rem]">
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-md bg-accent-wash px-4 py-3 text-[0.92rem]">
             <span>
               {pending} fact{pending === 1 ? "" : "s"} still to check.
             </span>
@@ -86,7 +86,7 @@ export function VaultReview({
           {facts.map((f) => {
             const src = f.sourceTurnIds.map((n) => ({ n, t: turns[n - 1] })).filter((x) => x.t);
             return (
-              <li key={f.id} data-fact={f.id} className={`rounded-2xl border bg-surface shadow-sm p-4 ${f.reviewStatus === "excluded" ? "border-line opacity-75" : f.reviewStatus === "candidate" ? "border-marigold/70" : "border-line"}`}>
+              <li key={f.id} data-fact={f.id} className={`rounded-2xl border bg-surface shadow-sm p-4 ${f.reviewStatus === "excluded" ? "border-line opacity-75" : f.reviewStatus === "candidate" ? "border-accent/70" : "border-line"}`}>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span className="font-serif text-[0.9rem] font-bold text-accent">{f.id}</span>
                   <label className="sr-only" htmlFor={`kind-${f.id}`}>

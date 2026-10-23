@@ -176,7 +176,7 @@ export function Results({
                 {on && (
                   <motion.span
                     layoutId="tab-pill"
-                    className="absolute inset-0 rounded-lg bg-surface shadow-sm ring-1 ring-line lg:shadow-[inset_3px_0_0_var(--marigold),var(--elev-sm)]"
+                    className="absolute inset-0 rounded-lg bg-surface shadow-sm ring-1 ring-line lg:shadow-[inset_3px_0_0_var(--accent),var(--elev-sm)]"
                     transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
                   />
                 )}

@@ -4,8 +4,8 @@ import { useState } from "react";
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-serif text-[1.6rem] font-extrabold leading-none tracking-tight text-ink ${className}`}>
-      Lynkr<span className="text-marigold">.</span>
+    <span className={`text-[1.5rem] font-semibold leading-none tracking-[-0.04em] text-ink ${className}`}>
+      Lynkr<span className="text-accent">.</span>
     </span>
   );
 }

@@ -1,80 +1,30 @@
 @import "tailwindcss";
 
 /*
- * Lynkr design tokens.
- * Neel (indigo) ink. Marigold is spent in one place only: the blanks that only the
- * user can fill. Newsreader (serif) carries headlines and every draft; Manrope carries
- * the interface. The product renders in the "night" palette (.theme-night on <html>);
- * the light and dark :root palettes remain as the tested fallbacks.
+ * Lynkr design tokens: one light palette for the whole product.
+ * A warm off-white page, white surfaces, near-black ink and a single indigo accent, spent on
+ * primary actions, links and the blanks only the user can fill. Green, amber and red appear only
+ * as status (good / check this / fix this). Every text colour passes WCAG AA on every surface.
+ * One typeface (Geist) in two weights: 400 for reading, 600 for emphasis.
  */
 :root {
-  --bg: #f4f5fa;
+  --bg: #fafaf8;
   --surface: #ffffff;
-  --muted: #eceef6;
-  --line: #dde1ec;
-  --ink: #0f1330;
-  --soft: #444a68;
-  --faint: #545a79;
-  --accent: #3340b8;
-  --accent-strong: #262f93;
+  --muted: #f3f3f0;
+  --line: #e7e7e2;
+  --ink: #111318;
+  --soft: #474c58;
+  --faint: #5f6472;
+  --accent: #3a42c8;
+  --accent-strong: #2c339f;
+  --accent-wash: #eef0fd;
   --good: #1b6e45;
-  --warn: #7a4d00;
+  --warn: #8a5300;
   --bad: #b02a1e;
-  --marigold: #f2b233;
-  --marigold-wash: #fdf0cf;
-  --night: #0a0c1f;
-  --night-2: #12152e;
-  --elev-sm: 0 1px 2px rgba(15, 19, 48, 0.05), 0 1px 1px rgba(15, 19, 48, 0.03);
-  --elev-md: 0 1px 2px rgba(15, 19, 48, 0.05), 0 10px 30px -14px rgba(15, 19, 48, 0.2);
-  --elev-lg: 0 2px 4px rgba(15, 19, 48, 0.04), 0 40px 80px -32px rgba(15, 19, 48, 0.4), 0 20px 40px -20px rgba(51, 64, 184, 0.22);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1024;
-    --surface: #151931;
-    --muted: #1c213e;
-    --line: #2a3054;
-    --ink: #eceef9;
-    --soft: #b8bcd6;
-    --faint: #a2a7c6;
-    --accent: #a3adff;
-    --accent-strong: #c0c7ff;
-    --good: #63d39a;
-    --warn: #f3be55;
-    --bad: #ff8f85;
-    --marigold: #e9a825;
-    --marigold-wash: #3a2f12;
-    --night: #07091a;
-    --night-2: #10142c;
-    --elev-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --elev-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -14px rgba(0, 0, 0, 0.6);
-    --elev-lg: 0 2px 4px rgba(0, 0, 0, 0.3), 0 40px 90px -30px rgba(0, 0, 0, 0.75), 0 20px 50px -20px rgba(163, 173, 255, 0.14);
-  }
-}
-
-/* The night palette, applied to the whole product from <html>. Same token names, so every component adapts. */
-.theme-night {
-  --bg: #0a0c1f;
-  --surface: #12152e;
-  --muted: #181c3a;
-  --line: #262b4d;
-  --ink: #eef0fa;
-  --soft: #b4b9d6;
-  --faint: #959bbd;
-  --accent: #aab3ff;
-  --accent-strong: #c6ccff;
-  --good: #6bd8a0;
-  --warn: #f5c15a;
-  --bad: #ff8f85;
-  --marigold: #f2b233;
-  --marigold-wash: #3a2f12;
-  --elev-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --elev-md: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -16px rgba(0, 0, 0, 0.7);
-  --elev-lg: 0 2px 4px rgba(0, 0, 0, 0.3), 0 50px 100px -30px rgba(0, 0, 0, 0.85), 0 30px 80px -30px rgba(122, 132, 255, 0.28);
-  background: var(--bg);
-  color: var(--ink);
-  color-scheme: dark;
+  --elev-sm: 0 1px 2px rgba(17, 19, 24, 0.04);
+  --elev-md: 0 1px 2px rgba(17, 19, 24, 0.04), 0 8px 24px -12px rgba(17, 19, 24, 0.12);
+  --elev-lg: 0 1px 2px rgba(17, 19, 24, 0.04), 0 30px 60px -30px rgba(17, 19, 24, 0.18);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -87,18 +37,21 @@
   --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-accent-wash: var(--accent-wash);
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
-  --color-marigold: var(--marigold);
-  --color-marigold-wash: var(--marigold-wash);
-  --color-night: var(--night);
-  --color-night-2: var(--night-2);
   --shadow-sm: var(--elev-sm);
   --shadow-md: var(--elev-md);
   --shadow-lg: var(--elev-lg);
-  --font-sans: var(--font-mukta);
-  --font-serif: var(--font-martel);
+  --font-sans: var(--font-geist);
+  /* `font-serif` is kept as a class name for drafts and headings; it now renders in the same sans. */
+  --font-serif: var(--font-geist);
+  /* Two weights only: every heavier utility resolves to 600. */
+  --font-weight-medium: 600;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
 }
 
 html {
@@ -106,14 +59,10 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(70rem 32rem at 50% -12rem, rgba(99, 110, 255, 0.16), transparent 70%),
-    var(--bg);
-  background-repeat: no-repeat;
+  background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-mukta), system-ui, sans-serif;
+  font-family: var(--font-geist), system-ui, sans-serif;
   line-height: 1.6;
-  font-feature-settings: "kern", "ss01";
   -webkit-font-smoothing: antialiased;
 }
 
@@ -121,19 +70,10 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-martel), Georgia, serif;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
   line-height: 1.15;
   text-wrap: balance;
-}
-
-/* The serif reads best at a medium weight: heavy faux-bold headings look cheap. */
-:where(h1, h2, h3, h4).font-bold,
-:where(h1, h2, h3, h4).font-extrabold,
-.font-serif.font-bold,
-.font-serif.font-extrabold {
-  font-weight: 600;
 }
 
 /* Visible keyboard focus everywhere (mouse clicks don't show it). */
@@ -143,22 +83,21 @@ h4 {
 }
 
 ::selection {
-  background: var(--marigold-wash);
+  background: var(--accent-wash);
   color: var(--ink);
 }
 
 /*
- * The draft sheet: the one memorable element. A writing sheet with a marigold margin
- * rule, set in the serif, where every unknown fact is a marigold blank until you fill it.
+ * The draft sheet: a writing sheet with an accent margin rule, where every unknown fact
+ * is a highlighted blank until you fill it.
  */
 .sheet {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 1.25rem 1.25rem 1.25rem 1.75rem;
-  font-family: var(--font-martel), Georgia, serif;
-  font-size: 1.02rem;
+  font-size: 1rem;
   line-height: 1.75;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -171,113 +110,37 @@ h4 {
   left: 0.85rem;
   width: 2px;
   border-radius: 2px;
-  background: var(--marigold);
-  opacity: 0.85;
+  background: var(--accent);
+  opacity: 0.5;
 }
 
 .blank,
 .filled {
   border-radius: 3px;
   padding: 0.05em 0.3em;
-  font-family: var(--font-mukta), system-ui, sans-serif;
-  font-size: 0.86em;
+  font-size: 0.9em;
   transition:
     background-color 260ms ease,
     color 260ms ease,
     box-shadow 260ms ease;
 }
 .blank {
-  background: var(--marigold-wash);
-  color: var(--ink);
-  box-shadow: inset 0 -2px 0 var(--marigold);
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+  box-shadow: inset 0 -1.5px 0 var(--accent);
 }
 .filled {
   background: transparent;
   color: var(--accent);
-  font-family: inherit;
   font-size: inherit;
   padding: 0;
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 html,
 body {
   overflow-x: hidden;
   overflow-x: clip;
-}
-
-/* A faint drafting grid, fading out at the edges. */
-.paper-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 85%);
-}
-.theme-night .paper-grid,
-.paper-grid.night {
-  opacity: 0.45;
-}
-@media (prefers-color-scheme: dark) {
-  .paper-grid {
-    opacity: 0.35;
-  }
-}
-
-/* In the components layer, so utilities like `absolute` still win over `position: relative` here. */
-@layer components {
-/* Film grain over dark surfaces, so large areas of colour don't look flat. */
-.grain {
-  position: relative;
-  isolation: isolate;
-}
-.grain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.07;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-
-/* A hairline that is brighter at the top: the edge of a glass card on the night canvas. */
-.edge {
-  position: relative;
-}
-.edge::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04) 40%, rgba(170, 179, 255, 0.1));
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-/* A soft light that follows the pointer across a card (set by --mx/--my). */
-.spot {
-  position: relative;
-  overflow: hidden;
-}
-.spot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 400ms ease;
-  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(170, 179, 255, 0.12), transparent 60%);
-}
-.spot:hover::after {
-  opacity: 1;
-}
 }
 
 /* Lenis smooth scrolling (landing page, pointer devices only). */
@@ -295,43 +158,6 @@ html.lenis body {
   overflow: hidden;
 }
 
-/* Text split for reveals keeps descenders: each word mask has room below. */
-.split-mask {
-  display: inline-block;
-  overflow: hidden;
-  padding-bottom: 0.12em;
-  margin-bottom: -0.12em;
-  vertical-align: top;
-}
-
-/* The ink threads drift very slowly. */
-@keyframes drift {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-2%, 1.5%, 0) scale(1.04);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-.drift {
-  animation: drift 70s ease-in-out infinite;
-  animation-delay: -12s;
-}
-@keyframes thread-glow {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-.node-glow {
-  animation: thread-glow 6s ease-in-out infinite;
-}
 body.paused *,
 body.paused *::before,
 body.paused *::after {
@@ -354,36 +180,6 @@ body.paused *::after {
     animation-delay: 0ms !important;
     transition-duration: 1ms !important;
   }
-}
-
-/* A slow ticker of promises under the hero. Duplicated content, so -50% loops seamlessly. */
-@keyframes ticker {
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-.ticker {
-  animation: ticker 40s linear infinite;
-}
-.ticker-wrap:hover .ticker {
-  animation-play-state: paused;
-}
-
-/* Headline accent: the serif italic, lit with a soft indigo-to-marigold gradient. */
-.ink-accent {
-  font-style: italic;
-  padding-right: 0.06em;
-}
-/* The gradient sits on the innermost text box: GSAP's word split wraps words in masks. */
-.ink-accent,
-.ink-accent .split-word {
-  background: linear-gradient(100deg, #c6ccff 10%, #f2c46a 90%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.ink-accent:has(.split-word) {
-  background: none;
 }
 
 /* Sign-up showcase: columns of promises drifting up (and one down). Duplicated content loops at -50%. */

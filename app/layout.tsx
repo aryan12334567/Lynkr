@@ -1,37 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Newsreader } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 
-// Newsreader: an editorial serif with optical sizes, for headlines and every draft.
-const serif = Newsreader({
-  variable: "--font-martel",
+// Geist: one clean sans for the whole product, in two weights (400 and 600).
+const sans = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["opsz"],
-  display: "swap",
-});
-
-// Manrope: a crisp geometric sans for the interface.
-const sans = Manrope({
-  variable: "--font-mukta",
-  subsets: ["latin"],
+  weight: ["400", "600"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Lynkr",
-  description: "Write to one person on LinkedIn and sound like yourself. A paid subscription for Indian freshers and early-career job seekers.",
+  description: "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts your profile, messages and posts from facts you confirm.",
 };
 
 export const viewport: Viewport = {
-  // The whole product uses the night palette (see .theme-night in globals.css).
-  themeColor: "#0a0c1f",
-  colorScheme: "dark",
+  themeColor: "#fafaf8",
+  colorScheme: "light",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`theme-night ${serif.variable} ${sans.variable} h-full antialiased`}>
+    <html lang="en-IN" className={`${sans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

@@ -6,7 +6,7 @@ import { SITE } from "@/lib/site";
 /** Plain page shell for Terms, Privacy, Refunds and Contact. Server-rendered, no scripts needed. */
 export function LegalPage({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="theme-night min-h-screen w-full bg-bg text-ink">
+    <div className="min-h-screen w-full bg-bg text-ink">
       <div className="mx-auto w-full max-w-3xl px-4 pb-16 pt-6 sm:px-6">
         <header className="mb-10 flex items-center justify-between gap-3">
           <Link href="/" aria-label="Lynkr home page" className="rounded-md">
@@ -47,6 +47,6 @@ export function ContactEmail() {
       {SITE.contactEmail}
     </a>
   ) : (
-    <span className="rounded bg-marigold-wash px-1.5 text-marigold">contact email not set yet</span>
+    <span className="rounded bg-accent-wash px-1.5 text-accent">contact email not set yet</span>
   );
 }

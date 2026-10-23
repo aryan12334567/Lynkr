@@ -88,7 +88,7 @@ export function Choice<T extends string>({
   );
 }
 
-/** Draft text on the sheet: blanks stay marigold until filled, then read as ink. */
+/** Draft text on the sheet: blanks stay highlighted until filled, then read as ink. */
 export function SheetText({ body, fills, className = "" }: { body: string; fills: string[]; className?: string }) {
   return (
     <div className={`sheet ${className}`}>

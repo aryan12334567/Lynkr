@@ -12,7 +12,7 @@ const sans = Geist({
 
 export const metadata: Metadata = {
   title: "Lynkr",
-  description: "Write to one person on LinkedIn and sound like yourself. A paid subscription for Indian freshers and early-career job seekers.",
+  description: "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts your profile, messages and posts from facts you confirm.",
 };
 
 export const viewport: Viewport = {

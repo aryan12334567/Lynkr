@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ContactEmail, LegalPage, Section } from "@/components/LegalPage";
 import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Terms of Service | Lynkr", description: "The terms for using Lynkr, a paid LinkedIn drafting tool for Indian freshers." };
+export const metadata: Metadata = { title: "Terms of Service | Lynkr", description: "The terms for using Lynkr, a paid LinkedIn drafting tool." };
 
 export default function Terms() {
   return (

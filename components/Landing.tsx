@@ -411,7 +411,7 @@ export function Landing({
               <div>
                 <p className={EYEBROW}>What you get</p>
                 <h2 data-split className={`mt-3 ${H2}`}>
-                  Everything a fresher needs to get noticed, nothing that fakes it.
+                  Everything you need to get noticed, nothing that fakes it.
                 </h2>
               </div>
               <p className="text-[1.05rem] text-soft md:pb-2">Seven tools, one Story Vault. Every draft points back to the facts it used.</p>
@@ -558,7 +558,7 @@ export function Landing({
           <div>
             <Wordmark className="text-[1.25rem]" />
             <p className="mt-2 max-w-[48ch] text-[0.88rem] text-faint">
-              A LinkedIn drafting tool for Indian freshers. Not affiliated with LinkedIn. Your data stays in your browser.
+              A LinkedIn drafting tool. Not affiliated with LinkedIn or Microsoft. Your data stays in your browser.
             </p>
             <LegalLinks className="mt-4" />
           </div>

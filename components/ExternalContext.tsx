@@ -100,7 +100,7 @@ export function ExternalContext({
       </div>
 
       {packet && (
-        <div className="mt-4 rounded-xl border border-marigold/60 bg-surface p-4 text-[0.92rem]" data-requirements="review">
+        <div className="mt-4 rounded-xl border border-accent/60 bg-surface p-4 text-[0.92rem]" data-requirements="review">
           <div className="flex flex-wrap items-center gap-2">
             <Pill tone="warn">Check before using</Pill>
             {demo && <Pill>Demo sample, not the real page</Pill>}

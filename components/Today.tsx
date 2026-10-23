@@ -30,9 +30,9 @@ export function Today({ s, go }: { s: Saved; go: (t: Tab) => void }) {
   const planTotal = s.plan?.items.length ?? 0;
   const followUps = s.connect.people.filter((p) => personFollowUpDue(p)).length;
 
-  const cards: { icon: typeof Library; title: string; body: string; action: string; tab: Tab; tone?: "marigold" }[] = [];
-  if (toCheck) cards.push({ icon: Library, title: `${toCheck} fact${toCheck === 1 ? "" : "s"} to check`, body: "Confirm or switch them off before they're used.", action: "Open Story Vault", tab: "vault", tone: "marigold" });
-  if (blanks) cards.push({ icon: PenLine, title: `${blanks} blank${blanks === 1 ? "" : "s"} to fill`, body: "Only you know these facts. Copy turns on once they're filled.", action: "Fill your posts", tab: "posts", tone: "marigold" });
+  const cards: { icon: typeof Library; title: string; body: string; action: string; tab: Tab; tone?: "attention" }[] = [];
+  if (toCheck) cards.push({ icon: Library, title: `${toCheck} fact${toCheck === 1 ? "" : "s"} to check`, body: "Confirm or switch them off before they're used.", action: "Open Story Vault", tab: "vault", tone: "attention" });
+  if (blanks) cards.push({ icon: PenLine, title: `${blanks} blank${blanks === 1 ? "" : "s"} to fill`, body: "Only you know these facts. Copy turns on once they're filled.", action: "Fill your posts", tab: "posts", tone: "attention" });
   if (followUps) cards.push({ icon: Users, title: `${followUps} follow-up${followUps === 1 ? "" : "s"} due`, body: "One short message with something new, then stop.", action: "Open Connect", tab: "connect" });
   cards.push({ icon: IdCard, title: "Fix your profile", body: "Your top three changes, each with what it's based on.", action: "See the fixes", tab: "profile" });
   cards.push({ icon: Send, title: "Write to one person", body: "Check there's a real reason first, then get a short note.", action: "Open Connect", tab: "connect" });
@@ -43,7 +43,7 @@ export function Today({ s, go }: { s: Saved; go: (t: Tab) => void }) {
   return (
     <div className="space-y-8">
       <section className="relative overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-sm sm:p-8">
-        <div className="paper-grid pointer-events-none absolute inset-0 opacity-70" aria-hidden />
+
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
           <div className="min-w-0 flex-1">
             <p className="text-[0.95rem] text-soft">Your progress</p>
@@ -91,7 +91,7 @@ export function Today({ s, go }: { s: Saved; go: (t: Tab) => void }) {
                 onClick={() => go(c.tab)}
                 className="group flex flex-col rounded-2xl border border-line bg-surface p-5 text-left shadow-sm transition-shadow hover:shadow-md"
               >
-                <span className={`grid h-9 w-9 place-items-center rounded-lg ${c.tone === "marigold" ? "bg-marigold-wash text-warn" : "bg-accent/10 text-accent"}`}>
+                <span className={`grid h-9 w-9 place-items-center rounded-lg ${c.tone === "attention" ? "bg-warn/10 text-warn" : "bg-accent/10 text-accent"}`}>
                   <I size={18} aria-hidden />
                 </span>
                 <span className="mt-4 font-bold">{c.title}</span>

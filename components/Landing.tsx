@@ -19,14 +19,12 @@ import {
   PenLine,
   Send,
   ShieldCheck,
-  Sparkles,
   Users,
 } from "lucide-react";
-import { InkThreads } from "./InkThreads";
 import { LegalLinks, Wordmark } from "./chrome";
 import { SITE } from "@/lib/site";
 import type { Account } from "@/lib/auth-client";
-import { useLandingMotion, useLenis, useMagnetic, useSpotlight } from "./motion";
+import { useLandingMotion, useLenis } from "./motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -40,41 +38,34 @@ function HeroWindow() {
   const [step, setStep] = useState(reduce ? 4 : 0);
   useEffect(() => {
     if (reduce) return;
-    const ts = [1100, 1900, 2700, 3500].map((ms, i) => setTimeout(() => setStep(i + 1), ms));
+    const ts = [1300, 2100, 2900, 3700].map((ms, i) => setTimeout(() => setStep(i + 1), ms));
     return () => ts.forEach(clearTimeout);
   }, [reduce]);
   const filled = (i: number) => step > i;
   const blank = (i: number) => (
-    <motion.mark
-      layout
-      className={filled(i) ? "filled" : "blank"}
-      initial={false}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3, ease: EASE }}
-    >
+    <motion.mark layout className={filled(i) ? "filled" : "blank"} initial={false} animate={{ opacity: 1 }} transition={{ duration: 0.3, ease: EASE }}>
       {filled(i) ? BLANKS[i] : ["their first name", "one thing they posted", "your one question"][i]}
     </motion.mark>
   );
 
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0, y: 24 }}
+      initial={reduce ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.9, ease: EASE, delay: 0.15 }}
+      transition={{ duration: 1, ease: EASE, delay: 0.5 }}
       className="relative mx-auto w-full max-w-5xl"
       aria-label="A sample Lynkr screen: a message with blanks the user fills in"
       role="img"
     >
-      <div className="pointer-events-none absolute -inset-x-10 -inset-y-8 -z-10 rounded-[3rem] bg-[radial-gradient(60%_60%_at_50%_40%,rgba(122,132,255,0.35),transparent_70%)] blur-2xl" aria-hidden />
-      <div className="edge overflow-hidden rounded-2xl border border-line bg-surface/90 shadow-lg backdrop-blur-xl">
-        <div className="flex items-center gap-2 border-b border-line bg-muted/60 px-4 py-2.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#ff6b5e]/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-marigold/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
+      <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-lg">
+        <div className="flex items-center gap-2 border-b border-line bg-muted px-4 py-2.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-line" />
+          <span className="h-2.5 w-2.5 rounded-full bg-line" />
+          <span className="h-2.5 w-2.5 rounded-full bg-line" />
           <span className="mx-auto rounded-md bg-surface px-3 py-0.5 text-[0.75rem] text-faint">lynkr / outreach</span>
         </div>
         <div className="grid sm:grid-cols-[11rem_1fr]">
-          <div className="hidden border-r border-line bg-bg/60 p-3 sm:block">
+          <div className="hidden border-r border-line bg-bg p-3 sm:block">
             {[
               [House, "Today"],
               [Library, "Story Vault"],
@@ -93,27 +84,27 @@ function HeroWindow() {
               );
             })}
           </div>
-          <div className="p-5 sm:p-7">
+          <div className="p-5 text-left sm:p-8">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-serif text-[1.15rem] font-medium">First message to a stranger</p>
-              <span className="rounded-full border border-good/40 bg-good/10 px-2 py-0.5 text-[0.72rem] text-good">Good reason to contact</span>
+              <p className="text-[1.05rem] font-medium">First message to a stranger</p>
+              <span className="rounded-full bg-good/10 px-2 py-0.5 text-[0.72rem] text-good">Good reason to contact</span>
             </div>
             <div className="sheet mt-4 text-[0.92rem] sm:text-[0.98rem]">
               Hi {blank(0)}, I read your {blank(1)}. I&apos;m a final-year B.Com student working towards data analyst roles. I built a Power BI dashboard for
               our college fest that tracked 40 sponsors. One question: {blank(2)}?
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <span className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[0.85rem] font-medium transition-colors duration-500 ${step >= 4 ? "bg-accent text-bg" : "bg-accent/30 text-bg"}`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[0.85rem] font-medium text-white transition-colors duration-500 ${step >= 4 ? "bg-accent" : "bg-accent/35"}`}>
                 <Copy size={14} aria-hidden /> Copy
               </span>
               <AnimatePresence mode="wait">
                 <motion.span
                   key={step >= 4 ? "ready" : "fill"}
-                  initial={reduce ? false : { opacity: 0, y: 6 }}
+                  initial={reduce ? false : { opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.35, ease: EASE }}
-                  className={`rounded-full border px-2.5 py-0.5 text-[0.78rem] ${step >= 4 ? "border-good/40 bg-good/10 text-good" : "border-warn/40 bg-warn/10 text-warn"}`}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                  className={`rounded-full px-2.5 py-0.5 text-[0.78rem] ${step >= 4 ? "bg-good/10 text-good" : "bg-warn/10 text-warn"}`}
                 >
                   {step >= 4 ? "Looks ready for your review" : `Fill ${3 - Math.min(step, 3)} blank${3 - Math.min(step, 3) === 1 ? "" : "s"} first`}
                 </motion.span>
@@ -123,41 +114,37 @@ function HeroWindow() {
         </div>
       </div>
 
-      {/* Floating fact chip: where the draft's facts came from. */}
+      {/* Floating notes: where the draft's facts came from, and what was checked. */}
       <motion.div
-        initial={reduce ? false : { opacity: 0, x: -16 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: EASE, delay: 0.9 }}
-        className="edge absolute -left-4 bottom-10 hidden w-60 rounded-xl border border-line bg-surface/95 p-3 backdrop-blur-xl text-[0.78rem] shadow-md lg:block xl:-left-16"
+        initial={reduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: EASE, delay: 1.2 }}
+        className="absolute -left-6 bottom-10 hidden w-60 rounded-xl border border-line bg-surface p-3 text-left text-[0.78rem] shadow-md lg:block xl:-left-16"
       >
         <div className="flex items-center gap-2">
-          <span className="font-serif font-bold text-accent">F1</span>
+          <span className="font-semibold text-accent">F1</span>
           <span className="text-faint">Project</span>
           <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-good/10 px-2 py-0.5 text-good">
             <Check size={12} aria-hidden /> Confirmed
           </span>
         </div>
-        <p className="mt-1.5 font-serif leading-snug">I built a Power BI dashboard that tracked 40 sponsors.</p>
+        <p className="mt-1.5 leading-snug">I built a Power BI dashboard that tracked 40 sponsors.</p>
       </motion.div>
       <motion.div
-        initial={reduce ? false : { opacity: 0, x: 16 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: EASE, delay: 1.2 }}
-        className="edge absolute -right-4 -top-12 hidden w-56 rounded-xl border border-line bg-surface/95 p-3 backdrop-blur-xl text-[0.78rem] shadow-md lg:block xl:-right-14"
+        initial={reduce ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: EASE, delay: 1.4 }}
+        className="absolute -right-6 -top-10 hidden w-56 rounded-xl border border-line bg-surface p-3 text-left text-[0.78rem] shadow-md lg:block xl:-right-14"
       >
         <p className="flex items-center gap-1.5 font-medium">
           <ShieldCheck size={14} className="text-accent" aria-hidden /> Checked before you send
         </p>
         <ul className="mt-2 space-y-1 text-soft">
-          <li className="flex items-center gap-1.5">
-            <Check size={12} className="text-good" aria-hidden /> 44 of 90 words
-          </li>
-          <li className="flex items-center gap-1.5">
-            <Check size={12} className="text-good" aria-hidden /> One clear ask
-          </li>
-          <li className="flex items-center gap-1.5">
-            <Check size={12} className="text-good" aria-hidden /> No referral ask to a stranger
-          </li>
+          {["44 of 90 words", "One clear ask", "No referral ask to a stranger"].map((t) => (
+            <li key={t} className="flex items-center gap-1.5">
+              <Check size={12} className="text-good" aria-hidden /> {t}
+            </li>
+          ))}
         </ul>
       </motion.div>
     </motion.div>
@@ -167,10 +154,11 @@ function HeroWindow() {
 /* ---------- How it works: a real sequence, with a small product visual each ---------- */
 
 function StepVisual({ n }: { n: number }) {
+  const card = "h-full rounded-xl border border-line bg-surface p-4 shadow-sm";
   if (n === 0)
     return (
-      <div className="h-full edge rounded-xl border border-line bg-surface p-4 shadow-md">
-        <p className="font-serif text-[1.02rem] font-medium leading-snug">What did you personally do on that project?</p>
+      <div className={card}>
+        <p className="text-[0.98rem] font-medium leading-snug">What did you personally do on that project?</p>
         <div className="mt-3 flex items-center gap-2">
           <div className="h-9 flex-1 rounded-md border border-line bg-bg px-3 py-2 text-[0.8rem] text-faint">I wrote the SQL myself…</div>
           <span className="grid h-9 w-9 place-items-center rounded-md border border-line text-soft">
@@ -181,14 +169,14 @@ function StepVisual({ n }: { n: number }) {
     );
   if (n === 1)
     return (
-      <div className="edge h-full space-y-2.5 rounded-xl border border-line bg-surface p-4 shadow-md">
+      <div className={`${card} space-y-2.5`}>
         {[
           ["F1", "Built a sponsor dashboard", "Confirmed", "good"],
           ["F2", "Wrote the SQL myself", "Confirmed", "good"],
           ["F3", "Saved 6 hours a week", "To check", "warn"],
         ].map(([id, t, s, tone]) => (
           <div key={id} className="flex items-center gap-2 text-[0.8rem]">
-            <span className="font-serif font-bold text-accent">{id}</span>
+            <span className="font-semibold text-accent">{id}</span>
             <span className="min-w-0 flex-1 truncate">{t}</span>
             <span className={`rounded-full px-2 py-0.5 text-[0.7rem] ${tone === "good" ? "bg-good/10 text-good" : "bg-warn/10 text-warn"}`}>{s}</span>
           </div>
@@ -196,11 +184,11 @@ function StepVisual({ n }: { n: number }) {
       </div>
     );
   return (
-    <div className="edge h-full rounded-xl border border-line bg-surface p-4 shadow-md">
+    <div className={card}>
       <div className="sheet text-[0.8rem] leading-relaxed">
         Your point about <mark className="filled">metric definitions</mark> matches what I saw building our fest dashboard.
       </div>
-      <span className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-[0.78rem] font-medium text-bg">
+      <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[0.78rem] font-medium text-white">
         <Copy size={12} aria-hidden /> Copy
       </span>
     </div>
@@ -217,10 +205,10 @@ const STEPS = [
 
 function Tile({ title, children, body, className = "" }: { title: string; body: string; children: React.ReactNode; className?: string }) {
   return (
-    <div data-reveal-item className={`spot edge group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface/80 transition-colors duration-500 hover:border-accent/40 ${className}`}>
-      <div className="flex-1 bg-[radial-gradient(120%_90%_at_50%_0%,rgba(122,132,255,0.10),transparent_60%)] p-5 transition-transform duration-700 ease-out group-hover:-translate-y-0.5 sm:p-6">{children}</div>
+    <div data-reveal-item className={`flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition-shadow duration-500 hover:shadow-md ${className}`}>
+      <div className="flex-1 p-5 sm:p-6">{children}</div>
       <div className="p-5 pt-0 sm:p-6 sm:pt-0">
-        <h3 className="text-[1.3rem]">{title}</h3>
+        <h3 className="text-[1.15rem]">{title}</h3>
         <p className="mt-1.5 text-[0.95rem] text-soft">{body}</p>
       </div>
     </div>
@@ -244,11 +232,9 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   const reduce = useReducedMotion();
   return (
     <div className="border-b border-line">
-      <button className="flex w-full items-center justify-between gap-4 py-5 text-left text-[1.05rem] font-medium transition-colors hover:text-accent-strong" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <button className="flex w-full items-center justify-between gap-4 py-5 text-left text-[1.05rem] font-medium transition-colors hover:text-accent" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         {q}
-        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line transition-all duration-300 ${open ? "rotate-180 border-accent/50 text-accent" : "text-soft"}`}>
-          <ChevronDown size={16} aria-hidden />
-        </span>
+        <ChevronDown size={18} className={`shrink-0 text-faint transition-transform duration-300 ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -277,8 +263,9 @@ const STATS = [
   ["0", "passwords asked, ever"],
 ];
 
-const EYEBROW = "text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-marigold";
-const H2 = "text-[2.3rem] leading-[1.05] sm:text-[3.4rem]";
+const EYEBROW = "text-[0.9rem] font-semibold text-accent";
+const H2 = "text-[2.1rem] leading-[1.08] tracking-[-0.03em] sm:text-[3rem]";
+const SECTION = "scroll-mt-20 px-4 py-20 sm:px-6 sm:py-32";
 
 export function Landing({
   onStart,
@@ -299,11 +286,8 @@ export function Landing({
   resume?: "drafts" | "flow" | null;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const magnet = useRef<HTMLDivElement>(null);
   useLenis();
   useLandingMotion(root);
-  useSpotlight(root);
-  useMagnetic(magnet, 0.2);
 
   const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : access === "paid" ? "Get access" : "Start the interview";
   // New visitors with accounts switched on create an account first; everyone else carries on as before.
@@ -312,17 +296,17 @@ export function Landing({
   const cta = (label = primary) => (
     <button
       onClick={start}
-      className="group inline-flex min-h-12 items-center gap-2 rounded-full bg-ink px-6 text-[1rem] font-semibold text-bg shadow-[0_10px_40px_-10px_rgba(170,179,255,0.55)] transition-[box-shadow,background-color] duration-300 hover:bg-white hover:shadow-[0_14px_50px_-8px_rgba(170,179,255,0.75)]"
+      className="group inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-6 text-[1rem] font-semibold text-white transition-colors duration-300 hover:bg-accent-strong"
     >
       {label} <ArrowRight size={17} className="transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
     </button>
   );
 
   return (
-    <div ref={root} className="theme-night grain w-full">
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-bg/70 backdrop-blur-xl">
+    <div ref={root} className="w-full bg-bg text-ink">
+      <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/80 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 sm:px-6" aria-label="Main">
-          <Wordmark className="text-[1.5rem] !font-semibold" />
+          <Wordmark className="text-[1.4rem]" />
           <div className="ml-auto hidden items-center gap-7 text-[0.92rem] text-soft md:flex">
             {[
               ["#how", "How it works"],
@@ -331,11 +315,7 @@ export function Landing({
               ["#never", "Privacy"],
               ["#faq", "Questions"],
             ].map(([href, label]) => (
-              <a
-                key={href}
-                href={href}
-                className="relative transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:text-ink hover:after:scale-x-100"
-              >
+              <a key={href} href={href} className="transition-colors hover:text-ink">
                 {label}
               </a>
             ))}
@@ -347,7 +327,7 @@ export function Landing({
           )}
           <button
             onClick={start}
-            className={`${account?.accounts && !account.signedIn ? "" : "ml-auto md:ml-0"} inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-4 text-[0.9rem] font-medium text-ink transition-colors hover:bg-white/[0.12]`}
+            className={`${account?.accounts && !account.signedIn ? "" : "ml-auto md:ml-0"} inline-flex min-h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-[0.9rem] font-medium text-white transition-colors hover:bg-ink/85`}
           >
             {resume ? (resume === "drafts" ? "My drafts" : "Continue") : toSignup ? "Get started" : access === "paid" ? "Get access" : "Start"} <ArrowRight size={15} aria-hidden />
           </button>
@@ -356,124 +336,96 @@ export function Landing({
 
       <main id="main">
         {/* Hero */}
-        <section className="relative overflow-hidden px-4 pb-16 pt-14 sm:px-6 sm:pb-24 sm:pt-24">
-          <div className="pointer-events-none absolute inset-0" aria-hidden>
-            <div data-parallax="0.25" className="absolute left-1/2 top-[-18rem] h-[44rem] w-[70rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(99,110,255,0.42),transparent)] blur-3xl" />
-            <div className="absolute right-[-10rem] top-[12rem] h-[26rem] w-[26rem] rounded-full bg-[radial-gradient(closest-side,rgba(242,178,51,0.14),transparent)] blur-3xl" />
-            <div className="paper-grid absolute inset-0" />
-          </div>
-          <InkThreads className="pointer-events-none absolute -top-24 left-1/2 h-[52rem] w-[110rem] -translate-x-1/2 opacity-50 [mask-image:linear-gradient(to_bottom,#000_40%,transparent_90%)]" />
+        <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-28">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(55%_60%_at_50%_0%,rgba(58,66,200,0.07),transparent_75%)]" aria-hidden />
           <div className="relative mx-auto max-w-4xl text-center">
-            <motion.p
+            <h1 data-split="load" className="text-[3rem] leading-[1] tracking-[-0.045em] sm:text-[5.5rem]">
+              {SITE.tagline}
+            </h1>
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: EASE }}
-              className="edge inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[0.82rem] text-soft backdrop-blur"
+              transition={{ duration: 0.8, ease: EASE, delay: 0.35 }}
             >
-              <Sparkles size={14} className="text-marigold" aria-hidden /> Get found on LinkedIn
-            </motion.p>
-            <h1 data-split="load" className="mt-7 text-[3rem] font-normal leading-[1] tracking-[-0.035em] sm:text-[5.4rem]">
-              Write to one person. <br className="hidden sm:block" />
-              Sound like <span className="ink-accent">you.</span>
-            </h1>
-            <motion.p
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: EASE, delay: 0.55 }}
-              className="mx-auto mt-7 max-w-[54ch] text-[1.05rem] leading-relaxed text-soft sm:text-[1.15rem]"
-            >
-              Lynkr interviews you about one real piece of work, keeps the facts in your Story Vault, and drafts your LinkedIn profile, messages
-              and posts from them. Anything it doesn&apos;t know stays a blank only you can fill.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: EASE, delay: 0.7 }}
-              className="mt-9 flex flex-wrap items-center justify-center gap-3"
-            >
-              <div ref={magnet}>{cta()}</div>
-              {access !== "paid" && (
-                <button
-                  onClick={onCheck}
-                  className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-5 text-[1rem] font-medium backdrop-blur transition-colors hover:border-accent/50 hover:bg-white/[0.08]"
-                >
-                  <BadgeCheck size={17} className="text-accent" aria-hidden /> Check a message
-                </button>
-              )}
+              <p className="mt-6 text-[1.3rem] leading-snug text-ink sm:text-[1.6rem]">Write to one person. Sound like you.</p>
+              <p className="mx-auto mt-4 max-w-[54ch] text-[1rem] leading-relaxed text-soft sm:text-[1.08rem]">
+                Lynkr interviews you about one real piece of work, keeps the facts in your Story Vault, and drafts your LinkedIn profile, messages
+                and posts from them. Anything it doesn&apos;t know stays a blank only you can fill.
+              </p>
+              <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+                {cta()}
+                {access !== "paid" && (
+                  <button
+                    onClick={onCheck}
+                    className="inline-flex min-h-12 items-center gap-2 rounded-full border border-line bg-surface px-5 text-[1rem] font-medium transition-colors hover:border-ink/25"
+                  >
+                    <BadgeCheck size={17} className="text-accent" aria-hidden /> Check a message
+                  </button>
+                )}
+              </div>
+              <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period}, taxes included. Cancel any time. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
             </motion.div>
-            <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period}, taxes included. Cancel any time. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
           </div>
-          <div data-tilt className="relative mt-14 sm:mt-20">
+          <div className="relative mt-16 sm:mt-24">
             <HeroWindow />
           </div>
         </section>
 
-        {/* Promise ticker */}
-        <div
-          className="ticker-wrap relative overflow-hidden border-y border-white/[0.06] bg-white/[0.02] py-4 [mask-image:linear-gradient(to_right,transparent,#000_12%,#000_88%,transparent)]"
-          role="region"
-          aria-label="What Lynkr promises"
-        >
-          <div className="ticker flex w-max gap-10 whitespace-nowrap text-[0.95rem] text-soft">
-            {[...PROMISES, ...PROMISES].map((p, i) => (
-              <span key={i} className="inline-flex items-center gap-10" aria-hidden={i >= PROMISES.length}>
-                {p}
-                <span className="h-1 w-1 rounded-full bg-marigold" />
-              </span>
+        {/* Promises */}
+        <section aria-label="What Lynkr promises" className="border-y border-line px-4 py-6 sm:px-6">
+          <ul className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-7 gap-y-2 text-[0.9rem] text-soft">
+            {PROMISES.map((p) => (
+              <li key={p} className="inline-flex items-center gap-1.5">
+                <Check size={14} className="text-accent" aria-hidden /> {p}
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
 
         {/* How it works */}
-        <section id="how" className="relative scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+        <section id="how" className={SECTION}>
           <div className="mx-auto max-w-6xl">
             <p className={EYEBROW}>How it works</p>
-            <h2 data-split className={`mt-4 max-w-[20ch] ${H2}`}>
-              Three steps from one story to a message you&apos;d <span className="ink-accent">actually send.</span>
+            <h2 data-split className={`mt-3 max-w-[22ch] ${H2}`}>
+              Three steps from one story to a message you&apos;d actually send.
             </h2>
-            <div className="relative mt-14">
-              <ol data-reveal className="grid gap-12 md:grid-cols-3 md:gap-8">
-                {STEPS.map(([t, d], i) => (
-                  <li key={t} data-reveal-item>
-                    <div className="md:h-48">
-                      <StepVisual n={i} />
-                    </div>
-                    <div className="mt-8 flex items-center gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-accent/40 bg-bg font-serif text-[1.05rem] text-accent shadow-[0_0_24px_-4px_rgba(170,179,255,0.6)]">
-                        {i + 1}
-                      </span>
-                      <h3 className="text-[1.4rem]">{t}</h3>
-                    </div>
-                    <p className="mt-3 max-w-[40ch] text-soft">{d}</p>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <ol data-reveal className="mt-14 grid gap-12 md:grid-cols-3 md:gap-8">
+              {STEPS.map(([t, d], i) => (
+                <li key={t} data-reveal-item>
+                  <div className="md:h-44">
+                    <StepVisual n={i} />
+                  </div>
+                  <p className="mt-7 text-[0.85rem] font-semibold text-faint">Step {i + 1}</p>
+                  <h3 className="mt-1 text-[1.3rem]">{t}</h3>
+                  <p className="mt-2 max-w-[40ch] text-soft">{d}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
         {/* Features */}
-        <section id="features" className="relative scroll-mt-20 px-4 pb-20 sm:px-6 sm:pb-28">
+        <section id="features" className={`${SECTION} !pt-0`}>
           <div className="mx-auto max-w-6xl">
             <div className="grid items-end gap-6 md:grid-cols-[1.4fr_1fr]">
               <div>
                 <p className={EYEBROW}>What you get</p>
-                <h2 data-split className={`mt-4 ${H2}`}>
-                  Everything a fresher needs to get noticed, <span className="ink-accent">nothing that fakes it.</span>
+                <h2 data-split className={`mt-3 ${H2}`}>
+                  Everything a fresher needs to get noticed, nothing that fakes it.
                 </h2>
               </div>
               <p className="text-[1.05rem] text-soft md:pb-2">Seven tools, one Story Vault. Every draft points back to the facts it used.</p>
             </div>
             <div data-reveal className="mt-12 grid gap-4 md:grid-cols-6">
               <Tile className="md:col-span-4" title="Profile fix" body="Your headline, About and every section checked against the role you want. Top three fixes first, each with what it's based on.">
-                <div className="rounded-xl border border-line bg-bg/60 p-4 text-[0.85rem]">
+                <div className="rounded-xl bg-muted p-4 text-[0.85rem]">
                   <div className="flex items-center gap-2">
-                    <span className="font-serif text-[1.05rem] text-accent">1.</span>
+                    <span className="font-semibold text-accent">1.</span>
                     <span className="font-semibold">Headline</span>
-                    <span className="rounded-full border border-bad/40 bg-bad/10 px-2 py-0.5 text-[0.75rem] text-bad">Fix first</span>
+                    <span className="rounded-full bg-bad/10 px-2 py-0.5 text-[0.75rem] text-bad">Fix first</span>
                   </div>
                   <p className="mt-2 text-soft line-through decoration-bad/60">Commerce student | Hardworking</p>
-                  <p className="mt-1 font-serif text-[1.02rem]">Data analyst | Power BI dashboard tracking 40 sponsors | SQL</p>
+                  <p className="mt-1 text-[1rem]">Data analyst | Power BI dashboard tracking 40 sponsors | SQL</p>
                 </div>
               </Tile>
               <Tile className="md:col-span-2" title="Message checker" body="Marks the exact words to change and fixes them in one click.">
@@ -483,34 +435,34 @@ export function Landing({
               </Tile>
               <Tile className="md:col-span-2" title="Connect" body="Who to look for, and whether you have a real reason to write, before any wording.">
                 <div className="space-y-2 text-[0.8rem]">
-                  <span className="inline-block rounded-full border border-good/40 bg-good/10 px-2.5 py-0.5 text-good">Good reason to contact</span>
-                  <span className="block w-fit rounded-full border border-bad/40 bg-bad/10 px-2.5 py-0.5 text-bad">Hold off: referral ask to a stranger</span>
+                  <span className="inline-block rounded-full bg-good/10 px-2.5 py-0.5 text-good">Good reason to contact</span>
+                  <span className="block w-fit rounded-full bg-bad/10 px-2.5 py-0.5 text-bad">Hold off: referral ask to a stranger</span>
                 </div>
               </Tile>
               <Tile className="md:col-span-2" title="This week" body="Three messages, two comments, one post on a Monday to Friday plan, with calendar reminders.">
                 <div className="grid grid-cols-5 gap-1.5 text-[0.7rem]">
                   {["Mon", "Tue", "Wed", "Thu", "Fri"].map((d, i) => (
-                    <div key={d} className="rounded-md border border-line bg-bg/60 p-1.5">
-                      <p className="font-serif">{d}</p>
-                      <span className={`mt-1 block h-1.5 rounded-full ${i === 1 ? "bg-marigold" : "bg-accent/60"}`} />
-                      {i % 2 === 0 && <span className="mt-1 block h-1.5 rounded-full bg-accent/25" />}
+                    <div key={d} className="rounded-md bg-muted p-1.5">
+                      <p>{d}</p>
+                      <span className={`mt-1 block h-1.5 rounded-full ${i === 1 ? "bg-accent" : "bg-accent/40"}`} />
+                      {i % 2 === 0 && <span className="mt-1 block h-1.5 rounded-full bg-accent/15" />}
                     </div>
                   ))}
                 </div>
               </Tile>
               <Tile className="md:col-span-2" title="Comment helper" body="Paste a post you found, add your own point, get one comment. Or a clear &quot;skip this one&quot;.">
-                <div className="rounded-lg border-l-2 border-accent/50 bg-bg/60 px-3 py-2 text-[0.82rem] text-soft">&quot;Most dashboards fail because nobody agrees on the metric definitions.&quot;</div>
+                <div className="rounded-lg border-l-2 border-accent/50 bg-muted px-3 py-2 text-[0.82rem] text-soft">&quot;Most dashboards fail because nobody agrees on the metric definitions.&quot;</div>
                 <div className="mt-2 flex items-center gap-1.5 text-[0.78rem] text-good">
                   <MessageSquareText size={13} aria-hidden /> 41 words, uses your fact F1
                 </div>
               </Tile>
             </div>
 
-            <dl data-reveal className="mt-14 grid grid-cols-3 gap-px overflow-hidden rounded-2xl border border-line bg-line">
+            <dl data-reveal className="mt-16 grid grid-cols-3 divide-x divide-line border-y border-line">
               {STATS.map(([n, label]) => (
-                <div key={label} data-reveal-item className="flex flex-col-reverse justify-end bg-bg px-3 py-5 sm:px-6 sm:py-7">
+                <div key={label} data-reveal-item className="flex flex-col-reverse justify-end px-3 py-7 sm:px-8">
                   <dt className="mt-2 text-[0.78rem] leading-snug text-soft sm:text-[0.92rem]">{label}</dt>
-                  <dd className="font-serif text-[2.2rem] leading-none tracking-tight text-ink sm:text-[3rem]">{n}</dd>
+                  <dd className="text-[2.2rem] font-semibold leading-none tracking-[-0.04em] sm:text-[3.2rem]">{n}</dd>
                 </div>
               ))}
             </dl>
@@ -518,13 +470,11 @@ export function Landing({
         </section>
 
         {/* Never */}
-        <section id="never" className="relative scroll-mt-20 overflow-hidden border-y border-white/[0.06] bg-night-2/60 px-4 py-20 sm:px-6 sm:py-28">
-          <InkThreads className="pointer-events-none absolute inset-0 h-full w-full opacity-70" />
-          <div className="pointer-events-none absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-marigold/50 to-transparent" aria-hidden />
-          <div className="relative mx-auto max-w-6xl">
+        <section id="never" className={`${SECTION} bg-muted`}>
+          <div className="mx-auto max-w-6xl">
             <p className={EYEBROW}>Privacy</p>
-            <h2 data-split className={`mt-4 max-w-[18ch] ${H2}`}>
-              Some things Lynkr will <span className="ink-accent">never do.</span>
+            <h2 data-split className={`mt-3 max-w-[18ch] ${H2}`}>
+              Some things Lynkr will never do.
             </h2>
             <p className="mt-5 max-w-[52ch] text-[1.05rem] text-soft">It drafts. You decide what&apos;s true and what gets sent.</p>
             <ul data-reveal className="mt-12 grid gap-4 sm:grid-cols-2">
@@ -536,11 +486,11 @@ export function Landing({
               ].map(([Icon, t, d]) => {
                 const I = Icon as typeof Lock;
                 return (
-                  <li key={t as string} data-reveal-item className="spot edge rounded-2xl border border-line bg-bg/60 p-6 backdrop-blur-sm sm:p-7">
-                    <span className="grid h-11 w-11 place-items-center rounded-xl border border-marigold/30 bg-marigold/10">
-                      <I size={20} className="text-marigold" aria-hidden />
+                  <li key={t as string} data-reveal-item className="rounded-2xl border border-line bg-surface p-6 sm:p-7">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-accent-wash">
+                      <I size={18} className="text-accent" aria-hidden />
                     </span>
-                    <p className="mt-5 font-serif text-[1.3rem]">{t as string}</p>
+                    <p className="mt-5 text-[1.15rem] font-medium">{t as string}</p>
                     <p className="mt-1.5 text-[0.95rem] text-soft">{d as string}</p>
                   </li>
                 );
@@ -550,15 +500,15 @@ export function Landing({
         </section>
 
         {/* Pricing */}
-        <section id="pricing" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+        <section id="pricing" className={SECTION}>
           <div className="mx-auto max-w-6xl">
             <p className={EYEBROW}>Pricing</p>
-            <h2 data-split className={`mt-4 max-w-[18ch] ${H2}`}>
-              One plan. <span className="ink-accent">Pay first, then use it.</span>
+            <h2 data-split className={`mt-3 max-w-[18ch] ${H2}`}>
+              One plan. Pay first, then use it.
             </h2>
-            <div data-reveal className="edge mt-12 max-w-xl rounded-2xl border border-line bg-surface p-6 sm:p-8">
-              <p className="font-serif text-[3rem] leading-none">
-                {SITE.price} <span className="text-[1.1rem] text-soft">a {SITE.period}, taxes included</span>
+            <div data-reveal className="mt-12 max-w-xl rounded-2xl border border-line bg-surface p-6 shadow-md sm:p-8">
+              <p className="text-[3rem] font-semibold leading-none tracking-[-0.04em]">
+                {SITE.price} <span className="text-[1.05rem] font-normal tracking-normal text-soft">a {SITE.period}, taxes included</span>
               </p>
               <ul className="mt-6 space-y-2.5 text-[0.98rem] text-soft">
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Every tool: interview, Story Vault, profile fix, outreach, posts, Connect and the weekly plan</li>
@@ -575,12 +525,12 @@ export function Landing({
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="scroll-mt-20 px-4 py-20 sm:px-6 sm:py-28">
+        <section id="faq" className={`${SECTION} !pt-0`}>
           <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[1fr_1.4fr]">
             <div>
               <p className={EYEBROW}>Questions</p>
-              <h2 data-split className={`mt-4 ${H2}`}>
-                Questions people <span className="ink-accent">ask first.</span>
+              <h2 data-split className={`mt-3 ${H2}`}>
+                Questions people ask first.
               </h2>
             </div>
             <div className="border-t border-line">
@@ -593,25 +543,20 @@ export function Landing({
 
         {/* Final call to action */}
         <section className="px-4 pb-20 sm:px-6 sm:pb-28">
-          <div data-reveal className="edge relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-line bg-surface px-6 py-16 text-center sm:px-12 sm:py-24">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_100%,rgba(99,110,255,0.4),transparent_70%)]" aria-hidden />
-            <div className="pointer-events-none absolute left-1/2 top-[60%] h-[20rem] w-[20rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(242,178,51,0.18),transparent)] blur-2xl" aria-hidden />
-            <InkThreads className="pointer-events-none absolute inset-0 h-full w-full opacity-60" />
-            <div className="relative">
-              <h2 data-split className="mx-auto max-w-[18ch] text-[2.3rem] leading-[1.05] sm:text-[3.8rem]">
-                Start with one thing you <span className="ink-accent">actually did.</span>
-              </h2>
-              <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install. {SITE.price} a {SITE.period}, taxes included. Cancel any time.</p>
-              <div className="mt-9 flex justify-center">{cta(resume || access === "paid" ? primary : "Start the interview")}</div>
-            </div>
+          <div data-reveal className="mx-auto max-w-6xl rounded-[2rem] bg-muted px-6 py-16 text-center sm:px-12 sm:py-24">
+            <h2 data-split className="mx-auto max-w-[18ch] text-[2.1rem] leading-[1.08] tracking-[-0.03em] sm:text-[3.4rem]">
+              Start with one thing you actually did.
+            </h2>
+            <p className="mx-auto mt-5 max-w-[48ch] text-soft">About ten minutes from basics to your first draft. Nothing to install. {SITE.price} a {SITE.period}, taxes included. Cancel any time.</p>
+            <div className="mt-9 flex justify-center">{cta(resume || access === "paid" ? primary : "Start the interview")}</div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/[0.06] px-4 py-10 sm:px-6">
+      <footer className="border-t border-line px-4 py-10 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-wrap items-start justify-between gap-6">
           <div>
-            <Wordmark className="text-[1.35rem] !font-semibold" />
+            <Wordmark className="text-[1.25rem]" />
             <p className="mt-2 max-w-[48ch] text-[0.88rem] text-faint">
               A LinkedIn drafting tool for Indian freshers. Not affiliated with LinkedIn. Your data stays in your browser.
             </p>

@@ -4,6 +4,8 @@
  */
 export const SITE = {
   name: "Lynkr",
+  /** The hero headline and sign-up badge. Pending a trademark decision: Microsoft owns both LinkedIn and Copilot. */
+  tagline: "Your LinkedIn co-pilot",
   /** Individual who operates Lynkr (shown on Terms, Privacy and Contact). */
   operator: "Aryan Subramanya J",
   country: "India",

@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, Check, Eye, EyeOff, Mail, MailCheck, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Eye, EyeOff, Mail, MailCheck, ShieldCheck } from "lucide-react";
 import { authClient, loadAccount, type Account } from "@/lib/auth-client";
-import { InkThreads } from "./InkThreads";
+import { SITE } from "@/lib/site";
 import { Wordmark } from "./chrome";
 import { ErrorNote } from "./ui";
 
@@ -25,7 +25,7 @@ function remember(m: Method) {
 }
 
 const field =
-  "w-full rounded-xl border border-line bg-bg/60 px-4 py-3 text-[0.98rem] text-ink placeholder:text-faint transition-colors focus:border-accent/60 focus:bg-bg focus:outline-none";
+  "w-full rounded-xl border border-line bg-surface px-4 py-3 text-[0.98rem] text-ink placeholder:text-faint transition-colors focus:border-accent focus:outline-none";
 
 function GoogleMark() {
   return (
@@ -52,8 +52,8 @@ function Column({ items, reverse }: { items: string[]; reverse?: boolean }) {
     <div className="h-full overflow-hidden">
       <div className={`auth-col flex flex-col gap-3 ${reverse ? "auth-col-reverse" : ""}`}>
         {list.map((t, i) => (
-          <div key={i} aria-hidden={i >= items.length} className="edge rounded-xl border border-line bg-surface/70 p-4 text-[0.88rem] text-soft backdrop-blur">
-            <Check size={14} className="mb-2 text-marigold" aria-hidden />
+          <div key={i} aria-hidden={i >= items.length} className="rounded-xl border border-line bg-surface p-4 text-[0.88rem] text-soft">
+            <Check size={14} className="mb-2 text-accent" aria-hidden />
             {t}
           </div>
         ))}
@@ -64,18 +64,16 @@ function Column({ items, reverse }: { items: string[]; reverse?: boolean }) {
 
 function Showcase() {
   return (
-    <aside className="grain relative hidden h-dvh overflow-hidden border-l border-white/[0.06] bg-night-2/50 lg:sticky lg:top-0 lg:block" aria-label="What Lynkr does">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_50%_at_50%_0%,rgba(99,110,255,0.35),transparent_70%)]" aria-hidden />
-      <InkThreads className="pointer-events-none absolute inset-0 h-full w-full opacity-50" />
+    <aside className="relative hidden h-dvh overflow-hidden border-l border-line bg-muted lg:sticky lg:top-0 lg:block" aria-label="What Lynkr does">
       <div className="relative flex h-full flex-col px-10 pb-0 pt-14 xl:px-14">
-        <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-marigold">Inside Lynkr</p>
-        <h2 className="mt-3 max-w-[16ch] text-[2.4rem] leading-[1.05]">
-          Messages that sound like <span className="ink-accent">you.</span>
+        <p className="text-[0.9rem] font-semibold text-accent">Inside Lynkr</p>
+        <h2 className="mt-3 max-w-[16ch] text-[2.4rem] leading-[1.05] tracking-[-0.03em]">
+          Messages that sound like you.
         </h2>
-        <div className="edge mt-8 rounded-2xl border border-line bg-surface/80 p-5 shadow-lg backdrop-blur-xl">
+        <div className="mt-8 rounded-2xl border border-line bg-surface p-5 shadow-md">
           <div className="flex items-center gap-2 text-[0.8rem]">
-            <span className="font-serif text-[1rem]">First message to a stranger</span>
-            <span className="ml-auto rounded-full border border-good/40 bg-good/10 px-2 py-0.5 text-good">Good reason to contact</span>
+            <span className="text-[1rem] font-medium">First message to a stranger</span>
+            <span className="ml-auto rounded-full bg-good/10 px-2 py-0.5 text-good">Good reason to contact</span>
           </div>
           <div className="sheet mt-3 text-[0.9rem]">
             Hi <mark className="filled">Ananya</mark>, I read your <mark className="filled">post on cleaning survey data</mark>. I built a Power BI dashboard for our college fest that
@@ -95,7 +93,7 @@ function Showcase() {
 /* ---------- The form ---------- */
 
 function LastUsed({ dark = false }: { dark?: boolean }) {
-  return <span className={`ml-2 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${dark ? "bg-bg/15 text-bg" : "bg-accent/15 text-accent"}`}>Last used</span>;
+  return <span className={`ml-2 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${dark ? "bg-white/20 text-white" : "bg-accent/15 text-accent"}`}>Last used</span>;
 }
 
 /** `token` (password reset) and `linkError` (a failed Google or email link) come from the address, read by the page. */
@@ -205,10 +203,9 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
   return (
     <div className="grid min-h-dvh w-full lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <div className="relative flex flex-col px-4 py-6 sm:px-10 lg:px-16">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(60%_100%_at_30%_0%,rgba(99,110,255,0.18),transparent_70%)] lg:hidden" aria-hidden />
         <header className="relative flex items-center justify-between">
           <Link href="/" aria-label="Lynkr home page" className="rounded-md">
-            <Wordmark className="!font-semibold" />
+            <Wordmark />
           </Link>
           <Link href="/" className="inline-flex items-center gap-1.5 text-[0.9rem] text-soft transition-colors hover:text-ink">
             <ArrowLeft size={15} aria-hidden /> Home
@@ -241,13 +238,13 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
             <div role="status">
               <h1 className="text-[2.2rem] leading-[1.05]">Password changed</h1>
               <p className="mt-3 text-soft">You can sign in with your new password now.</p>
-              <a href="/login" className="mt-6 inline-flex min-h-12 items-center rounded-full bg-ink px-6 font-semibold text-bg">Sign in</a>
+              <a href="/login" className="mt-6 inline-flex min-h-12 items-center rounded-full bg-accent px-6 font-semibold text-white">Sign in</a>
             </div>
           ) : (
             <>
               {mode === "signup" && (
-                <p className="edge inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[0.8rem] text-soft">
-                  <Sparkles size={13} className="text-marigold" aria-hidden /> Get found on LinkedIn
+                <p className="text-[0.9rem] font-semibold text-accent">
+                  {SITE.tagline}
                 </p>
               )}
               <h1 className="mt-4 text-[2.4rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.7rem]">{title}</h1>
@@ -335,7 +332,7 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
                 <button
                   type="submit"
                   disabled={busy !== null || off}
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-ink font-semibold text-bg shadow-[0_10px_40px_-12px_rgba(170,179,255,0.6)] transition-colors hover:bg-white disabled:opacity-50"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
                 >
                   {busy === "email"
                     ? "One moment..."

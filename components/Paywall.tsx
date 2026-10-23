@@ -162,9 +162,9 @@ export function Paywall({
         {notice && <p className="rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[0.95rem] text-warn">{notice}</p>}
 
         <Card>
-          <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-marigold">Lynkr subscription</p>
+          <p className="text-[0.78rem] font-semibold uppercase tracking-[0.2em] text-accent">Lynkr subscription</p>
           <h1 className="mt-2 text-[2rem] font-extrabold leading-tight sm:text-[2.4rem]">
-            {SITE.price} <span className="text-[1.1rem] font-medium text-soft">a {SITE.period}, taxes included</span>
+            {SITE.price} <span className="text-[1.05rem] font-normal tracking-normal text-soft">a {SITE.period}, taxes included</span>
           </h1>
           <p className="mt-2 max-w-[58ch] text-soft">
             {accounts

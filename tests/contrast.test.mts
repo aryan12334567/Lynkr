@@ -1,4 +1,4 @@
-// Phase 4 accessibility: text colour tokens must reach WCAG AA (4.5:1) on every surface, in light and dark.
+// Phase 4 accessibility: text colour tokens must reach WCAG AA (4.5:1) on every surface of the light palette.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -19,31 +19,17 @@ const ratio = (a: string, b: string) => {
   return (x + 0.05) / (y + 0.05);
 };
 
-// The night palette the product renders in.
-const night = Object.fromEntries(
-  [...(css.match(/\.theme-night\s*\{([^}]*)\}/)?.[1] ?? "").matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi)].map((x) => [x[1], x[2]]),
-);
-
-test("night palette text reaches 4.5:1 on bg, surface and muted, and on buttons", () => {
-  for (const fg of ["ink", "soft", "faint", "accent", "good", "warn", "bad"]) {
-    for (const bg of ["bg", "surface", "muted"]) assert.ok(ratio(night[fg], night[bg]) >= 4.5, `night ${fg} on ${bg}`);
+test("text colours reach 4.5:1 on bg, surface, muted and the accent wash", () => {
+  assert.equal(themes.length, 1, "expected one light :root palette");
+  const [t] = themes;
+  for (const fg of ["ink", "soft", "faint", "accent", "accent-strong", "good", "warn", "bad"]) {
+    for (const bg of ["bg", "surface", "muted", "accent-wash"]) {
+      const r = ratio(t[fg], t[bg]);
+      assert.ok(r >= 4.5, `${fg} on ${bg}: ${r.toFixed(2)}`);
+    }
   }
-  for (const btn of ["accent", "accent-strong", "ink"]) assert.ok(ratio(night.bg, night[btn]) >= 4.5, `night bg text on ${btn}`);
-});
-
-test("text colours reach 4.5:1 on bg, surface and muted in both themes", () => {
-  assert.equal(themes.length, 2, "expected light and dark :root blocks");
-  for (const [i, t] of themes.entries()) {
-    for (const fg of ["ink", "soft", "faint", "accent", "good", "warn", "bad"]) {
-      for (const bg of ["bg", "surface", "muted"]) {
-        const r = ratio(t[fg], t[bg]);
-        assert.ok(r >= 4.5, `${i ? "dark" : "light"} ${fg} on ${bg}: ${r.toFixed(2)}`);
-      }
-    }
-    // Primary buttons and the active tab: text-bg on accent / accent-strong, text-bg on ink.
-    for (const btn of ["accent", "accent-strong", "ink"]) {
-      const r = ratio(t.bg, t[btn]);
-      assert.ok(r >= 4.5, `${i ? "dark" : "light"} bg text on ${btn}: ${r.toFixed(2)}`);
-    }
+  // Primary buttons: white or bg-coloured text on accent, accent-strong and ink.
+  for (const btn of ["accent", "accent-strong", "ink"]) {
+    for (const fg of ["#ffffff", t.bg]) assert.ok(ratio(fg, t[btn]) >= 4.5, `${fg} on ${btn}: ${ratio(fg, t[btn]).toFixed(2)}`);
   }
 });

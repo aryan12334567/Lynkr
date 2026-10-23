@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import type { ExternalContextPacket, GenerateReply, ProfileInput, StoryFact, Turn, VaultReply } from "@/lib/schemas";
 import type { ImportMode } from "./ExternalContext";
-import { clear, clearLicense, draftFacts, EMPTY, load, loadLicense, LOCKED_EVENT, postJson, save, type License, type Saved } from "@/lib/store";
+import { clear, draftFacts, EMPTY, load, loadLicense, LOCKED_EVENT, postJson, save, type License, type Saved } from "@/lib/store";
 import { importedText, type ImportedProfile } from "@/lib/linkedinExport";
 import { Setup } from "./Setup";
 import { Interview } from "./Interview";
@@ -74,7 +74,7 @@ export function LynkrApp() {
   // Paid access. `paywall` stays null until the server answers, and the app never opens before that.
   const [paywall, setPaywall] = useState<boolean | null>(null);
   const [checkout, setCheckout] = useState(false);
-  const [license, setLicense] = useState<License | null>(loadLicense);
+  const [license] = useState<License | null>(loadLicense);
   // The server refused the saved key: the subscription ended, a payment failed, or Dodo was unreachable.
   const [lapsed, setLapsed] = useState(false);
   // The signed-in account (null while loading). An active subscription on it unlocks the app like a key does.
@@ -123,21 +123,6 @@ export function LynkrApp() {
     window.addEventListener(LOCKED_EVENT, lock);
     return () => window.removeEventListener(LOCKED_EVENT, lock);
   }, []);
-
-  /** Sign this browser out: frees its activation and forgets the key. */
-  function forgetLicense() {
-    const l = license;
-    clearLicense();
-    setLicense(null);
-    setLapsed(false);
-    if (l) {
-      fetch("/api/license", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "deactivate", key: l.key, instanceId: l.instanceId }),
-      }).catch(() => {});
-    }
-  }
 
   useEffect(() => {
     if (skipNextSave.current) {
@@ -251,15 +236,9 @@ export function LynkrApp() {
     return (
       <Paywall
         checkout={checkout}
-        stored={license}
         account={account}
         notice={license && lapsed ? "We couldn't confirm your subscription, so Lynkr is locked for now." : null}
-        onUnlocked={(l) => {
-          setLicense(l);
-          setLapsed(false);
-        }}
         onRecheck={recheck}
-        onForget={forgetLicense}
         onBack={() => go({ name: "home" })}
       />
     );

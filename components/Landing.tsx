@@ -219,7 +219,7 @@ function Tile({ title, children, body, className = "" }: { title: string; body: 
 
 const FAQ = [
   ["How much does it cost?", `${SITE.price} a ${SITE.period}, taxes included. You subscribe first, then use Lynkr. Cancel any time, and your first payment can be refunded within ${SITE.refundDays} days.`],
-  ["Is there a free trial?", "No. Access starts when you subscribe. Dodo Payments emails you a license key, and you enter it in Lynkr. There's no separate account to create."],
+  ["Is there a free trial?", "No. Create your account, subscribe, and Lynkr unlocks straight away on any device you sign in on."],
   ["Will it sound like AI wrote it?", "It writes only from facts you confirm, in plain words, and leaves blanks for anything it doesn't know. You can edit every line before you copy it."],
   ["Does it log in to my LinkedIn?", "No. Lynkr never asks for your LinkedIn password and never opens LinkedIn pages. You copy each draft and send it yourself."],
   ["What happens to my answers?", "Your Story Vault, drafts and tracker stay in your browser. Posts you paste and profile files you import are used once and never saved."],

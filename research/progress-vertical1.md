@@ -85,3 +85,41 @@ No new paid service proposed.
 - **Evidence at takeover:** `tsc` clean; lint 0 errors (7 warnings, pre-existing kinds); unit 112/112. Open PRs: none. Master is at 7da1ac6 (PR #12, hero wordmark; touches `Landing.tsx`, `layout.tsx`, `HeroWordmark.tsx`, none of which the branch edits).
 - **Remaining:** Part 4 screens, Part 5 screens, the v2 flow wired into `LynkrApp` behind the switch, account data screens (consent, download, delete, move browser data), regression tests for existing features with accounts, docs, persona run, v2 e2e and accessibility, rebase on master, PR.
 - **Work split (parallel agents, one owner per file, only the lead commits):** A question screen and vault panel; B read-back and first win; C flow, store and app wiring; D account data screens; E backend review and regression tests; F docs; G persona and PDF-injection evaluation; H v2 e2e and accessibility (after A to D).
+
+### Part 4: interview screens (agent A, 2026-10-24)
+- **Done:** `components/v2/QuestionScreen.tsx` (one question per screen, section and minutes left, editable example that can't be saved unedited, Skip on sensitive only, "Not sure yet" parks, "Later" on enrichment, stuck ladder rephrase → examples → park, follow-up label, voice, Ctrl/Cmd+Enter), `VaultPanel.tsx` (brief and facts by kind with confidence hints, live count), `ProgressBar.tsx`.
+- **Evidence:** tsc clean; eslint clean; `tests/v2-ui.test.mts` 7/7, including "anything Save allows, validateAnswer accepts" across every question in every bucket.
+- **Next:** browser check at 1280 and 375 px (agent H).
+
+### Part 5: read-back and first win (agent B, 2026-10-24)
+- **Done:** `ReadBack.tsx` (six sections, Fix and Remove per line, put back, private label from the schema's single list, optional 1–5 rating), `FirstWin.tsx` (headline and referral through the existing `DraftCard`, blanks lock Copy, facts used listed, 401 → sign-up link).
+- **Evidence:** `tests/v2-readback.test.mts` 7/7; only confirmed, switched-on facts reach `/api/first-win`.
+- **Next:** browser check (agent H).
+
+### Flow, store and switch (agent C, 2026-10-24)
+- **Done:** `InterviewFlow.tsx` and `BucketChoice.tsx` (bucket → import → interview → read-back → first win, resume at the saved phase); `Saved.v2` with migration for old saves; `LynkrApp` renders the flow before the paywall when `/api/status` says `interview: "v2"`; v1 untouched. "Answer more" in v2 reopens the read-back (lead fix).
+- **Evidence:** `tests/store-v2.test.mts` 5/5 (old save loads, round trip, malformed fallback, time cap).
+- **Known gaps:** answering the "Later" enrichment questions after finishing isn't built (the read-back reopens instead); after the first win, the person passes the old fact-review screen once before full drafts.
+
+### Account data screens (agent D, 2026-10-24)
+- **Done:** `MyData.tsx` (consent note, save-answers switch, download JSON, two-step delete then clear browser), `MoveToAccount.tsx` (newest edit wins, shows added / updated / kept), consent line on sign-up.
+- **Evidence:** `tests/mydata.test.mts` 3/3.
+- **Known gap:** the browser-import route caps at 60 facts per move.
+
+### Backend review (agent E, 2026-10-24)
+- **Done:** license holders without accounts reach the free part; with accounts off and the paywall on, the free routes now need payment (402) instead of being open; stale follow-up facts pruned on edit; constant-time cron check. Lead: the AI error log now records only status and error code.
+- **Evidence:** `tests/routes.test.mts` 5/5 (every old request shape works in demo mode; free vs paid gating in three configurations); `tests/vault-db.test.mts` 13/13 on PGlite (user A/B isolation for read, change and delete; delete removes all 7 tables; migration re-run safe; no console calls with answer text).
+- **Not covered:** a route test of the signed-in account path (needs a faked Better Auth session); covered at the storage layer instead.
+
+### Docs (agent F) and evaluation (agent G), 2026-10-24
+- **Done:** privacy page corrected (account storage, us-east-1, retention, export and delete, LinkedIn scopes, Resend link), `.env.example`, README, CONTEXT, Terms draft with sections 3 and 6 (not published). Persona run in demo mode: `research/eval-vertical1.md`.
+- **Evidence:** 5/5 personas finish; core fields 100%; expected facts 34/34; median estimated time 11.9 min; no example answers or untraced facts in the vault; planted-instruction PDF stays inside a quoted data block (lead fixed the fencing) and creates no fact.
+- **Next:** completion rate and rating need the five real testers on the preview.
+
+### Questions for Aryan (current)
+1. **Neon branch for preview and development:** approve creating one, so the preview never shares production's database. Recommended: yes.
+2. **LinkedIn client ID and secret:** needed to switch on Sign in with LinkedIn.
+3. **Terms change** (`research/terms-draft.md`): approve before the v2 switch is turned on in production.
+4. **Your own LinkedIn PDF** for one more parser check (optional).
+5. **Landing copy "No LinkedIn login":** change once Sign in with LinkedIn is on.
+Decided by the lead (reversible): license-key holders without an account may use the free interview and first win, since they have paid.

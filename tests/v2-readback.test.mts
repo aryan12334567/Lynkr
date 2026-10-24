@@ -41,7 +41,8 @@ test("facts land in the right section", () => {
 });
 
 test("private kinds are marked", () => {
-  for (const k of ["goal", "target_company", "warm_path", "offer", "must_have"] as const) assert.ok(isPrivateKind(k), k);
+  for (const k of ["target", "goal", "target_company", "warm_path", "must_have"] as const) assert.ok(isPrivateKind(k), k);
+  assert.ok(!isPrivateKind("offer"), "what you can offer may appear in public drafts");
   assert.ok(!isPrivateKind("project"));
 });
 

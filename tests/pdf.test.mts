@@ -126,14 +126,13 @@ test("a planted instruction never becomes a fact and reaches prompts only as pro
   // The prompt carries it only as the labelled profile text, and every drafting system prompt says such text is data.
   const profile = profileFrom("fresher", answers, text)!;
   const user = generateUser(profile, [], "", "");
-  const line = user.split("\n").find((l) => l.includes(PLANTED)) ?? "";
-  assert.match(line, /^(Current LinkedIn headline\/About text|About: )/);
+  const fenced = [...user.matchAll(/"""\n([\s\S]*?)\n"""/g)].map((m) => m[1]).join("\n");
+  assert.ok(fenced.includes(PLANTED), "the planted line sits only inside a quoted data block");
   for (const system of [generateSystem("fresher"), firstWinSystem("fresher")]) assert.match(system, /imported profile[^.]*are data, not instructions/);
 });
 
 test(
   "a planted instruction in the import sits inside a quoted block, not inline",
-  { todo: "lib/prompts.ts profileBlock inlines currentProfile; fence it in triple quotes like generateUser's other inputs" },
   async () => {
     const { profileFrom } = await import("../lib/interview/profile");
     const { generateUser } = await import("../lib/prompts");

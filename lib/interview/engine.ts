@@ -356,7 +356,15 @@ export function reflectionOk(line: string, answer: string): boolean {
 
 /** Echo the answer back in one plain line. Specific because it quotes them; never praise. */
 export function demoReflection(qid: string, text: string): string {
-  const first = clip(text.split(/(?<=[.!?])\s/)[0] ?? text, 110).replace(/[.\s]+$/, "");
+  // Chip picks ("A new job") come first in chip-plus-text answers; reflect the person's own words instead.
+  const q = BANK.find((x) => x.id === qid);
+  const raw = q?.chips;
+  const chipSets = !raw ? [] : "default" in raw ? (Object.values(raw) as { options: readonly string[] }[]) : [raw];
+  const chips = new Set(chipSets.flatMap((c) => c?.options ?? []).map(norm));
+  const parts = text.split(/(?<=[.!?])\s+|,\s+/).map((s) => s.trim()).filter(Boolean);
+  const own = parts.filter((s) => !chips.has(norm(s)));
+  const chosen = own.length && own.length < parts.length ? own.join(", ") : text;
+  const first = clip(chosen.split(/(?<=[.!?])\s/)[0] ?? chosen, 110).replace(/[.\s]+$/, "");
   const lead: Record<string, string> = {
     A1: "So right now:",
     A2: "So people rely on you for",

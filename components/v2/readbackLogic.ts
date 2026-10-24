@@ -1,6 +1,6 @@
 import type { Brief } from "../../lib/interview/engine";
 import { DOMAIN_LABEL } from "../../lib/roles";
-import { WANT_LABEL, WEEKLY_TIME_LABEL, type FactKind, type FactRef, type ProfileInput, type StoryFact } from "../../lib/schemas";
+import { OUTREACH_ONLY_KINDS, WANT_LABEL, WEEKLY_TIME_LABEL, type FactKind, type FactRef, type ProfileInput, type StoryFact } from "../../lib/schemas";
 
 /**
  * Pure helpers for the read-back (Part 5): which section each line of the summary goes in,
@@ -28,8 +28,8 @@ export const SECTION_EMPTY: Record<ReadBackSection, string> = {
   out: "Nothing left out. Remove any line above to keep it out of every draft.",
 };
 
-/** Kinds that only go into private outreach, never a headline, About or post. */
-export const PRIVATE_KINDS: readonly FactKind[] = ["goal", "target_company", "warm_path", "offer", "must_have"];
+/** Kinds that only go into private outreach, never a headline, About or post (the schema's list, so the label and the prompts agree). */
+export const PRIVATE_KINDS: readonly FactKind[] = OUTREACH_ONLY_KINDS;
 
 export const isPrivateKind = (k: FactKind): boolean => PRIVATE_KINDS.includes(k);
 

@@ -14,6 +14,7 @@ import { Checker } from "./Checker";
 import { Landing } from "./Landing";
 import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } from "./chrome";
 import { Paywall } from "./Paywall";
+import { InterviewFlow } from "./v2/InterviewFlow";
 import { loadAccount, type Account } from "@/lib/auth-client";
 import { Button, Card, ErrorNote } from "./ui";
 
@@ -38,7 +39,7 @@ function parseRoute(hash: string, s: Saved): Route {
   }
   // No address yet: returning users with drafts land in the app, everyone else on the home page.
   if (s.stage === "results" && s.result) return { name: "app", tab: "today" };
-  if (s.profile) return { name: "start" };
+  if (s.profile || s.v2.startedAt) return { name: "start" };
   return { name: "home" };
 }
 
@@ -74,6 +75,8 @@ export function LynkrApp() {
   // Paid access. `paywall` stays null until the server answers, and the app never opens before that.
   const [paywall, setPaywall] = useState<boolean | null>(null);
   const [checkout, setCheckout] = useState(false);
+  // Which interview the server runs (LYNKR_INTERVIEW, see lib/interview/flags.ts). v1 until it says otherwise.
+  const [interview, setInterview] = useState<"v1" | "v2">("v1");
   const [license] = useState<License | null>(loadLicense);
   // The server refused the saved key: the subscription ended, a payment failed, or Dodo was unreachable.
   const [lapsed, setLapsed] = useState(false);
@@ -89,11 +92,12 @@ export function LynkrApp() {
   useEffect(() => {
     fetch("/api/status")
       .then((r) => r.json())
-      .then((d: { mock: boolean; importFromLink?: ImportMode; paywall?: boolean; checkout?: boolean }) => {
+      .then((d: { mock: boolean; importFromLink?: ImportMode; paywall?: boolean; checkout?: boolean; interview?: "v1" | "v2" }) => {
         setMock(d.mock);
         setImportMode(d.importFromLink ?? null);
         setPaywall(d.paywall === true);
         setCheckout(d.checkout === true);
+        setInterview(d.interview === "v2" ? "v2" : "v1");
       })
       .catch(() => {
         setMock(null);
@@ -222,6 +226,14 @@ export function LynkrApp() {
     go({ name: "start" });
   }
 
+  // The new interview, Story Vault and first win come before the paywall (they need a free account
+  // when accounts are on). Once the person moves on to the full drafts, the usual flow and paywall apply.
+  const v2Start = interview === "v2" && route.name === "start" && !["review", "generating", "results"].includes(s.stage);
+  const needsAccount = v2Start && paywall === true && account?.accounts === true && !account.signedIn;
+  useEffect(() => {
+    if (needsAccount) window.location.assign("/signup");
+  }, [needsAccount]);
+
   // ---- screens ----
 
   if (route.name !== "home" && (paywall === null || account === null)) {
@@ -229,6 +241,31 @@ export function LynkrApp() {
       <p role="status" className="p-8 text-soft">
         Loading...
       </p>
+    );
+  }
+
+  if (needsAccount) {
+    return (
+      <p role="status" className="p-8 text-soft">
+        Taking you to create a free account…
+      </p>
+    );
+  }
+
+  if (v2Start) {
+    return (
+      <InterviewFlow
+        s={s}
+        setS={setS}
+        account={account}
+        mock={mock}
+        onHome={() => go({ name: "home" })}
+        onDone={() => {
+          // On to the full drafts: the paywall shows here when there's no subscription.
+          update({ stage: "review" });
+          go({ name: "app", tab: "today" });
+        }}
+      />
     );
   }
 
@@ -250,7 +287,7 @@ export function LynkrApp() {
         mock={mock}
         access={paywall === true ? (entitled ? "subscribed" : "paid") : "open"}
         account={account}
-        resume={hasDrafts ? "drafts" : s.profile ? "flow" : null}
+        resume={hasDrafts ? "drafts" : s.profile || s.v2.startedAt ? "flow" : null}
         onStart={() => go(hasDrafts && s.stage === "results" ? { name: "app", tab: "today" } : { name: "start" })}
         onCheck={() => go({ name: "check" })}
       />

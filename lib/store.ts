@@ -1,6 +1,7 @@
 import { ProfileInput, type FactKind, type GenerateReply, type StoryFact, type Turn } from "./schemas";
 import type { Plan } from "./plan";
 import { DEFAULT_CONNECT, migratePerson, type Connect, type Person } from "./connect";
+import { EMPTY_V2, migrateV2, type V2State } from "./interview/client";
 
 /** Everything Lynkr keeps lives in this browser only (localStorage). */
 export type Stage = "setup" | "interview" | "extracting" | "review" | "generating" | "results";
@@ -27,6 +28,8 @@ export type Saved = {
   plan: Plan | null;
   /** Connect Coach: note budget, weekly cap and the people tracker. */
   connect: Connect;
+  /** Interview v2 (the question-bank interview): its phase, answers and import. */
+  v2: V2State;
 };
 
 const KEY = "lynkr:v1";
@@ -43,6 +46,7 @@ export const EMPTY: Saved = {
   keptComments: [],
   plan: null,
   connect: DEFAULT_CONNECT,
+  v2: EMPTY_V2,
 };
 
 const OLD_KIND: Record<string, FactKind> = {
@@ -74,6 +78,7 @@ export function migrate(raw: Partial<Saved> & Record<string, unknown>): Saved {
     }));
   }
   s.connect = { ...DEFAULT_CONNECT, ...s.connect, people: (s.connect?.people ?? []).map((p) => migratePerson(p as Omit<Person, "status"> & { status: string })) };
+  s.v2 = migrateV2(raw.v2);
   // A reload mid-request has nothing to wait for.
   if (s.stage === "generating") s.stage = s.facts.length ? "review" : s.turns.length ? "interview" : "setup";
   if (s.stage === "extracting") s.stage = s.turns.length ? "interview" : "setup";

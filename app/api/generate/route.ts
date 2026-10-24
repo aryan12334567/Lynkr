@@ -1,3 +1,4 @@
+import { resolveContext } from "@/lib/context";
 import { requireLicense } from "@/lib/billing";
 import { GenerateReply, GenerateRequest, type FactRef, type ProfileInput } from "@/lib/schemas";
 import { cleanStrings } from "@/lib/clean";
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Confirm at least one Story Vault fact, then try again." }, { status: 400 });
   }
-  const { profile, facts, jobDescription, imported, requirements } = parsed.data;
+  const { profile, facts, jobDescription, imported, requirements } = await resolveContext(req, parsed.data, "all");
   // Only a packet the user approved reaches the AI (enrichment plan A4).
   const reqText = requirements?.reviewStatus === "approved" ? packetForPrompt(requirements) : "";
   const ids = new Set(facts.map((f) => f.id));

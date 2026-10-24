@@ -1,3 +1,4 @@
+import { resolveContext } from "@/lib/context";
 import { requireLicense } from "@/lib/billing";
 import { ConnectReply, ConnectRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Check the person details. Pasted text is up to 4,000 characters; screenshots are PNG, JPG or WebP under 4 MB." }, { status: 400 });
   }
-  const { profile, facts, packet, text, image } = parsed.data;
+  const { profile, facts, packet, text, image } = await resolveContext(req, parsed.data, "picked");
   if (image) {
     const bad = validateImage(image.media_type, image.data);
     if (bad) return Response.json({ error: bad }, { status: 413 });

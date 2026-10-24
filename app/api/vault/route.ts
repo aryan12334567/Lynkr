@@ -1,3 +1,4 @@
+import { resolveContext } from "@/lib/context";
 import { requireLicense } from "@/lib/billing";
 import { VaultReply, VaultRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Please check your answers and try again." }, { status: 400 });
   }
-  const { profile, turns } = parsed.data;
+  const { profile, turns } = await resolveContext(req, parsed.data, "picked");
 
   if (isMock()) return Response.json(mockVault(profile, turns));
 

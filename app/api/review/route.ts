@@ -1,3 +1,4 @@
+import { resolveContext } from "@/lib/context";
 import { requireLicense } from "@/lib/billing";
 import { ReviewReply, ReviewRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
   const limited = checkLimits(req, "interview");
   if (limited) return Response.json({ error: limited }, { status: 429 });
 
-  const { text, channel, intent, relationship, anchor, facts, tone } = parsed.data;
+  const { text, channel, intent, relationship, anchor, facts, tone } = await resolveContext(req, parsed.data, "picked");
   try {
     const reply = cleanStrings(await callStructured({ system: REVIEW_SYSTEM, user: reviewUser(text, channel, intent, relationship, anchor, facts, tone), schema: ReviewReply, effort: "low", maxTokens: 2000 }));
     // Only edits that point at real text in the message.

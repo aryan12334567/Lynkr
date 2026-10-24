@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { deleteAll, inactiveUsers, type Db } from "./db";
 
 /**
@@ -12,11 +13,16 @@ export function cutoff(now: Date): Date {
   return d;
 }
 
-/** Vercel Cron sends "Authorization: Bearer $CRON_SECRET". Refuse everything when the secret isn't set. */
+/**
+ * Vercel Cron sends "Authorization: Bearer $CRON_SECRET". Refuse everything when the secret isn't set.
+ * Compared in constant time, so the secret can't be guessed from response timings.
+ */
 export function cronAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret || secret.length < 16) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  const got = Buffer.from(req.headers.get("authorization") ?? "");
+  const want = Buffer.from(`Bearer ${secret}`);
+  return got.length === want.length && timingSafeEqual(got, want);
 }
 
 /** Returns how many users matched. In dry-run mode nothing is deleted. Never returns ids or content. */

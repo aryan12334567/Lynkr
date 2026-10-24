@@ -190,6 +190,11 @@ export async function saveFacts(db: Db, userId: string, facts: StoryFact[]): Pro
   return { saved, older };
 }
 
+/** Drop unreviewed facts from follow-ups that no longer exist (the main answer was edited). */
+export async function pruneAnswerFacts(db: Db, userId: string, qid: string, keepAttempts: number[]): Promise<void> {
+  await db.query("delete from facts where user_id = $1 and source_qid = $2 and status = 'candidate' and not (source_attempt = any($3::smallint[]))", [userId, qid, keepAttempts]);
+}
+
 export async function deleteFact(db: Db, userId: string, factKey: string): Promise<boolean> {
   const r = await db.query("delete from facts where user_id = $1 and fact_key = $2 returning fact_key", [userId, factKey]);
   return r.rows.length > 0;

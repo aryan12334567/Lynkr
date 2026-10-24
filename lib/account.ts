@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { accountsConfigured, sessionUser } from "./auth";
-import { paywallEnabled } from "./billing";
+import { hasValidLicense, paywallEnabled } from "./billing";
 import { cloudReady, getDb, touchUser, type Db, type Settings } from "./db";
 import { FACT_KINDS } from "./schemas";
 
@@ -21,16 +21,19 @@ export async function accountContext(req: Request): Promise<AccountCtx | null> {
 
 /**
  * The free part (interview, Story Vault, first draft) comes before the paywall but needs a
- * signed-in account when the paywall is on. Returns a 401 to send back, or the user (null when
- * no account is needed, for example local development).
+ * signed-in account when the paywall is on. A license key bought before accounts existed also
+ * works, with the context kept in the browser until its owner creates an account. Returns the
+ * response to send back, or the user (null when there's no account: local development or a key).
  */
 export async function requireAccountForFree(req: Request): Promise<{ user: { id: string; email: string } | null } | { error: Response }> {
   const user = await sessionUser(req);
   if (user) return { user: { id: user.id, email: user.email } };
-  if (paywallEnabled() && accountsConfigured()) {
+  if (!paywallEnabled() || (await hasValidLicense(req))) return { user: null };
+  if (accountsConfigured()) {
     return { error: Response.json({ error: "Create a free account or sign in to start your interview.", code: "account_required" }, { status: 401 }) };
   }
-  return { user: null };
+  // Paywall on but accounts off: there's no free path, so this is paid like everything else.
+  return { error: Response.json({ error: "An active subscription is needed. Subscribe, or enter your license key.", code: "subscription_required" }, { status: 402 }) };
 }
 
 /** A Story Vault fact as sent by the browser (edits, confirmations, moving browser data). */

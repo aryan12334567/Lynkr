@@ -185,3 +185,55 @@ test("existing routes: account facts and brief win; request shapes still work wi
   assert.equal(mergeProfile({ ...p, targetRole: "Data analyst" }, p).targetRole, "Data analyst");
   assert.equal(mergeProfile({ broken: true }, p).targetRole, "Analyst");
 });
+
+test("I16b: user B saving a brief, settings or pruning facts never touches user A", async () => {
+  const { d } = await fresh();
+  await seed(d, "userA");
+  await db.updateSettings(d, "userA", { consent: true });
+  await db.saveBrief(d, "userB", { bucket: "networker", targetRoles: "hijacked" });
+  assert.equal((await db.getBrief<{ targetRoles: string }>(d, "userA"))?.data.targetRoles, "role of userA");
+  assert.equal((await db.getBrief(d, "userA"))?.version, 1, "A's brief gets no new version");
+  await db.updateSettings(d, "userB", { saveAnswers: false });
+  assert.equal((await db.touchUser(d, "userA")).saveAnswers, true);
+  assert.ok((await db.touchUser(d, "userA")).consentAt);
+  await db.pruneAnswerFacts(d, "userB", "C1", []);
+  await db.deleteAnswers(d, "userB", [], "C1");
+  assert.equal((await db.listFacts(d, "userA")).length, 1);
+  assert.equal((await db.listAnswers(d, "userA")).length, 1);
+  await db.upsertAnswerFacts(d, "userB", "C1", 0, []);
+  assert.equal((await db.listFacts(d, "userA")).length, 1, "B's empty re-save drops only B's candidates");
+});
+
+test("editing a main answer drops unreviewed facts from its old follow-ups, keeps reviewed ones", async () => {
+  const { d } = await fresh();
+  await db.upsertAnswerFacts(d, "userA", "C1", 0, [{ kind: "project", text: "I built a report", confidence: conf }]);
+  await db.upsertAnswerFacts(d, "userA", "C1", 1, [{ kind: "contribution", text: "I wrote the SQL", confidence: conf }]);
+  await db.upsertAnswerFacts(d, "userA", "C1", 2, [{ kind: "evidence", text: "about 6 hours a week (estimate)", confidence: conf }]);
+  const f2 = (await db.listFacts(d, "userA")).find((f) => f.text === "I wrote the SQL")!;
+  await db.saveFacts(d, "userA", [{ ...f2, reviewStatus: "confirmed", useInDrafts: true, updatedAt: new Date(Date.now() + 1000).toISOString() }]);
+  await db.pruneAnswerFacts(d, "userA", "C1", [0]);
+  assert.deepEqual((await db.listFacts(d, "userA")).map((f) => f.text).sort(), ["I built a report", "I wrote the SQL"]);
+});
+
+test("no answer text in logs: new server code logs counts and status only", async () => {
+  const { readdirSync, readFileSync: read, statSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const root = new URL("../", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const n of readdirSync(dir)) {
+      const p = join(dir, n);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.ts$/.test(n)) files.push(p);
+    }
+  };
+  for (const d of ["app/api/interview2", "app/api/first-win", "app/api/me", "app/api/metrics", "app/api/cron", "lib/interview"]) walk(join(root, d));
+  for (const f of ["lib/db.ts", "lib/account.ts", "lib/context.ts", "lib/cleanup.ts", "lib/metrics.ts"]) files.push(join(root, f));
+  assert.ok(files.length >= 15, `scanned ${files.length} files`);
+  const allowed = /console\.info\(JSON\.stringify\(\{ (lynkr_cleanup: result|lynkr_metric: \{ \.\.\.clean \}) \}\)\)/;
+  for (const f of files) {
+    for (const line of read(f, "utf8").split("\n").filter((l) => /console\./.test(l))) {
+      assert.ok(allowed.test(line), `${f}: ${line.trim()}`);
+    }
+  }
+});

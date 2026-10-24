@@ -53,3 +53,35 @@ Each test has an ID used in `validation-report.md`. "Unit" tests run with `node 
 | C11 | Browser | Cap | With cap 1 and one person added this week, Add is disabled with a message |
 | C12 | Browser | Clear + phone | "Clear everything" removes people; no horizontal scroll at 390 px |
 | C13 | Build | Checks | tsc, eslint, unit tests, browser tests, next build clean |
+
+# Acceptance tests: interview v2 and Story Vault (vertical 1)
+
+Unit tests live in `tests/interview.test.mts`, `tests/vault-db.test.mts`, `tests/pdf.test.mts` and `tests/personas.test.mts`. Browser tests are in `tests/e2e-interview.mjs` (demo mode, `LYNKR_INTERVIEW=v2`).
+
+| ID | Type | Test | Pass when |
+|---|---|---|---|
+| I1 | Unit | Bank | Every question has text, an example, a rephrase, 2+ extra examples, what it feeds, and where it's saved; ids unique; fresher, experienced and networker each have 10+ core questions; salary never asked |
+| I2 | Unit | Order | The first question is A1, worded for the bucket; networkers get no job-search questions (B5, B6, B7) |
+| I3 | Unit | Skip and park | Skip refused on core and enrichment, allowed on sensitive; "Later" only on enrichment; "Not sure yet" allowed anywhere |
+| I4 | Unit | Park ladder | A parked core question comes back once at the end; parked again it's listed as unresolved and the interview still finishes |
+| I5 | Unit | Stop rule | Done when every core question is answered or unresolved; unanswered enrichment is in the Later list |
+| I6 | Unit | Follow-up limit | At most two follow-ups per core question; none on enrichment or chip questions |
+| I7 | Unit | Estimate | A win with no number gets one estimate follow-up; "not measured" accepted; an estimate is labelled "(estimate)" |
+| I8 | Unit | Should probe | B4 asked only when a goal answer sounds like a "should" |
+| I9 | Unit | Examples | An unedited example is refused and never becomes a fact; chip picks are not examples |
+| I10 | Unit | Idempotent | Saving the same answer twice keeps one row; editing a main answer drops its stale follow-ups |
+| I11 | Unit | Progress | 0% with no import; above 0% after the import |
+| I12 | Unit | Brief | Chips map to field, goals and weekly time; a skipped "does your employer know?" stays private |
+| I13 | Unit | Facts | New kinds (goal, target_company, warm_path, offer, must_have) and confidence (example, number, "I did") |
+| I14 | Unit | Reflection | One line quoting the answer; stock praise rejected |
+| I15 | Unit | Old saves | A save from before v2 loads, with private search on and no confidence |
+| I16 | Unit | Account isolation | User A cannot read, change or delete user B's brief, facts, answers, drafts or plan items |
+| I17 | Unit | Delete my data | Removes every row for the user in every Lynkr table and nothing for anyone else |
+| I18 | Unit | Durable caps | Per-user daily caps hold across two app instances sharing one database |
+| I19 | Unit | Cleanup | Dry run lists users inactive 12+ months without deleting; real run deletes only them; refused without the secret |
+| I20 | Unit | PDF parser | 4 made-up LinkedIn PDFs give name, headline, About, experience, education and skills; a planted instruction is extracted as plain text only |
+| I21 | Unit | Personas | 5 personas (2 fresher, 2 experienced, 1 networker) finish in demo mode with their expected facts and an estimated time under 15 minutes |
+| I22 | Browser | Full flow | Bucket, import (paste), every question, reflection, live vault, summary, rating and first win, at 1280px and 375px |
+| I23 | Browser | Keyboard and screen reader | Every control reachable by keyboard, labelled, focus visible; status updates announced |
+| I24 | Browser | Switch | With `LYNKR_INTERVIEW=v1` the old interview runs unchanged (existing e2e) |
+| I25 | Build | Checks | tsc, eslint, unit tests, both e2e runs and next build clean |

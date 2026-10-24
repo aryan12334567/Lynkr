@@ -11,6 +11,35 @@ export const GOAL_LABEL: Record<Goal, string> = {
   network: "To meet people in my field",
 };
 
+/** Who the interview is for. The first three are built; the last two come later (build plan, decision 2). */
+export const BUCKETS = ["fresher", "experienced", "networker", "switcher", "founder"] as const;
+export type Bucket = (typeof BUCKETS)[number];
+export const ACTIVE_BUCKETS = ["fresher", "experienced", "networker"] as const satisfies readonly Bucket[];
+
+export const BUCKET_LABEL: Record<Bucket, string> = {
+  fresher: "I'm a student or recent graduate looking for my first job or internship",
+  experienced: "I have a few years of experience and want my next job",
+  networker: "I want to meet people in my field (not job hunting right now)",
+  switcher: "I'm changing careers",
+  founder: "I'm a founder or freelancer",
+};
+
+/** What someone wants LinkedIn to help with (more than one allowed). */
+export const WANTS = ["job", "internship", "referral", "network", "mentor", "clients"] as const;
+export type Want = (typeof WANTS)[number];
+export const WANT_LABEL: Record<Want, string> = {
+  job: "A new job",
+  internship: "An internship",
+  referral: "Referrals",
+  network: "Meeting people in my field",
+  mentor: "A mentor",
+  clients: "Clients",
+};
+
+export const WEEKLY_TIMES = ["15m", "30m", "1h", "2h"] as const;
+export type WeeklyTime = (typeof WEEKLY_TIMES)[number];
+export const WEEKLY_TIME_LABEL: Record<WeeklyTime, string> = { "15m": "15 minutes", "30m": "30 minutes", "1h": "1 hour", "2h": "2 hours or more" };
+
 // ---- request bodies (validated on the server) ----
 
 /**
@@ -32,6 +61,13 @@ export const ProfileInput = z.object({
   audiences: z.array(z.enum(AUDIENCES)).max(2).default([]),
   topics: z.array(z.string().trim().min(1).max(40)).max(3).default([]),
   keepPrivate: z.string().trim().max(200).default(""),
+  // Interview v2 (build plan Part 1). Optional with defaults, so saves from older versions still load.
+  bucket: z.enum(BUCKETS).default("fresher"),
+  goals: z.array(z.enum(WANTS)).max(WANTS.length).default([]),
+  mustHaves: z.string().trim().max(300).default(""),
+  /** True unless the person said their search is public. A skipped question stays private. */
+  privateSearch: z.boolean().default(true),
+  weeklyTime: z.enum(WEEKLY_TIMES).default("30m"),
 });
 export type ProfileInput = z.infer<typeof ProfileInput>;
 
@@ -48,7 +84,22 @@ export const InterviewRequest = z.object({
 
 // ---- Story Vault: candidate facts the user reviews before any drafting ----
 
-export const FACT_KINDS = ["project", "contribution", "challenge", "evidence", "learning", "opinion", "constraint", "target"] as const;
+export const FACT_KINDS = [
+  "project",
+  "contribution",
+  "challenge",
+  "evidence",
+  "learning",
+  "opinion",
+  "constraint",
+  "target",
+  // Interview v2
+  "goal",
+  "target_company",
+  "warm_path",
+  "offer",
+  "must_have",
+] as const;
 export type FactKind = (typeof FACT_KINDS)[number];
 
 export const FACT_KIND_LABEL: Record<FactKind, string> = {
@@ -60,7 +111,21 @@ export const FACT_KIND_LABEL: Record<FactKind, string> = {
   opinion: "Your observation",
   constraint: "Constraint",
   target: "Who you want to reach",
+  goal: "What you want",
+  target_company: "Companies you're aiming for",
+  warm_path: "A way in you already have",
+  offer: "What you can offer",
+  must_have: "Must-have",
 };
+
+/** Kinds that only ever go into private outreach, never a headline, About or post. */
+export const OUTREACH_ONLY_KINDS: readonly FactKind[] = ["target", "goal", "target_company", "warm_path", "must_have"];
+
+/**
+ * How solid a fact is, worked out from the answer itself: is there a concrete example,
+ * a number (measured, or an estimate the person labelled), and a clear "I did"?
+ */
+export type FactConfidence = { example: boolean; number: "measured" | "estimate" | "none"; iDid: boolean };
 
 export type ReviewStatus = "candidate" | "confirmed" | "excluded";
 
@@ -72,6 +137,11 @@ export type StoryFact = {
   sourceTurnIds: number[];
   reviewStatus: ReviewStatus;
   useInDrafts: boolean;
+  /** Interview v2: the question the fact came from, and how solid it is. Absent on older saves. */
+  sourceQid?: string;
+  confidence?: FactConfidence;
+  /** Last change, for "newest edit wins" when browser and account copies differ. */
+  updatedAt?: string;
 };
 
 export const VaultRequest = z.object({

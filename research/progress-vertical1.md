@@ -74,3 +74,8 @@ No new paid service proposed.
 
 ## Part log
 (Three lines per part: done, evidence, next.)
+
+### Parts 0 and 1: spec and data model (2026-10-24)
+- **Done:** question bank as typed data (`lib/interview/bank.ts`: 3 buckets, sections A to E, tags, examples, rephrase, extra examples, feeds, brief field or fact kind, follow-up triggers, time per question); pure engine (`lib/interview/engine.ts`); `ProfileInput` gains bucket, goals, mustHaves, privateSearch (default true), weeklyTime; 5 new fact kinds and `FactConfidence`; an "experienced" stage; prompts name the bucket, and rule 5 keeps all private kinds out of public drafts; I-series acceptance tests (I1 to I25).
+- **Evidence:** `tsc` clean; `eslint` clean; unit 82/82 (15 new); `next build` compiled; existing e2e 31/31 and accessibility 5/5 in demo mode (v1 unchanged).
+- **Next:** Part 1b, account storage. **Part 0's check (Aryan approves the bank, tags and tests) is pending:** the bank is data and easy to change.

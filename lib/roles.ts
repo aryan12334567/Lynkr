@@ -36,12 +36,13 @@ export const DOMAIN_LABEL: Record<Domain, string> = {
   not_sure: "Not sure yet",
 };
 
-export const STAGES = ["final_year", "recent_grad", "early_career", "switching", "other"] as const;
+export const STAGES = ["final_year", "recent_grad", "early_career", "experienced", "switching", "other"] as const;
 export type Stage = (typeof STAGES)[number];
 export const STAGE_LABEL: Record<Stage, string> = {
   final_year: "Final-year student",
   recent_grad: "Recent graduate",
   early_career: "0 to 2 years' experience",
+  experienced: "3 or more years' experience",
   switching: "Changing fields",
   other: "Other / prefer not to say",
 };
@@ -50,6 +51,7 @@ export const STAGE_PHRASE: Record<Stage, string> = {
   final_year: "a final-year student",
   recent_grad: "a recent graduate",
   early_career: "early in my career",
+  experienced: "an experienced professional",
   switching: "moving into this field",
   other: "",
 };

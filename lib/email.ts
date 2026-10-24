@@ -25,13 +25,14 @@ ${action(kind, value, button)}
 <p style="font-size:13px;color:#5f6472">If you didn't ask for this, you can ignore this email.</p></div>`;
 }
 
-type Kind = "verify" | "reset" | "code";
+type Kind = "verify" | "reset" | "code" | "continue";
 
 /** `value` is the link to open, or for "code" the one-time code to type in. */
 export async function sendEmail(to: string, kind: Kind, value: string): Promise<void> {
   const copy = {
     verify: ["Confirm your email", "Confirm your email address to finish creating your Lynkr account.", "Confirm email", "Confirm your Lynkr email"],
     reset: ["Reset your password", "Use this link to choose a new password. It expires in one hour.", "Choose a new password", "Reset your Lynkr password"],
+    continue: ["Continue on your laptop", "Open this on your laptop to import your LinkedIn PDF. The link works once and expires in 15 minutes.", "Continue on my laptop", "Continue Lynkr on your laptop"],
     code: ["Your sign-in code", "Enter this code in Lynkr to sign in. It expires in ten minutes and works once.", "", `${value} is your Lynkr sign-in code`],
   }[kind];
   const key = process.env.RESEND_API_KEY?.trim();

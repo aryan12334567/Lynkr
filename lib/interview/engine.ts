@@ -82,7 +82,9 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 /** True when the answer is only chip picks, which are choices, not typed text. */
 function onlyChips(q: Question, bucket: Bucket, text: string): boolean {
   const chips = q.chips ? pick(q.chips, bucket) : null;
-  return !!chips && text.split(/s*,s*/).every((p) => chips.options.includes(p.trim()));
+  if (!chips) return false;
+  // Options can contain commas ("Yes, it's public"), so a whole-answer match comes first.
+  return chips.options.includes(text.trim()) || text.split(/\s*,\s*/).every((p) => chips.options.includes(p.trim()));
 }
 
 /** True when the text is one of the question's example answers, unedited. Chip picks never count. */
@@ -186,8 +188,9 @@ export function validateAnswer(bucket: Bucket, answers: Answer[], input: AnswerI
     if (isExampleText(q, bucket, t)) return "That's the example. Edit it so it's about you.";
     const chips = q.chips ? pick(q.chips, bucket) : null;
     if (chips && !chips.withText && input.attempt === 0) {
-      const parts = chips.multi ? t.split(/\s*,\s*/) : [t];
-      if (!parts.every((p) => chips.options.includes(p))) return "Pick one of the options.";
+      // Options can contain commas ("Yes, it's public"), so a whole-answer match comes first.
+      const ok = chips.options.includes(t) || (!!chips.multi && t.split(/\s*,\s*/).every((p) => chips.options.includes(p)));
+      if (!ok) return "Pick one of the options.";
     }
   }
   return null;

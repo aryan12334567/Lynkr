@@ -23,6 +23,8 @@ export async function readJson(req: Request, maxBytes: number): Promise<{ body: 
 /** Per-route body caps: generous for real use, far below anything abusive. */
 export const BODY_LIMIT = {
   interview: 32 * 1024,
+  interview2: 96 * 1024, // up to 80 saved answers of the browser's copy, plus one new answer
+  firstWin: 32 * 1024,
   vault: 48 * 1024,
   generate: 96 * 1024, // transcript + confirmed facts + optional job description and imported fields
   comment: 16 * 1024,

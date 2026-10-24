@@ -369,3 +369,52 @@ export const ReviewReply = z.object({
   edits: z.array(z.object({ find: z.string(), replace: z.string(), why: z.string() })),
 });
 export type ReviewReply = z.infer<typeof ReviewReply>;
+
+// ---- interview v2 (build plan Part 3) ----
+
+const AnswerStatusEnum = z.enum(["answered", "skipped", "parked", "later"]);
+const TriggerEnum = z.enum(["vague", "we", "no_number"]);
+
+export const AnswerInputSchema = z.object({
+  qid: z.string().trim().min(2).max(8),
+  attempt: z.number().int().min(0).max(2),
+  status: AnswerStatusEnum,
+  text: z.string().max(1500).default(""),
+  trigger: TriggerEnum.optional(),
+  round: z.number().int().min(1).max(2).optional(),
+});
+
+export const SavedAnswerSchema = AnswerInputSchema.extend({
+  vague: z.boolean().optional(),
+  should: z.boolean().optional(),
+  followUpText: z.string().max(300).optional(),
+  at: z.string().max(40).optional(),
+});
+
+export const Interview2Request = z.object({
+  bucket: z.enum(ACTIVE_BUCKETS),
+  /** null asks for the current step without saving anything. */
+  answer: AnswerInputSchema.nullable(),
+  /** The browser's copy of the answers; ignored when the account holds them. */
+  history: z.array(SavedAnswerSchema).max(80).default([]),
+  elapsedSecs: z.number().int().min(0).max(24 * 3600).default(0),
+  imported: z.boolean().default(false),
+});
+
+/** The model's only jobs: reflect, judge vagueness (and "should"), phrase one follow-up, propose facts from this answer. */
+export const JudgeReply = z.object({
+  reflection: z.string(),
+  vague: z.boolean(),
+  should: z.boolean(),
+  followUp: z.string(),
+  facts: z.array(z.object({ kind: z.enum(FACT_KINDS), text: z.string() })),
+});
+export type JudgeReply = z.infer<typeof JudgeReply>;
+
+export const FirstWinRequest = z.object({
+  profile: ProfileInput,
+  facts: z.array(FactRef).max(20).default([]),
+});
+
+export const FirstWinReply = z.object({ headline: z.string(), referral: Draft });
+export type FirstWinReply = z.infer<typeof FirstWinReply>;

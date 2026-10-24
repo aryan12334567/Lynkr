@@ -12,18 +12,36 @@ export default function Privacy() {
         including the Digital Personal Data Protection Act, 2023.
       </p>
 
-      <Section title="What stays in your browser">
+      <Section title="Your account">
         <p>
-          Your Story Vault, drafts, weekly plan, tracker and settings are saved in your browser&apos;s local storage on your own device. Lynkr&apos;s servers do not keep a copy. &quot;Start over&quot; deletes them, and clearing
-          your browser data does too. Your license key and this browser&apos;s activation id are kept in local storage as well.
+          If you create an account, Lynkr stores your name, email address, whether your email is confirmed, a securely hashed password (never the password itself) or the Google, Apple or LinkedIn account you signed in
+          with, any passkeys you add, your sign-in sessions (with the IP address and browser they came from) and the id of your Dodo Payments customer record. We email you only to confirm your address, reset your
+          password, send a sign-in code, or send a &quot;continue on your laptop&quot; link you asked for.
+        </p>
+        <p>
+          With an account, your context is saved to it so it&apos;s the same on every device: your context brief (who you are, what you want, target roles and companies, must-haves, whether your job search is
+          private, weekly time and tone), your Story Vault facts, your interview answers (unless you switch saving answers off), and your drafts and weekly plan. This is stored in Lynkr&apos;s database on Neon,
+          hosted in AWS US East (N. Virginia, USA).
         </p>
       </Section>
 
-      <Section title="Your account">
+      <Section title="How long we keep it, and how to get it or delete it">
         <p>
-          If you create an account, Lynkr stores your name, email address, whether your email is confirmed, a securely hashed password (never the password itself) or the Google account you signed in with, your sign-in
-          sessions (with the IP address and browser they came from) and the id of your Dodo Payments customer record. This is kept in Lynkr&apos;s database so you can sign in on any device and so we can check your
-          subscription. Your Story Vault and drafts are not stored in your account. We email you only to confirm your address, reset your password or send a sign-in link you asked for.
+          Your saved context is kept until you delete it, and removed automatically after 12 months without any activity on your account. In the app, &quot;Download my data&quot; gives you everything Lynkr holds for
+          your account as a file, and &quot;Delete my data&quot; removes all of it at once.
+        </p>
+      </Section>
+
+      <Section title="Your LinkedIn PDF">
+        <p>
+          If you import the PDF that LinkedIn&apos;s &quot;Save to PDF&quot; makes, it is read inside your browser. The file is never uploaded or stored. Only the details you confirm are kept, as part of your context.
+        </p>
+      </Section>
+
+      <Section title="Without an account">
+        <p>
+          If you use a license key without an account, your Story Vault, drafts, weekly plan, tracker and settings stay in your browser&apos;s local storage on your own device, as before. Lynkr&apos;s servers do not keep a
+          copy. &quot;Start over&quot; deletes them, and clearing your browser data does too. Your license key and this browser&apos;s activation id are kept in local storage as well.
         </p>
       </Section>
 
@@ -50,8 +68,9 @@ export default function Privacy() {
 
       <Section title="Technical information">
         <p>
-          Our hosting provider (Vercel) and our server record technical information such as IP address, time and the page or API requested. We use it for security, to limit abuse and to keep the service running. Lynkr does
-          not use advertising or analytics cookies, and does not sell personal data.
+          Our hosting provider (Vercel) and our server record technical information such as IP address, time and the page or API requested. We use it for security, to limit abuse and to keep the service running. The
+          text of your answers is never written to these logs. To see whether the interview works, Lynkr counts events such as interviews started and finished, time taken and the 1 to 5 rating you give the summary;
+          these counts carry no name, email or answer text. Lynkr does not use advertising or analytics cookies, and does not sell personal data.
         </p>
       </Section>
 
@@ -60,16 +79,17 @@ export default function Privacy() {
           <li>OpenAI: writes drafts from what you submit.</li>
           <li>Dodo Payments: payments, tax, invoices and license keys.</li>
           <li>Vercel: hosting.</li>
-          <li>Neon: the database that holds accounts.</li>
+          <li>Neon: the database that holds accounts and saved context (AWS US East).</li>
           <li>Resend: sends account emails.</li>
           <li>Google: only if you choose &quot;Continue with Google&quot;.</li>
+          <li>LinkedIn: only if you choose Sign in with LinkedIn: your name, email and photo.</li>
           <li>Apify: reads a public job page, only if you use the import.</li>
         </ul>
       </Section>
 
       <Section title="Your choices and requests">
         <p>
-          You can delete your saved work at any time in the app. To delete your account, or to ask about any personal data we hold, such as your account details or emails you send us, write to <ContactEmail />. Lynkr is for people aged 18 and over.
+          You can download or delete your saved work at any time in the app. To delete your account, or to ask about any personal data we hold, such as your account details or emails you send us, write to <ContactEmail />. Lynkr is for people aged 18 and over.
         </p>
       </Section>
 

@@ -17,8 +17,8 @@ const AFTER = "/#start";
 
 /** The sign-in method used last in this browser, so it can be marked "Last used". Not sensitive: no email or token. */
 const LAST = "lynkr.lastAuth";
-type Method = "google" | "apple" | "passkey" | "email" | "code";
-const METHODS: Method[] = ["google", "apple", "passkey", "email", "code"];
+type Method = "google" | "apple" | "linkedin" | "passkey" | "email" | "code";
+const METHODS: Method[] = ["google", "apple", "linkedin", "passkey", "email", "code"];
 function remember(m: Method) {
   try {
     localStorage.setItem(LAST, m);
@@ -30,6 +30,15 @@ const OPTION =
 
 const field =
   "w-full rounded-xl border border-line bg-surface px-4 py-3 text-[0.98rem] text-ink placeholder:text-faint transition-colors focus:border-accent focus:outline-none";
+
+function LinkedInMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+      <rect width="24" height="24" rx="4" fill="#0A66C2" />
+      <path fill="#fff" d="M6.9 9.6h2.6V18H6.9zM8.2 5.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM11.1 9.6h2.5v1.15h.04c.35-.66 1.2-1.36 2.47-1.36 2.64 0 3.13 1.74 3.13 4V18h-2.6v-4.06c0-.97-.02-2.22-1.35-2.22-1.36 0-1.57 1.06-1.57 2.15V18h-2.6z" />
+    </svg>
+  );
+}
 
 function AppleMark() {
   return (
@@ -227,7 +236,7 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
     }
   }
 
-  async function social(provider: "google" | "apple") {
+  async function social(provider: "google" | "apple" | "linkedin") {
     remember(provider);
     await run(provider, () => authClient.signIn.social({ provider, callbackURL: AFTER, errorCallbackURL: `/login?error=${provider}` }));
   }
@@ -248,7 +257,7 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
   }[mode];
   const off = account !== null && !account.accounts;
   // One-click options above the email form: Google, Apple, and (when signing in) a passkey.
-  const quick = signInScreen && !off && (account?.google || account?.apple || (mode === "login" && passkeys));
+  const quick = signInScreen && !off && (account?.google || account?.apple || account?.linkedin || (mode === "login" && passkeys));
 
   return (
     <div className="grid min-h-dvh w-full lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -349,7 +358,9 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
                     ? "Google sign-in didn't finish. Please try again."
                     : linkError === "apple"
                       ? "Apple sign-in didn't finish. Please try again."
-                      : "That link has expired or was already used. Ask for a new one."}
+                      : linkError === "linkedin"
+                        ? "LinkedIn sign-in didn't finish. Please try again."
+                        : "That link has expired or was already used. Ask for a new one."}
                 </p>
               )}
 
@@ -366,6 +377,12 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
                       <button onClick={() => social("apple")} disabled={busy !== null} className={OPTION}>
                         <AppleMark /> {busy === "apple" ? "Opening Apple..." : "Continue with Apple"}
                         {lastUsed === "apple" && <LastUsed />}
+                      </button>
+                    )}
+                    {account?.linkedin && (
+                      <button onClick={() => social("linkedin")} disabled={busy !== null} className={OPTION}>
+                        <LinkedInMark /> {busy === "linkedin" ? "Opening LinkedIn..." : "Continue with LinkedIn"}
+                        {lastUsed === "linkedin" && <LastUsed />}
                       </button>
                     )}
                     {mode === "login" && passkeys && (

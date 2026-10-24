@@ -22,6 +22,7 @@ import {
   Users,
 } from "lucide-react";
 import { LegalLinks, Wordmark } from "./chrome";
+import { HeroWordmark } from "./HeroWordmark";
 import { SITE } from "@/lib/site";
 import type { Account } from "@/lib/auth-client";
 import { useLandingMotion, useLenis } from "./motion";
@@ -338,10 +339,10 @@ export function Landing({
         {/* Hero */}
         <section className="relative overflow-hidden px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-28">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(55%_60%_at_50%_0%,rgba(58,66,200,0.07),transparent_75%)]" aria-hidden />
+          <div className="relative mx-auto max-w-6xl text-center">
+            <HeroWordmark text={SITE.tagline} />
+          </div>
           <div className="relative mx-auto max-w-4xl text-center">
-            <h1 data-split="load" className="text-[3rem] leading-[1] tracking-[-0.045em] sm:text-[5.5rem]">
-              {SITE.tagline}
-            </h1>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

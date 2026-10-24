@@ -9,6 +9,11 @@
  *
  * Prints a table and appends a dated section to research/eval-personas-results.md.
  * Never prints answer text from the server, cookies or keys.
+ *
+ *   ... scripts/eval-personas.mts --demo
+ * Demo mode: no server and no model. Runs the same steps as the route in-process (validate, judge in
+ * demo mode, apply, next step) and prints a detailed table (asked, follow-ups, parked, skipped, later,
+ * core filled, facts traced to an answer, example leaks). Nothing is appended.
  */
 import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { BANK } from "../lib/interview/bank";
@@ -91,6 +96,75 @@ async function replay(p: Persona): Promise<Result> {
     const stopped = err instanceof Stop;
     return { ...base, status: stopped ? "stopped" : "error", note: (err as Error).message, steps, followUps, facts: facts.length, expected: "-", badReflections, estMinutes: Math.round((secs / 60) * 10) / 10, wallSecs: Math.round((Date.now() - started) / 1000) };
   }
+}
+
+if (process.argv.includes("--demo")) {
+  await demo();
+  process.exit(0);
+}
+
+/** Demo mode: the route's steps in-process, with the model switched off. */
+async function demo() {
+  process.env.LYNKR_MOCK = "1";
+  const { judgeAnswer } = await import("../lib/interview/judge");
+  const { applyAnswer, isExampleText, nextStep, validateAnswer } = await import("../lib/interview/engine");
+  const { overlap } = await import("../lib/clean");
+  const { pick } = await import("../lib/interview/bank");
+  const rows: string[] = [];
+  for (const p of PERSONAS) {
+    const choose = chooser(p);
+    let answers: Answer[] = [];
+    let secs = 0;
+    let asks = 0;
+    let followUps = 0;
+    const facts: CandidateFact[] = [];
+    let badReflections = 0;
+    // Facts per question attempt: a re-saved attempt replaces its own facts, as in the route.
+    const byAttempt = new Map<string, CandidateFact[]>();
+    const parked = new Set<string>();
+    let step = nextStep(p.bucket, answers, { elapsedSecs: 0 });
+    let note = "";
+    try {
+      while (step.type === "ask") {
+        if (++asks > 80) throw new Error("did not finish within 80 steps");
+        const input = choose(step);
+        const err = validateAnswer(p.bucket, answers, input);
+        if (err) throw new Error(`${step.qid}/${step.attempt} refused: ${err}`);
+        if (step.attempt > 0) followUps++;
+        if (input.status === "parked") parked.add(input.qid);
+        secs += secsFor(BANK.find((x) => x.id === input.qid)!.secs, step, input);
+        const judged = await judgeAnswer(p.bucket, answers, { ...input, text: input.status === "answered" ? input.text.trim() : "" });
+        if (input.status === "answered" && !reflectionOk(judged.reflection, input.text)) badReflections++;
+        answers = applyAnswer(answers, input);
+        byAttempt.set(`${input.qid}.${input.attempt}`, judged.facts);
+        step = nextStep(p.bucket, answers, { elapsedSecs: secs });
+      }
+    } catch (e) {
+      note = (e as Error).message;
+    }
+    // Only facts from attempts that are still saved (editing a main answer drops stale follow-ups).
+    for (const [k, fs] of byAttempt) if (answers.some((a) => `${a.qid}.${a.attempt}` === k)) facts.push(...fs);
+    const main = (s: string) => answers.filter((a) => a.attempt === 0 && a.status === s).map((a) => a.qid);
+    const core = BANK.filter((q) => q.tag === "core" && q.buckets.includes(p.bucket) && (!q.triggeredBy || answers.some((a) => a.qid === q.id)));
+    const coreFilled = core.filter((q) => answers.some((a) => a.qid === q.id && a.attempt === 0 && a.status === "answered")).length;
+    // Traceable: every fact shares most of its words with a saved answer to its own question.
+    const untraced = facts.filter((f) => !answers.some((a) => a.qid === f.sourceQid && a.status === "answered" && overlap(f.text.replace(/ \(estimate\)$/, ""), a.text) >= 0.5));
+    const leaks = facts.filter((f) => {
+      const q = BANK.find((x) => x.id === f.sourceQid);
+      return q && (isExampleText(q, p.bucket, f.text) || [pick(q.example, p.bucket), ...pick(q.examples, p.bucket)].some((e) => e.trim() === f.text.trim()));
+    });
+    const { found, missing } = expectedFound(p, facts);
+    rows.push(
+      `| ${p.id} | ${p.bucket} | ${step.type === "done" && !note ? "finished" : "stuck"} | ${asks} | ${followUps} | ${[...parked].map((q) => `${q}${main("parked").includes(q) ? " (unresolved)" : " (answered on revisit)"}`).join(", ") || "-"} | ${main("skipped").join(", ") || "-"} | ${step.type === "done" ? step.later.join(", ") || "-" : "-"} | ${(secs / 60).toFixed(1)} | ${coreFilled}/${core.length} | ${found}/${p.expectFacts.length}${missing.length ? ` (missing ${missing.join("; ")})` : ""} | ${leaks.length} | ${untraced.length} | ${badReflections} | ${note.replace(/\|/g, "/")} |`,
+    );
+  }
+  console.log(
+    [
+      "| Persona | Bucket | Result | Asks | Follow-ups | Parked | Skipped | Later | Est. min | Core filled | Expected facts | Example leaks | Untraced facts | Bad reflections | Note |",
+      "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+      ...rows,
+    ].join("\n"),
+  );
 }
 
 const results: Result[] = [];

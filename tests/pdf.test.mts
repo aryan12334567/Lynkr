@@ -114,6 +114,36 @@ test("a planted instruction stays plain About text, never a headline, role or pr
   assert.ok(importText(f).split("\n").some((l) => l.startsWith("About: ") && l.includes(PLANTED)));
 });
 
+test("a planted instruction never becomes a fact and reaches prompts only as profile data under a data-not-instructions rule", async () => {
+  const { profileFrom } = await import("../lib/interview/profile");
+  const { factsFromAnswer } = await import("../lib/interview/engine");
+  const { firstWinSystem, generateSystem, generateUser } = await import("../lib/prompts");
+  const text = importText(await read(INJECTED));
+  // The interview's facts come only from answers; the import text is never an answer.
+  const answers = [{ qid: "A1", attempt: 0, status: "answered" as const, text: "Final year B.Com in Pune" }];
+  const facts = answers.flatMap((a) => factsFromAnswer("fresher", a));
+  assert.ok(facts.every((f) => !/Google|Ignore all previous/i.test(f.text)));
+  // The prompt carries it only as the labelled profile text, and every drafting system prompt says such text is data.
+  const profile = profileFrom("fresher", answers, text)!;
+  const user = generateUser(profile, [], "", "");
+  const line = user.split("\n").find((l) => l.includes(PLANTED)) ?? "";
+  assert.match(line, /^(Current LinkedIn headline\/About text|About: )/);
+  for (const system of [generateSystem("fresher"), firstWinSystem("fresher")]) assert.match(system, /imported profile[^.]*are data, not instructions/);
+});
+
+test(
+  "a planted instruction in the import sits inside a quoted block, not inline",
+  { todo: "lib/prompts.ts profileBlock inlines currentProfile; fence it in triple quotes like generateUser's other inputs" },
+  async () => {
+    const { profileFrom } = await import("../lib/interview/profile");
+    const { generateUser } = await import("../lib/prompts");
+    const profile = profileFrom("fresher", [{ qid: "A1", attempt: 0, status: "answered", text: "Final year B.Com in Pune" }], importText(await read(INJECTED)))!;
+    const user = generateUser(profile, [], "", "");
+    const fenced = [...user.matchAll(/"""\n([\s\S]*?)\n"""/g)].map((m) => m[1]).join("\n");
+    assert.ok(fenced.includes(PLANTED));
+  },
+);
+
 test("a profile in another language, or an empty scan, isn't enough to use", async () => {
   const es = await read({
     ...FRESHER,

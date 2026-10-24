@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Mona_Sans } from "next/font/google";
 import "./globals.css";
 
 // Geist: one clean sans for the whole product, in two weights (400 and 600).
@@ -7,6 +7,14 @@ const sans = Geist({
   variable: "--font-geist",
   subsets: ["latin"],
   weight: ["400", "600"],
+  display: "swap",
+});
+
+// Mona Sans (GitHub's open-source typeface), wide and heavy: used only for the hero wordmark.
+const display = Mona_Sans({
+  variable: "--font-display",
+  subsets: ["latin"],
+  axes: ["wdth"],
   display: "swap",
 });
 
@@ -22,7 +30,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${sans.variable} h-full antialiased`}>
+    <html lang="en-IN" className={`${sans.variable} ${display.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

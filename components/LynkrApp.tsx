@@ -222,7 +222,8 @@ export function LynkrApp() {
 
   /** Leave the app for more interview questions; drafts stay and can be returned to. */
   function moreQuestions() {
-    update({ stage: "interview" });
+    // v2 reopens the read-back (fix or add to the summary), never the first-win screen, which would spend a daily draft.
+    update(interview === "v2" ? { stage: "interview", v2: { ...s.v2, phase: "summary" } } : { stage: "interview" });
     go({ name: "start" });
   }
 

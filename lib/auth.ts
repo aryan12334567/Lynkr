@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
-import { magicLink } from "better-auth/plugins";
+import { emailOTP, oneTap } from "better-auth/plugins";
+import { passkey } from "@better-auth/passkey";
 import { checkout, dodopayments, portal, webhooks } from "@dodopayments/better-auth";
 import DodoPayments from "dodopayments";
 import { Pool } from "pg";
@@ -12,10 +13,18 @@ import { sendEmail } from "./email";
  * person's Dodo customer: the Story Vault, drafts and plan stay in their browser.
  *
  * Off until DATABASE_URL and BETTER_AUTH_SECRET are set; the app then falls back to license keys only.
- * Sign-in methods: email + password (verified email), magic link, and Google when its client is configured.
+ * Sign-in methods: email + password (verified email), a one-time email code, passkeys, and Google (with One Tap)
+ * and Apple when their clients are configured.
  */
 export const accountsConfigured = (): boolean => Boolean(process.env.DATABASE_URL?.trim() && process.env.BETTER_AUTH_SECRET?.trim());
 export const googleConfigured = (): boolean => Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim());
+/** Apple needs a Services ID and a client secret (a signed JWT that Apple lets live for at most six months). */
+export const appleConfigured = (): boolean => Boolean(process.env.APPLE_CLIENT_ID?.trim() && process.env.APPLE_CLIENT_SECRET?.trim());
+
+/** The passkey "relying party": the site's registrable domain, so a passkey made on www.lynkr.cloud also works on lynkr.cloud. */
+function relyingParty(site: string): string {
+  return new URL(site).hostname.replace(/^www\./, "");
+}
 
 /** The checkout slug the browser asks for; mapped to DODO_PRODUCT_ID on the server. */
 export const PLAN_SLUG = "lynkr-monthly";
@@ -39,13 +48,19 @@ function build() {
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) => sendEmail(user.email, "verify", url),
     },
-    socialProviders: googleConfigured()
-      ? { google: { clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET!, prompt: "select_account" } }
-      : {},
-    account: { accountLinking: { enabled: true, trustedProviders: ["google"] } },
+    socialProviders: {
+      ...(googleConfigured() && { google: { clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET!, prompt: "select_account" as const } }),
+      ...(appleConfigured() && { apple: { clientId: process.env.APPLE_CLIENT_ID!, clientSecret: process.env.APPLE_CLIENT_SECRET! } }),
+    },
+    // Apple returns to the site with a form POST from its own origin.
+    trustedOrigins: appleConfigured() ? ["https://appleid.apple.com"] : [],
+    account: { accountLinking: { enabled: true, trustedProviders: ["google", "apple"] } },
     rateLimit: { enabled: true, window: 60, max: 30 },
     plugins: [
-      magicLink({ sendMagicLink: async ({ email, url }) => sendEmail(email, "magic", url) }),
+      // A six-digit code instead of a link: it works even when the email opens in a different browser or app.
+      emailOTP({ otpLength: 6, expiresIn: 600, sendVerificationOTP: async ({ email, otp }) => sendEmail(email, "code", otp) }),
+      passkey({ rpID: relyingParty(site), rpName: "Lynkr", origin: site }),
+      ...(googleConfigured() ? [oneTap()] : []),
       dodopayments({
         client: dodo,
         // The Dodo customer is created at first checkout, not at sign-up: signing up never depends on Dodo being reachable.

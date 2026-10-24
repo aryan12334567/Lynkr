@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, Check, Eye, EyeOff, Mail, MailCheck, ShieldCheck } from "lucide-react";
-import { authClient, loadAccount, type Account } from "@/lib/auth-client";
+import { ArrowLeft, Check, Eye, EyeOff, Fingerprint, Mail, MailCheck, ShieldCheck } from "lucide-react";
+import { authClient, loadAccount, passkeysSupported, startOneTap, type Account } from "@/lib/auth-client";
 import { SITE } from "@/lib/site";
 import { Wordmark } from "./chrome";
 import { ErrorNote } from "./ui";
@@ -17,15 +17,27 @@ const AFTER = "/#start";
 
 /** The sign-in method used last in this browser, so it can be marked "Last used". Not sensitive: no email or token. */
 const LAST = "lynkr.lastAuth";
-type Method = "google" | "email" | "magic";
+type Method = "google" | "apple" | "passkey" | "email" | "code";
+const METHODS: Method[] = ["google", "apple", "passkey", "email", "code"];
 function remember(m: Method) {
   try {
     localStorage.setItem(LAST, m);
   } catch {}
 }
 
+const OPTION =
+  "inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface font-medium transition-colors hover:border-ink/25 hover:bg-muted disabled:opacity-50";
+
 const field =
   "w-full rounded-xl border border-line bg-surface px-4 py-3 text-[0.98rem] text-ink placeholder:text-faint transition-colors focus:border-accent focus:outline-none";
+
+function AppleMark() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M16.37 12.73c-.02-2.3 1.88-3.4 1.97-3.46-1.07-1.57-2.74-1.78-3.33-1.8-1.42-.14-2.77.83-3.49.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.8-.41 6.94 1.16 9.21.77 1.11 1.68 2.36 2.88 2.31 1.16-.05 1.59-.75 2.99-.75 1.4 0 1.79.75 3.01.72 1.24-.02 2.03-1.13 2.79-2.25.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.42-.93-2.45-3.71zM14.08 5.98c.64-.78 1.07-1.85.95-2.93-.92.04-2.04.61-2.7 1.39-.59.69-1.11 1.79-.97 2.85 1.03.08 2.08-.52 2.72-1.31z" />
+    </svg>
+  );
+}
 
 function GoogleMark() {
   return (
@@ -109,21 +121,40 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // After an email goes out: "verify" (new account), "magic" (sign-in link) or "reset".
-  const [sent, setSent] = useState<"verify" | "magic" | "reset" | null>(null);
+  // After an email goes out: "verify" (new account) or "reset".
+  const [sent, setSent] = useState<"verify" | "reset" | null>(null);
+  // The email a sign-in code was sent to, while the code is being entered.
+  const [codeFor, setCodeFor] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [passkeys, setPasskeys] = useState(false);
   const [done, setDone] = useState(false);
+  const signInScreen = mode === "signup" || mode === "login";
   useEffect(() => {
     loadAccount().then((a) => {
       let m: string | null = null;
       try {
         m = localStorage.getItem(LAST);
       } catch {}
-      setLastUsed(m === "google" || m === "email" || m === "magic" ? m : null);
+      setLastUsed(METHODS.includes(m as Method) ? (m as Method) : null);
       setAccount(a);
+      setPasskeys(passkeysSupported());
       // Already signed in: straight into the app.
-      if (a.signedIn && (mode === "signup" || mode === "login")) window.location.replace(AFTER);
+      if (a.signedIn && signInScreen) return window.location.replace(AFTER);
+      if (signInScreen && a.googleClientId) startOneTap(a.googleClientId, AFTER);
+      // Sign in: offer saved passkeys in the email field's autofill, where the browser supports it.
+      if (mode === "login" && a.accounts && passkeysSupported()) {
+        PublicKeyCredential.isConditionalMediationAvailable?.().then((ok) => {
+          if (!ok) return;
+          authClient.signIn.passkey({ autoFill: true }).then((r) => {
+            if (r && !r.error) {
+              remember("passkey");
+              window.location.assign(AFTER);
+            }
+          }).catch(() => {});
+        });
+      }
     });
-  }, [mode]);
+  }, [mode, signInScreen]);
 
   async function run(label: string, fn: () => Promise<{ error: { message?: string; status?: number } | null } | void>) {
     setBusy(label);
@@ -177,18 +208,35 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
     }
   }
 
-  async function magic() {
-    if (!email.trim()) return setError("Enter your email above, then we'll send the link.");
-    if (await run("magic", () => authClient.signIn.magicLink({ email: email.trim(), name: name || undefined, callbackURL: AFTER, errorCallbackURL: "/login?error=link" }))) {
-      remember("magic");
-      setSent("magic");
+  async function sendCode() {
+    const to = (codeFor ?? email).trim();
+    if (!to) return setError("Enter your email above, then we'll send a code.");
+    if (await run("code", () => authClient.emailOtp.sendVerificationOtp({ email: to, type: "sign-in" }))) {
+      setCodeFor(to);
+      setCode("");
       setBusy(null);
     }
   }
 
-  async function google() {
-    remember("google");
-    await run("google", () => authClient.signIn.social({ provider: "google", callbackURL: AFTER, errorCallbackURL: "/login?error=google" }));
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!codeFor || !/^\d{6}$/.test(code)) return setError("Enter the 6-digit code from the email.");
+    if (await run("verify", () => authClient.signIn.emailOtp({ email: codeFor, otp: code, name: name || undefined }))) {
+      remember("code");
+      window.location.assign(AFTER);
+    }
+  }
+
+  async function social(provider: "google" | "apple") {
+    remember(provider);
+    await run(provider, () => authClient.signIn.social({ provider, callbackURL: AFTER, errorCallbackURL: `/login?error=${provider}` }));
+  }
+
+  async function withPasskey() {
+    if (await run("passkey", () => authClient.signIn.passkey())) {
+      remember("passkey");
+      window.location.assign(AFTER);
+    }
   }
 
   const title = { signup: "Create your account", login: "Welcome back", forgot: "Reset your password", reset: "Choose a new password" }[mode];
@@ -199,6 +247,8 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
     reset: "Use at least 8 characters.",
   }[mode];
   const off = account !== null && !account.accounts;
+  // One-click options above the email form: Google, Apple, and (when signing in) a passkey.
+  const quick = signInScreen && !off && (account?.google || account?.apple || (mode === "login" && passkeys));
 
   return (
     <div className="grid min-h-dvh w-full lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -227,13 +277,51 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
               <h1 className="mt-6 text-[2.2rem] leading-[1.05]">Check your email</h1>
               <p className="mt-3 text-soft">
                 {sent === "verify" && <>We sent a link to <b className="text-ink">{email.trim()}</b>. Open it to confirm your email and you&apos;ll be signed in.</>}
-                {sent === "magic" && <>We sent a sign-in link to <b className="text-ink">{email.trim()}</b>. It works once and expires in five minutes.</>}
                 {sent === "reset" && <>If an account uses <b className="text-ink">{email.trim()}</b>, a reset link is on its way. It expires in one hour.</>}
               </p>
               <p className="mt-6 text-[0.9rem] text-faint">Nothing arrived? Check spam, or{" "}
                 <button className="text-accent underline underline-offset-4" onClick={() => setSent(null)}>try again</button>.
               </p>
             </div>
+          ) : codeFor ? (
+            <form onSubmit={verifyCode} noValidate>
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-accent-wash text-accent">
+                <MailCheck size={22} aria-hidden />
+              </span>
+              <h1 className="mt-6 text-[2.2rem] leading-[1.05]">Enter your code</h1>
+              <p className="mt-3 text-soft">
+                We sent a 6-digit code to <b className="text-ink">{codeFor}</b>. It expires in ten minutes.
+              </p>
+              <label className="mt-8 block">
+                <span className="mb-1.5 block text-[0.9rem] font-medium">Sign-in code</span>
+                <input
+                  className={`${field} text-center font-mono text-[1.5rem] tracking-[0.5em]`}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  autoFocus
+                />
+              </label>
+              <div className="mt-4">
+                <ErrorNote message={error} />
+              </div>
+              <button type="submit" disabled={busy !== null} className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-accent font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50">
+                {busy === "verify" ? "Checking..." : "Continue"}
+              </button>
+              <p className="mt-6 text-center text-[0.9rem] text-soft">
+                No email?{" "}
+                <button type="button" className="text-accent underline underline-offset-4" onClick={sendCode} disabled={busy !== null}>
+                  {busy === "code" ? "Sending..." : "Send a new code"}
+                </button>{" "}
+                or{" "}
+                <button type="button" className="text-accent underline underline-offset-4" onClick={() => (setCodeFor(null), setError(null))}>
+                  use a different email
+                </button>
+                .
+              </p>
+            </form>
           ) : done ? (
             <div role="status">
               <h1 className="text-[2.2rem] leading-[1.05]">Password changed</h1>
@@ -252,33 +340,48 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
 
               {off && (
                 <p className="mt-6 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-[0.92rem] text-warn">
-                  Accounts aren&apos;t switched on yet. You can still{" "}
-                  <Link className="underline underline-offset-4" href="/#start">use a license key</Link>.
+                  Accounts aren&apos;t switched on yet. Please try again later.
                 </p>
               )}
               {linkError && mode === "login" && (
                 <p className="mt-6 rounded-xl border border-bad/40 bg-bad/10 px-4 py-3 text-[0.92rem] text-bad">
-                  {linkError === "google" ? "Google sign-in didn't finish. Please try again." : "That link has expired or was already used. Ask for a new one."}
+                  {linkError === "google"
+                    ? "Google sign-in didn't finish. Please try again."
+                    : linkError === "apple"
+                      ? "Apple sign-in didn't finish. Please try again."
+                      : "That link has expired or was already used. Ask for a new one."}
                 </p>
               )}
 
-              {(mode === "signup" || mode === "login") && account?.google && (
+              {quick && (
                 <>
-                  <button
-                    onClick={google}
-                    disabled={busy !== null}
-                    className="mt-8 inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface font-medium transition-colors hover:border-accent/50 hover:bg-muted disabled:opacity-50"
-                  >
-                    <GoogleMark /> {busy === "google" ? "Opening Google..." : "Continue with Google"}
-                    {lastUsed === "google" && <LastUsed />}
-                  </button>
+                  <div className="mt-8 space-y-3">
+                    {account?.google && (
+                      <button onClick={() => social("google")} disabled={busy !== null} className={OPTION}>
+                        <GoogleMark /> {busy === "google" ? "Opening Google..." : "Continue with Google"}
+                        {lastUsed === "google" && <LastUsed />}
+                      </button>
+                    )}
+                    {account?.apple && (
+                      <button onClick={() => social("apple")} disabled={busy !== null} className={OPTION}>
+                        <AppleMark /> {busy === "apple" ? "Opening Apple..." : "Continue with Apple"}
+                        {lastUsed === "apple" && <LastUsed />}
+                      </button>
+                    )}
+                    {mode === "login" && passkeys && (
+                      <button onClick={withPasskey} disabled={busy !== null} className={OPTION}>
+                        <Fingerprint size={18} aria-hidden /> {busy === "passkey" ? "Waiting for your device..." : "Sign in with a passkey"}
+                        {lastUsed === "passkey" && <LastUsed />}
+                      </button>
+                    )}
+                  </div>
                   <div className="my-6 flex items-center gap-3 text-[0.8rem] text-faint">
                     <span className="h-px flex-1 bg-line" /> or with email <span className="h-px flex-1 bg-line" />
                   </div>
                 </>
               )}
 
-              <form onSubmit={submit} className={`space-y-4 ${(mode === "signup" || mode === "login") && account?.google ? "" : "mt-8"}`} noValidate>
+              <form onSubmit={submit} className={`space-y-4 ${quick ? "" : "mt-8"}`} noValidate>
                 {mode === "signup" && (
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block">
@@ -294,7 +397,16 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
                 {mode !== "reset" && (
                   <label className="block">
                     <span className="mb-1.5 block text-[0.9rem] font-medium">Email</span>
-                    <input className={field} type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@example.com" />
+                    <input
+                      className={field}
+                      type="email"
+                      inputMode="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      // "webauthn" lets the browser offer saved passkeys right in this field when signing in.
+                      autoComplete={mode === "login" ? "username webauthn" : "email"}
+                      placeholder="you@example.com"
+                    />
                   </label>
                 )}
                 {mode !== "forgot" && (
@@ -339,15 +451,15 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
                     : { signup: "Create account", login: "Sign in", forgot: "Send reset link", reset: "Save new password" }[mode]}
                   {mode === "login" && lastUsed === "email" && <LastUsed dark />}
                 </button>
-                {(mode === "signup" || mode === "login") && (
+                {signInScreen && (
                   <button
                     type="button"
-                    onClick={magic}
+                    onClick={sendCode}
                     disabled={busy !== null || off}
                     className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-line text-[0.95rem] text-soft transition-colors hover:border-accent/50 hover:text-ink disabled:opacity-50"
                   >
-                    <Mail size={16} aria-hidden /> {busy === "magic" ? "Sending..." : "Email me a sign-in link instead"}
-                    {mode === "login" && lastUsed === "magic" && <LastUsed />}
+                    <Mail size={16} aria-hidden /> {busy === "code" ? "Sending..." : mode === "signup" ? "Skip the password: email me a code" : "Email me a sign-in code instead"}
+                    {mode === "login" && lastUsed === "code" && <LastUsed />}
                   </button>
                 )}
               </form>

@@ -16,19 +16,24 @@ export default function Privacy() {
         <p>
           If you create an account, Lynkr stores your name, email address, whether your email is confirmed, a securely hashed password (never the password itself) or the Google, Apple or LinkedIn account you signed in
           with, any passkeys you add, your sign-in sessions (with the IP address and browser they came from) and the id of your Dodo Payments customer record. We email you only to confirm your address, reset your
-          password, send a sign-in code, or send a &quot;continue on your laptop&quot; link you asked for.
+          password, send a sign-in code, or send a &quot;continue on your laptop&quot; link you asked for (it works once and expires after 15 minutes).
+        </p>
+        <p>
+          If you choose Sign in with LinkedIn, Lynkr asks LinkedIn only for your name, email address and profile photo (the &quot;openid&quot;, &quot;profile&quot; and &quot;email&quot; permissions). Lynkr cannot post,
+          comment or send messages for you, and cannot see your connections, your feed or your full profile.
         </p>
         <p>
           With an account, your context is saved to it so it&apos;s the same on every device: your context brief (who you are, what you want, target roles and companies, must-haves, whether your job search is
           private, weekly time and tone), your Story Vault facts, your interview answers (unless you switch saving answers off), and your drafts and weekly plan. This is stored in Lynkr&apos;s database on Neon,
-          hosted in AWS US East (N. Virginia, USA).
+          hosted in AWS US East (N. Virginia, USA, region us-east-1). You can switch off saving your interview answers in the app; Lynkr then keeps only the context brief and the facts you confirm.
         </p>
       </Section>
 
       <Section title="How long we keep it, and how to get it or delete it">
         <p>
           Your saved context is kept until you delete it, and removed automatically after 12 months without any activity on your account. In the app, &quot;Download my data&quot; gives you everything Lynkr holds for
-          your account as a file, and &quot;Delete my data&quot; removes all of it at once.
+          your account as a JSON file, and &quot;Delete my data&quot; removes all of your saved context at once: brief, Story Vault, answers, drafts and plan. Your sign-in account itself stays, so you can
+          start again; to delete the account too, write to us (see below).
         </p>
       </Section>
 
@@ -48,8 +53,8 @@ export default function Privacy() {
       <Section title="What is sent to write your drafts">
         <p>
           When you answer interview questions, confirm facts, paste a post or a job description, or upload a screenshot for Connect Coach, that text or image is sent through Lynkr&apos;s server to an AI provider
-          (currently OpenAI) so it can write the reply. Lynkr does not store it, and imported profile files and pasted posts are used once and not saved. The AI provider handles that data under its own terms and privacy
-          policy. Please don&apos;t enter passwords, government ID numbers, bank or card details, or other people&apos;s private information.
+          (currently OpenAI) so it can write the reply. With an account, your interview answers, the facts you confirm and your saved drafts are kept in your account as described above; everything else (pasted
+          posts, job descriptions, screenshots and imported profile files) is used once and not saved. The AI provider handles that data under its own terms and privacy policy. Please don&apos;t enter passwords, government ID numbers, bank or card details, or other people&apos;s private information.
         </p>
       </Section>
 
@@ -80,8 +85,9 @@ export default function Privacy() {
           <li>Dodo Payments: payments, tax, invoices and license keys.</li>
           <li>Vercel: hosting.</li>
           <li>Neon: the database that holds accounts and saved context (AWS US East).</li>
-          <li>Resend: sends account emails.</li>
+          <li>Resend: sends account emails, including the &quot;continue on your laptop&quot; link.</li>
           <li>Google: only if you choose &quot;Continue with Google&quot;.</li>
+          <li>Apple: only if you choose &quot;Continue with Apple&quot;.</li>
           <li>LinkedIn: only if you choose Sign in with LinkedIn: your name, email and photo.</li>
           <li>Apify: reads a public job page, only if you use the import.</li>
         </ul>

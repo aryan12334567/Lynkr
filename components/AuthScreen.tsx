@@ -491,10 +491,15 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
                 )}
               </p>
               {mode === "signup" && (
-                <p className="mt-4 text-center text-[0.8rem] leading-relaxed text-faint">
-                  By continuing, you agree to the <a className="underline underline-offset-4 hover:text-ink" href="/terms">Terms</a> and{" "}
-                  <a className="underline underline-offset-4 hover:text-ink" href="/privacy">Privacy Policy</a>.
-                </p>
+                <>
+                  <p className="mt-4 text-center text-[0.8rem] leading-relaxed text-faint">
+                    By continuing, you agree to the <a className="underline underline-offset-4 hover:text-ink" href="/terms">Terms</a> and{" "}
+                    <a className="underline underline-offset-4 hover:text-ink" href="/privacy">Privacy Policy</a>.
+                  </p>
+                  <p className="mt-2 text-center text-[0.8rem] leading-relaxed text-faint">
+                    Your account stores your Story Vault, interview answers and drafts so you can use them on any device. <a className="underline underline-offset-4 hover:text-ink" href="/privacy">What we keep</a>
+                  </p>
+                </>
               )}
             </>
           )}

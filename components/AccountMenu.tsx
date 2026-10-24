@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { Check, CreditCard, Fingerprint, LogOut, UserRound } from "lucide-react";
 import { authClient, openPortal, passkeysSupported, type Account } from "@/lib/auth-client";
+import { MoveToAccount } from "./MoveToAccount";
+import { MyData } from "./MyData";
 
-/** The signed-in account in the app sidebar: who you are, billing, passkey, sign out. Hidden without an account. */
+/** The signed-in account in the app sidebar: who you are, billing, passkey, my data, sign out. Hidden without an account. */
 export function AccountMenu({ account, className = "" }: { account: Account | null; className?: string }) {
   const [busy, setBusy] = useState<"billing" | "out" | "passkey" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +83,8 @@ export function AccountMenu({ account, className = "" }: { account: Account | nu
         </button>
       </div>
       {error && <p className="mt-1 text-[0.8rem] text-bad">{error}</p>}
+      {account?.email && <MoveToAccount email={account.email} />}
+      <MyData />
     </div>
   );
 }

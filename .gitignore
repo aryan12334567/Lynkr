@@ -48,4 +48,3 @@ research/evidence/
 Copilot.md
 .vercel
 .env*
-!.env.example

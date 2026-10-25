@@ -239,3 +239,11 @@ test("Part 1: an old saved session (before v2 fields) still loads, with private 
   // New kinds pass the request schema used by the drafting routes.
   assert.ok(FactRef.safeParse({ id: "F9", kind: "warm_path", text: "My IIM alumni group" }).success);
 });
+
+test("a vague follow-up on a question without a fact kind adds no fact (it feeds the brief)", async () => {
+  const { factsFromAnswer } = await import("../lib/interview/engine");
+  const { BANK } = await import("../lib/interview/bank");
+  const q = BANK.find((x) => !x.factKind && x.tag === "core")!;
+  const facts = factsFromAnswer("fresher", { qid: q.id, attempt: 1, status: "answered", trigger: "vague", text: "Final year B.Com at a college in Pune, looking at analyst roles" });
+  assert.deepEqual(facts, []);
+});

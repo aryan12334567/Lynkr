@@ -326,7 +326,9 @@ function clip(s: string, n: number): string {
 export function factsFromAnswer(bucket: Bucket, answer: Answer): CandidateFact[] {
   const q = BANK.find((x) => x.id === answer.qid);
   if (!q || answer.status !== "answered" || !answer.text.trim() || isExampleText(q, bucket, answer.text)) return [];
-  if (answer.attempt === 0 && !q.factKind) return [];
+  // Questions without a fact kind (the current situation, for example) feed the brief, not the vault; only
+  // "which part was yours" and "rough number" follow-ups on them can still yield a fact.
+  if (!q.factKind && (answer.attempt === 0 || (answer.trigger !== "we" && answer.trigger !== "no_number"))) return [];
   let kind: FactKind = q.factKind ?? "project";
   let text = answer.text;
   let estimate = false;

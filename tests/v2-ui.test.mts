@@ -64,3 +64,20 @@ test("vault grouping hides excluded facts; confidence hints read plainly", () =>
   assert.deepEqual(confidenceHints({ example: true, number: "estimate", iDid: true }), ["specific example", "estimate", "your own work"]);
   assert.deepEqual(confidenceHints(undefined), []);
 });
+
+test("Ctrl or Cmd+Enter is the save shortcut; plain Enter is not (it still toggles a focused chip)", async () => {
+  const { isSaveShortcut } = await import("../components/v2/questionLogic");
+  assert.equal(isSaveShortcut({ key: "Enter", ctrlKey: true, metaKey: false }), true);
+  assert.equal(isSaveShortcut({ key: "Enter", ctrlKey: false, metaKey: true }), true);
+  assert.equal(isSaveShortcut({ key: "Enter", ctrlKey: false, metaKey: false }), false);
+  assert.equal(isSaveShortcut({ key: " ", ctrlKey: true, metaKey: false }), false);
+});
+
+test("the example answer fits the field when known, else falls back to the bucket's example", async () => {
+  const { exampleFor } = await import("../components/v2/questionLogic");
+  const { byId, pick } = await import("../lib/interview/bank");
+  const q = byId("C1")!;
+  assert.equal(exampleFor(q, "experienced").example, pick(q.example, "experienced"));
+  assert.equal(exampleFor(q, "experienced", "Not a field").example, pick(q.example, "experienced"));
+  assert.notEqual(exampleFor(q, "experienced", "Design").example, pick(q.example, "experienced"));
+});

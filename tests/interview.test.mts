@@ -247,3 +247,75 @@ test("a vague follow-up on a question without a fact kind adds no fact (it feeds
   const facts = factsFromAnswer("fresher", { qid: q.id, attempt: 1, status: "answered", trigger: "vague", text: "Final year B.Com at a college in Pune, looking at analyst roles" });
   assert.deepEqual(facts, []);
 });
+
+test("numbers: a measurable figure counts; a count of steps or a year does not", async () => {
+  const { hasNumber } = await import("../lib/interview/engine");
+  for (const yes of [
+    "I cut the close from 8 days to 5",
+    "about 30% more sign-ups",
+    "saved three hours a week",
+    "used by two lakh merchants",
+    "₹4 lakh in new revenue",
+    "it doubled our replies",
+    "trained four sales reps",
+    "cut review time in half",
+  ])
+    assert.ok(hasNumber(yes), yes);
+  for (const no of [
+    "designed the new bank details screen that splits it into two short steps",
+    "I asked one question in the interview",
+    "we shipped it in 2023",
+    "I redesigned the whole onboarding flow",
+  ])
+    assert.ok(!hasNumber(no), no);
+});
+
+test("the 'rough number' follow-up fires when a proof story has only a step count", () => {
+  const q = BANK.find((x) => x.id === "C1")!;
+  const chain: Answer[] = [
+    { qid: "C1", attempt: 0, status: "answered", text: "Merchants were abandoning sign-up, so I redesigned the onboarding flow myself last year." },
+    { qid: "C1", attempt: 1, status: "answered", trigger: "vague", text: "I designed the bank details screen that splits it into two short steps." },
+  ];
+  assert.equal(followUpFor(q, chain)?.trigger, "no_number");
+  assert.equal(confidenceOf(chain[1].text).number, "none");
+});
+
+test("reflection leads read as plain sentences whatever the answer's shape", () => {
+  const cases: [string, string][] = [
+    ["A2", "Product managers come to me when a checkout flow is losing people."],
+    ["A2", "Fixing broken dashboards."],
+    ["B2", "Design lead at a consumer fintech company."],
+    ["B2", "I want to lead a small design team."],
+    ["D1", "Hiring managers at my target companies, Design managers at Razorpay."],
+    ["D1", "I'd like to meet founders."],
+    ["C3", "Our head of product said my redesign was the cleanest flow."],
+    ["C4", "A case study on my portfolio."],
+  ];
+  for (const [qid, ans] of cases) {
+    const line = demoReflection(qid, ans);
+    assert.match(line, /^[A-Z][^:]*: [A-Z]/, line);
+    assert.ok(!/\bfor product managers come\b/i.test(line), line);
+    assert.ok(reflectionOk(line, ans), line);
+  }
+});
+
+test("field-aware examples: a designer sees design examples; buckets with their own wording keep it", async () => {
+  const { exampleFor, FIELD_EXAMPLES } = await import("../lib/interview/bank");
+  const c1 = BANK.find((x) => x.id === "C1")!;
+  const e1 = BANK.find((x) => x.id === "E1")!;
+  assert.match(exampleFor(c1, "experienced", "Design").example, /screen|design/i);
+  assert.ok(!/sales|renewal|forecast/i.test(exampleFor(e1, "experienced", "Design").example));
+  assert.equal(exampleFor(c1, "experienced", "Sales").example, pick(c1.example, "experienced"), "Sales keeps the default wording");
+  assert.equal(exampleFor(c1, "experienced", null).example, pick(c1.example, "experienced"), "no field yet keeps the default");
+  assert.equal(exampleFor(c1, "fresher", "Design").example, pick(c1.example, "fresher"), "fresher wording stays");
+  const b2 = BANK.find((x) => x.id === "B2")!;
+  assert.equal(exampleFor(b2, "networker", "Software").example, pick(b2.example, "networker"), "networker wording stays");
+  // Every field example exists on a real question, and none can be saved unedited, in any bucket.
+  for (const [qid, fields] of Object.entries(FIELD_EXAMPLES)) {
+    const q = BANK.find((x) => x.id === qid);
+    assert.ok(q, qid);
+    for (const f of Object.values(fields)) {
+      for (const text of [f!.example, ...f!.examples]) for (const bucket of q!.buckets) assert.ok(isExampleText(q!, bucket, text), `${qid}: ${text}`);
+    }
+  }
+});

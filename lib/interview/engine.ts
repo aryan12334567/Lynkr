@@ -1,6 +1,6 @@
 import { suggestDomain, type Domain } from "../roles";
 import { WANTS, type Bucket, type FactConfidence, type FactKind, type Want, type WeeklyTime } from "../schemas";
-import { BANK, FIELD_CHIPS, pick, questionsFor, TIME_CHIPS, WANT_CHIPS, type Question, type Trigger } from "./bank";
+import { allExamples, BANK, FIELD_CHIPS, pick, questionsFor, TIME_CHIPS, WANT_CHIPS, type Question, type Trigger } from "./bank";
 
 /**
  * Interview v2 engine (build plan Part 3). Pure functions over the list of saved answers:
@@ -62,10 +62,19 @@ export function saysWeNotI(text: string): boolean {
   return /\b(we|our|team)\b/i.test(text) && !/\b(I|my|myself|me)\b/.test(text);
 }
 
-const NUMBER_WORDS = /\b(one|two|three|four|five|six|seven|eight|nine|ten|dozen|hundred|thousand|lakh|crore|half|double|twice|triple)\b/i;
+// Number words count only next to something measurable ("three hours", "two lakh merchants"), so "two short steps"
+// or "one question" isn't mistaken for a result.
+const NUMBER_WORD = "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|dozen|dozens|hundred|hundreds|thousand|thousands)";
+const MEASURE =
+  "(?:percent|per cent|hours?|hrs?|days?|weeks?|months?|minutes?|mins?|years?|users?|customers?|clients?|merchants?|people|reps?|deals?|lakhs?|crores?|times|rupees|dollars|accounts?|leads?|orders?|sign-?ups?|students?|members?|employees?|stores?|sponsors?|tickets?|calls?|downloads?|installs?|sessions?|visits?|submissions?|applicants?|candidates?|interns?|projects?|teams?|reports?)";
+const WORD_FIGURE = new RegExp(`\\b${NUMBER_WORD}\\s+(?:[a-z-]+\\s+){0,2}?${MEASURE}\\b|\\b${NUMBER_WORD}\\s+(?:lakh|crore)\\b`, "i");
+const MULTIPLIER = /\b(doubled|halved|tripled|twice as|half the|by half|in half)\b/i;
+const CURRENCY = /(₹|\brs\.?\s?\d|\$\s?\d|\binr\b)/i;
 
+/** A measurable result: a figure that isn't just a year, money, a multiplier, or a number word with a unit. */
 export function hasNumber(text: string): boolean {
-  return /\d/.test(text) || NUMBER_WORDS.test(text);
+  const noYears = text.replace(/\b(19|20)\d{2}\b/g, " ");
+  return /\d/.test(noYears) || CURRENCY.test(text) || MULTIPLIER.test(text) || WORD_FIGURE.test(text);
 }
 
 export function notMeasured(text: string): boolean {
@@ -87,11 +96,11 @@ function onlyChips(q: Question, bucket: Bucket, text: string): boolean {
   return chips.options.includes(text.trim()) || text.split(/\s*,\s*/).every((p) => chips.options.includes(p.trim()));
 }
 
-/** True when the text is one of the question's example answers, unedited. Chip picks never count. */
+/** True when the text is any of the question's example answers (any bucket or field), unedited. Chip picks never count. */
 export function isExampleText(q: Question, bucket: Bucket, text: string): boolean {
   const t = norm(text);
   if (!t || onlyChips(q, bucket, text)) return false;
-  return [pick(q.example, bucket), ...pick(q.examples, bucket)].some((e) => norm(e) === t);
+  return allExamples(q).some((e) => norm(e) === t);
 }
 
 // ---- order, follow-ups and the stop rule ----
@@ -367,21 +376,23 @@ export function demoReflection(qid: string, text: string): string {
   const own = parts.filter((s) => !chips.has(norm(s)));
   const chosen = own.length && own.length < parts.length ? own.join(", ") : text;
   const first = clip(chosen.split(/(?<=[.!?])\s/)[0] ?? chosen, 110).replace(/[.\s]+$/, "");
+  // Every lead ends in a colon, so the line reads right whatever shape the answer takes
+  // (a noun phrase, a full sentence, or "Product managers come to me when...").
   const lead: Record<string, string> = {
     A1: "So right now:",
-    A2: "So people rely on you for",
+    A2: "What people come to you for:",
     B1: "Over the next 3 months you want:",
-    B2: "You're aiming for",
+    B2: "The role you're aiming for:",
     B3: "Your targets:",
     B4: "What you actually want:",
     B6: "Your must-haves:",
     C1: "Your example:",
     C1b: "Your second example:",
-    D1: "You want to talk to",
+    C3: "The praise you got:",
+    C4: "What you can show:",
+    D1: "Who you want to talk to:",
     D2: "Your ways in:",
     D3: "What you can offer:",
   };
-  const l = lead[qid] ?? "Noted:";
-  const body = l.endsWith(":") ? first : first.charAt(0).toLowerCase() + first.slice(1);
-  return `${l} ${body}.`;
+  return `${lead[qid] ?? "Noted:"} ${first}.`;
 }

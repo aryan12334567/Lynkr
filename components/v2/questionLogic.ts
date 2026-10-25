@@ -1,6 +1,6 @@
 import type { Bucket, FactConfidence, FactKind, StoryFact } from "../../lib/schemas";
 import { FACT_KINDS } from "../../lib/schemas";
-import { pick, type Chips, type Question, type Tag } from "../../lib/interview/bank";
+import { exampleFor as bankExampleFor, pick, type Chips, type Question, type Tag } from "../../lib/interview/bank";
 import { isExampleText } from "../../lib/interview/engine";
 
 /**
@@ -9,6 +9,16 @@ import { isExampleText } from "../../lib/interview/engine";
  */
 
 export const MAX_ANSWER = 1500;
+
+/** Ctrl+Enter (Cmd+Enter on a Mac) saves the answer. */
+export function isSaveShortcut(e: { key: string; ctrlKey: boolean; metaKey: boolean }): boolean {
+  return e.key === "Enter" && (e.ctrlKey || e.metaKey);
+}
+
+/** The example answer and stuck-ladder examples to show, fitted to the person's field when known (see the bank). */
+export function exampleFor(q: Question, bucket: Bucket, field?: string | null): { example: string; examples: readonly string[] } {
+  return bankExampleFor(q, bucket, field);
+}
 
 /** The chips this question shows on its main attempt; follow-ups are free text only. */
 export function chipsFor(q: Question, bucket: Bucket, attempt: number): Chips | null {

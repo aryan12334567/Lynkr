@@ -72,6 +72,15 @@ export function InterviewFlow({
   const [reflection, setReflection] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // True once the account is known to hold the interview (account storage on), for the "saved" hint.
+  const [inAccount, setInAccount] = useState(false);
+  useEffect(() => {
+    if (!account?.signedIn) return;
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { cloud?: boolean } | null) => setInAccount(j?.cloud === true))
+      .catch(() => {});
+  }, [account?.signedIn]);
   const shownAt = useRef(0);
   const imported = !!v2.importSource && v2.importSource !== "skip";
 
@@ -182,7 +191,7 @@ export function InterviewFlow({
           <Wordmark />
         </button>
         <span className="flex items-center gap-3">
-          <SavedHint />
+          <SavedHint inAccount={inAccount} />
           {mock && <DemoPill />}
         </span>
       </header>
@@ -222,6 +231,7 @@ export function InterviewFlow({
                 busy={busy}
                 error={null}
                 onSubmit={submit}
+                field={v2.answers.find((a) => a.qid === "A3" && a.attempt === 0 && a.status === "answered")?.text ?? null}
               />
             ) : (
               <p role="status" className="animate-pulse text-soft">

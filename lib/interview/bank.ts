@@ -90,6 +90,9 @@ export const FIELD_CHIPS = [
   "Other",
 ] as const;
 
+export type FieldChip = (typeof FIELD_CHIPS)[number];
+export type FieldExamples = { example: string; examples: readonly string[] };
+
 export const WANT_CHIPS = ["A new job", "An internship", "Referrals", "Meeting people in my field", "A mentor", "Clients"] as const;
 export const TIME_CHIPS = ["15 minutes", "30 minutes", "1 hour", "2 hours or more"] as const;
 
@@ -484,6 +487,99 @@ export const BANK: readonly Question[] = [
     secs: 45,
   },
 ];
+
+/**
+ * Example answers in the person's own field (the A3 answer), by question id. They replace the default
+ * wording only where the bucket has none of its own (fresher and networker wording stays). The default
+ * wording is written for sales, so Sales needs no entry; fields without an entry keep the default.
+ */
+export const FIELD_EXAMPLES: Readonly<Record<string, Partial<Record<FieldChip, FieldExamples>>>> = {
+  A2: {
+    Design: { example: "Turning a messy feature request into a flow engineers can build.", examples: ["Running quick usability tests before a launch.", "Cleaning up the design system when screens drift."] },
+    Software: { example: "Debugging the payment service when it fails at 2 a.m.", examples: ["Reviewing pull requests for the new joiners.", "Making slow database queries fast."] },
+    "Data and analytics": { example: "Finding why the weekly numbers don't match finance's numbers.", examples: ["Building the dashboard leadership checks every Monday.", "Writing the SQL nobody else wants to touch."] },
+    Marketing: { example: "Fixing campaign tracking when the numbers look off.", examples: ["Writing the launch email.", "Deciding which ad creatives to cut."] },
+  },
+  B2: {
+    Design: { example: "Design lead at a consumer app, leading two or three designers.", examples: ["Senior product designer at a fintech.", "UX researcher at a SaaS company."] },
+    Software: { example: "Senior backend engineer at a product company.", examples: ["Engineering manager for a small team.", "Staff engineer on platform."] },
+    "Data and analytics": { example: "Senior data analyst at a product startup.", examples: ["Analytics lead for a growth team.", "Data scientist working on pricing."] },
+    Marketing: { example: "Growth marketing manager at a D2C brand.", examples: ["Content lead at a B2B SaaS company.", "Brand manager at a consumer company."] },
+  },
+  B3: {
+    Design: { example: "Razorpay, CRED, or any consumer fintech with a real design team.", examples: ["Swiggy or Zomato.", "Design agencies working with startups."] },
+    Software: { example: "Atlassian, Postman, or any developer-tools company in Bengaluru.", examples: ["Series B fintechs.", "Product teams at Microsoft or Google."] },
+    "Data and analytics": { example: "Fractal, Flipkart's analytics team, or any startup with a data team of 10 or more.", examples: ["Mu Sigma or Tiger Analytics.", "Analytics teams at banks."] },
+    Marketing: { example: "Mamaearth, boAt, or any D2C brand growing fast.", examples: ["B2B SaaS companies in Chennai.", "Agencies that run performance marketing."] },
+  },
+  C1: {
+    Design: { example: "Sign-ups dropped at the KYC step, so I redesigned it into two short screens and tested it with 8 users.", examples: ["I built our first design system and moved 40 screens onto it.", "I ran 12 user interviews that changed our onboarding plan."] },
+    Software: { example: "Our checkout API timed out at peak, so I added caching and cut response time from 2 s to 300 ms.", examples: ["I moved our deploys from manual to CI, from 1 a day to 10.", "I wrote the retry logic that stopped duplicate payments."] },
+    "Data and analytics": { example: "Leadership didn't trust the churn numbers, so I rebuilt the pipeline and reconciled it with finance to within 1%.", examples: ["I built a forecast that cut stock-outs by about a fifth.", "I automated a weekly report that took 6 hours by hand."] },
+    Marketing: { example: "Our paid leads were too expensive, so I rebuilt the campaign targeting and cut cost per lead by about 30%.", examples: ["I wrote a launch email series with a 42% open rate.", "I started our newsletter and grew it to 5,000 readers."] },
+  },
+  C1b: {
+    Design: { example: "I ran a design critique every week that cut review rounds from 4 to 2.", examples: ["I wrote the team's first accessibility checklist.", "I mentored two junior designers through their first launch."] },
+    Software: { example: "I added monitoring that caught outages about 20 minutes sooner.", examples: ["I wrote the onboarding guide for new engineers.", "I cut our test run from 25 minutes to 8."] },
+    "Data and analytics": { example: "I set up data quality checks that caught about two broken loads a week.", examples: ["I trained the sales team to use our dashboards.", "I documented 30 key metrics so teams stopped arguing about them."] },
+    Marketing: { example: "I set up a content calendar that doubled our posting without extra hires.", examples: ["I ran an A/B test on the pricing page.", "I built our first referral programme."] },
+  },
+  C3: {
+    Design: { example: "Our head of product said my onboarding redesign was the cleanest flow we'd shipped.", examples: ["A user wrote in to thank us for the new checkout.", "Shortlisted for the company's design award."] },
+    Software: { example: "My tech lead said my migration plan was the first one that didn't need a rollback.", examples: ["Spot award for fixing the payments outage.", "A customer thanked our team for the faster app."] },
+    "Data and analytics": { example: "My manager wrote that my churn model was the first one leadership trusted.", examples: ["Top performer award, Q2 2025.", "The CFO asked for my dashboard in every review."] },
+    Marketing: { example: "Our CEO shared my launch campaign as the example for the next one.", examples: ["Our agency asked to use our campaign as a case study.", "A customer replied to say the email made them sign up."] },
+  },
+  C4: {
+    Design: { example: "A case study on my portfolio about the onboarding redesign.", examples: ["My Dribbble shots.", "A Medium article on usability testing."] },
+    Software: { example: "My open-source library on GitHub with 200 stars.", examples: ["A conference talk on caching.", "A blog post on our migration."] },
+    "Data and analytics": { example: "A Kaggle notebook and a public Tableau dashboard.", examples: ["A blog post on cleaning survey data.", "The Google Data Analytics certificate."] },
+    Marketing: { example: "The public case study our agency wrote about the launch.", examples: ["My newsletter archive.", "A talk at a marketing meetup."] },
+  },
+  D1: {
+    Design: { example: "Design managers at fintech companies in Bengaluru.", examples: ["Senior designers at Swiggy.", "UX researchers at SaaS companies."] },
+    Software: { example: "Engineering managers at developer-tools companies.", examples: ["Staff engineers at fintechs.", "Founders of early-stage startups."] },
+    "Data and analytics": { example: "Analytics leads at product startups.", examples: ["Data scientists at Fractal.", "Alumni in data roles."] },
+    Marketing: { example: "Growth leads at D2C brands.", examples: ["Marketing heads at SaaS startups.", "Founders who run their own marketing."] },
+  },
+  D3: {
+    Design: { example: "A quick review of their onboarding flow: I've redesigned three of them.", examples: ["Feedback on their app from a real user.", "A list of good free UX courses."] },
+    Software: { example: "A second pair of eyes on a tricky bug or code review.", examples: ["Notes from our migration that might save them time.", "Feedback on their API docs."] },
+    "Data and analytics": { example: "A quick look at a dashboard that isn't telling them much.", examples: ["A list of good free SQL courses.", "My checklist for data quality."] },
+    Marketing: { example: "Honest feedback on a landing page or launch email.", examples: ["A list of tools that saved us money.", "What worked in our last campaign."] },
+  },
+  E1: {
+    Design: { example: "Why most onboarding flows ask for too much too early.", examples: ["Design systems that people actually use.", "Usability testing on a tiny budget."] },
+    Software: { example: "Why most slow apps are slow because of the database, not the code.", examples: ["Writing tests people don't skip.", "Picking boring technology."] },
+    "Data and analytics": { example: "Why most dashboards fail: nobody agrees on what the metric means.", examples: ["Cleaning messy data.", "Forecasting with very little history."] },
+    Marketing: { example: "Why most launch emails get ignored, and what to write instead.", examples: ["Cheap ways to test an ad idea.", "Writing for people who skim."] },
+  },
+};
+
+/** True when the per-bucket value has wording of its own for this bucket (not the default). */
+function hasOwn(v: ByBucket<unknown>, bucket: Bucket): boolean {
+  return v !== null && typeof v === "object" && !Array.isArray(v) && "default" in (v as object) && bucket in (v as object);
+}
+
+/**
+ * The example answer and the stuck-ladder examples to show: the person's field when one is known and the
+ * bucket has no wording of its own, otherwise the bucket's.
+ */
+export function exampleFor(q: Question, bucket: Bucket, field?: string | null): FieldExamples {
+  const own = hasOwn(q.example, bucket) || hasOwn(q.examples, bucket);
+  const byField = !own && field ? FIELD_EXAMPLES[q.id]?.[field as FieldChip] : undefined;
+  return byField ?? { example: pick(q.example, bucket), examples: pick(q.examples, bucket) };
+}
+
+/** Every example this question can show, in any bucket or field: none of them may be saved unedited. */
+export function allExamples(q: Question): string[] {
+  const all = (v: ByBucket<string> | ByBucket<readonly string[]>): string[] => {
+    const values = v !== null && typeof v === "object" && !Array.isArray(v) ? Object.values(v as object) : [v];
+    return values.flat() as string[];
+  };
+  const fields = Object.values(FIELD_EXAMPLES[q.id] ?? {}).flatMap((f) => (f ? [f.example, ...f.examples] : []));
+  return [...all(q.example), ...all(q.examples), ...fields];
+}
 
 /** Resolve a per-bucket value. */
 export function pick<T>(v: ByBucket<T>, bucket: Bucket): T {

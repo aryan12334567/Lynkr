@@ -1,4 +1,4 @@
-import type { CommentReply, FactRef, GenerateReply, InterviewReply, ProfileInput, Turn, VaultReply } from "./schemas";
+import { OUTREACH_ONLY_KINDS, type CommentReply, type FactRef, type GenerateReply, type InterviewReply, type ProfileInput, type Turn, type VaultReply } from "./schemas";
 import { AUDIENCE_LABEL } from "./roles";
 import { whoLine } from "./packet";
 
@@ -104,9 +104,39 @@ function mid(s: string): string {
   return t.charAt(0).toLowerCase() + t.slice(1);
 }
 
+/**
+ * The current role as a short headline phrase, from the brief's "where you are now" line
+ * ("5 to 8 years, Senior Product Designer at Paylane, a fintech app…" → "Senior Product Designer at Paylane").
+ */
+export function currentRolePhrase(profile: ProfileInput): string {
+  const now = profile.background.split(/\.\s+People come to me for:/)[0] ?? "";
+  const parts = now
+    .split(/[,.;]\s+/)
+    .map((s) => s.trim().replace(/[.\s]+$/, ""))
+    .filter((s) => s && !/^(\d+|less than|under|over|more than)\b.*\b(years?|months?)$/i.test(s) && s !== "Not given yet");
+  const first = parts[0] ?? "";
+  return first && first.length <= 60 ? first : "";
+}
+
+/** A fact as a whole headline phrase: its first sentence or clause if it fits, never cut mid-sentence. */
+export function headlinePhrase(f: FactRef | null, max: number): string | null {
+  if (!f) return null;
+  const sentence = (f.text.split(/(?<=[.!?])\s/)[0] ?? f.text).trim().replace(/[.\s]+$/, "");
+  if (sentence.length <= max) return sentence;
+  const clause = sentence.split(/,\s+|\s+(?:so|and|because|which)\s+/)[0]?.trim() ?? "";
+  return clause.split(/\s+/).length >= 3 && clause.length <= max ? clause : null;
+}
+
 export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateReply {
   const role = profile.targetRole;
-  const of = (k: FactRef["kind"]) => facts.find((f) => f.kind === k) ?? null;
+  // A private search (interview v2, past the fresher bucket) keeps the target role out of everything public:
+  // headlines, About and posts describe the current role instead. Outreach drafts are private and may name it.
+  const hideTarget = profile.privateSearch && profile.bucket !== "fresher";
+  const nowRole = currentRolePhrase(profile);
+  const publicRole = hideTarget ? nowRole || "[[your current role]]" : role;
+  // Outreach-only facts (targets, goals, warm paths, must-haves) never reach a public draft.
+  const publicFacts = facts.filter((f) => !OUTREACH_ONLY_KINDS.includes(f.kind));
+  const of = (k: FactRef["kind"]) => publicFacts.find((f) => f.kind === k) ?? null;
   const project = of("project");
   const contribution = of("contribution");
   const evidence = of("evidence");
@@ -117,18 +147,19 @@ export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateR
   const refs = (...fs: (FactRef | null)[]) => fs.filter((f): f is FactRef => !!f).map((f) => f.id);
   const t = (f: FactRef | null, blank: string, n = 200) => (f ? clip(f.text, n).replace(/[.\s]+$/, "") : `[[${blank}]]`);
   const readers = profile.audiences.filter((a) => a !== "not_sure").map((a) => AUDIENCE_LABEL[a].toLowerCase());
-  const forReaders = readers.length ? `Written for ${readers.join(" and ")}.` : `Written for people working in or hiring for ${role}.`;
+  const forReaders = readers.length ? `Written for ${readers.join(" and ")}.` : `Written for people working in or hiring for ${hideTarget ? "your field" : role}.`;
   const who = whoLine(profile);
 
   return {
     profile: {
       headlines: [
-        `${role} | ${t(project, "your strongest project in a few words", 60)} | ${t(evidence, "one result or proof", 40)}`,
-        `${profile.specialization ? `${role}, ${profile.specialization}` : role} | ${clip(profile.background, 50)}`,
-        `Working towards ${role} | ${t(contribution ?? project, "what you build or do", 60)}`,
+        // Whole phrases only: a headline never ends in a cut-off sentence.
+        [publicRole, headlinePhrase(evidence, 50) ?? headlinePhrase(project, 60) ?? "[[your strongest project or result in a few words]]"].join(" | "),
+        `${profile.specialization ? `${publicRole}, ${profile.specialization}` : publicRole} | ${headlinePhrase(contribution ?? project, 60) ?? "[[what you build or do]]"}`,
+        hideTarget ? `${publicRole} | [[the kind of problems you solve]]` : `Working towards ${role} | ${headlinePhrase(contribution ?? project, 60) ?? "[[what you build or do]]"}`,
       ],
       about: [
-        `I'm working towards ${role} roles${profile.market ? ` in ${profile.market}` : ""}.`,
+        hideTarget ? `Right now: ${publicRole}.` : `I'm working towards ${role} roles${profile.market ? ` in ${profile.market}` : ""}.`,
         project ? `Recently: ${mid(t(project, "", 200))}.` : "Recently: [[one project or task you're proud of]].",
         contribution ? `My part: ${mid(t(contribution, "", 160))}.` : "",
         evidence ? `What changed: ${mid(t(evidence, "", 160))}.` : "What changed: [[a result, or something people can look at]].",
@@ -178,7 +209,7 @@ export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateR
           project ? `${t(project, "")}.` : "[[the project or task, in one sentence]]",
           contribution ? `My part: ${mid(t(contribution, ""))}.` : "My part: [[what you did yourself]]",
           evidence ? `What changed: ${mid(t(evidence, ""))}.` : "What changed: [[a result, or the artifact someone can look at]]",
-          learning ? `What I took from it: ${mid(t(learning, ""))}.` : `What I'd tell someone starting in ${role}: [[one plain sentence]]`,
+          learning ? `What I took from it: ${mid(t(learning, ""))}.` : `What I'd tell someone starting in ${hideTarget ? "[[your field]]" : role}: [[one plain sentence]]`,
         ].join("\n\n"),
         factRefs: refs(project, contribution, evidence, learning),
       },
@@ -199,13 +230,13 @@ export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateR
         ? {
             title: "An observation from the field",
             why: `Anchored in something you saw yourself. ${forReaders}`,
-            body: `Something I noticed while working towards ${role} roles: ${mid(t(opinion, ""))}.\n\nWhere I saw it: [[where you saw it]]\n\n${constraint ? `It connects to my own situation: ${mid(t(constraint, "", 160))}.` : ""}`.trim(),
+            body: `Something I noticed ${hideTarget ? "in my work" : `while working towards ${role} roles`}: ${mid(t(opinion, ""))}.\n\nWhere I saw it: [[where you saw it]]\n\n${constraint ? `It connects to my own situation: ${mid(t(constraint, "", 160))}.` : ""}`.trim(),
             factRefs: refs(opinion, constraint),
           }
         : {
             title: "An observation from the field",
             why: "Your answers have no first-hand observation. Don't post this unless you have one.",
-            body: `Something I noticed while working towards ${role} roles: [[what you saw yourself]]\n\nWhere I saw it: [[where]]`,
+            body: `Something I noticed ${hideTarget ? "in my work" : `while working towards ${role} roles`}: [[what you saw yourself]]\n\nWhere I saw it: [[where]]`,
             factRefs: [],
           },
     ],

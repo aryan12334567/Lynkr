@@ -218,6 +218,12 @@ function Tile({ title, children, body, className = "" }: { title: string; body: 
 
 /* ---------- FAQ ---------- */
 
+/** With the free interview on, the trial question gets the free-account answer. */
+const FREE_FAQ: [string, string] = [
+  "Can I try it first?",
+  "Yes. Create a free account to do the interview, build your Story Vault and see your first draft: a new headline and one referral message. Subscribe for everything else.",
+];
+
 const FAQ = [
   ["How much does it cost?", `${SITE.price} a ${SITE.period}, taxes included. You subscribe first, then use Lynkr. Cancel any time, and your first payment can be refunded within ${SITE.refundDays} days.`],
   ["Is there a free trial?", "No. Create your account, subscribe, and Lynkr unlocks straight away on any device you sign in on."],
@@ -275,6 +281,7 @@ export function Landing({
   access = "open",
   account = null,
   resume = null,
+  freeStart = false,
 }: {
   onStart: () => void;
   onCheck: () => void;
@@ -285,12 +292,14 @@ export function Landing({
   account?: Account | null;
   /** Saved progress in this browser: "drafts" if drafts exist, "flow" if partway through. */
   resume?: "drafts" | "flow" | null;
+  /** Interview v2: the interview and first draft are free with an account, so new visitors "Start free". */
+  freeStart?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   useLenis();
   useLandingMotion(root);
 
-  const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : access === "paid" ? "Get access" : "Start the interview";
+  const primary = resume === "drafts" ? "Open my drafts" : resume === "flow" ? "Continue where you left off" : access === "paid" ? (freeStart ? "Start free" : "Get access") : "Start the interview";
   // New visitors with accounts switched on create an account first; everyone else carries on as before.
   const toSignup = access === "paid" && !resume && account?.accounts === true && !account.signedIn;
   const start = () => (toSignup ? window.location.assign("/signup") : onStart());
@@ -330,7 +339,7 @@ export function Landing({
             onClick={start}
             className={`${account?.accounts && !account.signedIn ? "" : "ml-auto md:ml-0"} inline-flex min-h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-[0.9rem] font-medium text-white transition-colors hover:bg-ink/85`}
           >
-            {resume ? (resume === "drafts" ? "My drafts" : "Continue") : toSignup ? "Get started" : access === "paid" ? "Get access" : "Start"} <ArrowRight size={15} aria-hidden />
+            {resume ? (resume === "drafts" ? "My drafts" : "Continue") : toSignup ? (freeStart ? "Start free" : "Get started") : access === "paid" ? (freeStart ? "Start free" : "Get access") : "Start"} <ArrowRight size={15} aria-hidden />
           </button>
         </nav>
       </header>
@@ -505,7 +514,7 @@ export function Landing({
           <div className="mx-auto max-w-6xl">
             <p className={EYEBROW}>Pricing</p>
             <h2 data-split className={`mt-3 max-w-[18ch] ${H2}`}>
-              One plan. Pay first, then use it.
+              {freeStart ? "Start free. Subscribe for the full toolkit." : "One plan. Pay first, then use it."}
             </h2>
             <div data-reveal className="mt-12 max-w-xl rounded-2xl border border-line bg-surface p-6 shadow-md sm:p-8">
               <p className="text-[3rem] font-semibold leading-none tracking-[-0.04em]">
@@ -515,9 +524,9 @@ export function Landing({
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Every tool: interview, Story Vault, profile fix, outreach, posts, Connect and the weekly plan</li>
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Cancel any time; access runs to the end of the month you paid for</li>
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Your first payment can be refunded within {SITE.refundDays} days</li>
-                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> No free tier and no free trial. Payments are handled by Dodo Payments, our Merchant of Record</li>
+                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> {freeStart ? "The interview and your first draft are free with an account." : "No free tier and no free trial."} Payments are handled by Dodo Payments, our Merchant of Record</li>
               </ul>
-              <div className="mt-7">{cta(access === "subscribed" ? "Open Lynkr" : access === "paid" ? "Get access" : primary)}</div>
+              <div className="mt-7">{cta(access === "subscribed" ? "Open Lynkr" : access === "paid" ? (freeStart ? "Start free" : "Get access") : primary)}</div>
               <p className="mt-4 text-[0.85rem] text-faint">
                 See the <a className="underline underline-offset-4 hover:text-ink" href="/terms">Terms</a>, <a className="underline underline-offset-4 hover:text-ink" href="/refunds">refund policy</a> and <a className="underline underline-offset-4 hover:text-ink" href="/privacy">privacy policy</a>.
               </p>
@@ -535,7 +544,7 @@ export function Landing({
               </h2>
             </div>
             <div className="border-t border-line">
-              {FAQ.map(([q, a]) => (
+              {(freeStart ? FAQ.map((f) => (f[0] === "Is there a free trial?" ? FREE_FAQ : f)) : FAQ).map(([q, a]) => (
                 <FaqItem key={q} q={q} a={a} />
               ))}
             </div>

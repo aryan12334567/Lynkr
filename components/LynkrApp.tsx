@@ -289,6 +289,7 @@ export function LynkrApp() {
         access={paywall === true ? (entitled ? "subscribed" : "paid") : "open"}
         account={account}
         resume={hasDrafts ? "drafts" : s.profile || s.v2.startedAt ? "flow" : null}
+        freeStart={interview === "v2"}
         onStart={() => go(hasDrafts && s.stage === "results" ? { name: "app", tab: "today" } : { name: "start" })}
         onCheck={() => go({ name: "check" })}
       />

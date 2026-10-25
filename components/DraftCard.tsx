@@ -119,13 +119,11 @@ export function DraftCard({
       {used.length > 0 && (
         <details className="mt-4 text-[0.88rem]">
           <summary className="cursor-pointer text-soft">
-            Built from {used.length} of your fact{used.length === 1 ? "" : "s"}: {used.map((f) => f.id).join(", ")}
+            Built from {used.length} of your fact{used.length === 1 ? "" : "s"}
           </summary>
-          <ul className="mt-2 space-y-1 text-soft">
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-soft">
             {used.map((f) => (
-              <li key={f.id}>
-                <span className="font-serif font-bold text-accent">{f.id}</span> {f.text}
-              </li>
+              <li key={f.id}>{f.text}</li>
             ))}
           </ul>
           <p className="mt-1 text-faint">A pointer for your review, not proof that every sentence is right.</p>

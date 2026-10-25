@@ -5,7 +5,7 @@ import { Mic, MicOff } from "lucide-react";
 import { Button, ErrorNote, inputCls } from "../ui";
 import { useSpeech } from "../useSpeech";
 import { ProgressBar } from "./ProgressBar";
-import { actionsFor, chipsFor, composeAnswer, saveState, STUCK_LABEL, stuckPress, toggleChip, type StuckLevel } from "./questionLogic";
+import { actionsFor, chipsFor, composeAnswer, exampleFor, isSaveShortcut, saveState, STUCK_LABEL, stuckPress, toggleChip, type StuckLevel } from "./questionLogic";
 import { byId, pick, SECTION_LABEL } from "@/lib/interview/bank";
 import type { AnswerInput, AskStep } from "@/lib/interview/engine";
 import type { Bucket } from "@/lib/schemas";
@@ -19,6 +19,8 @@ type Props = {
   busy: boolean;
   error: string | null;
   onSubmit: (input: AnswerInput) => void;
+  /** The person's field as they picked it (the A3 chip, e.g. "Design"), so the example fits their kind of work. */
+  field?: string | null;
 };
 
 /**
@@ -30,7 +32,7 @@ export function QuestionScreen(props: Props) {
   return <QuestionBody key={`${step.qid}.${step.attempt}.${step.revisit ? 1 : 0}`} {...props} />;
 }
 
-function QuestionBody({ bucket, step, progress, minutesLeft, reflection, busy, error, onSubmit }: Props) {
+function QuestionBody({ bucket, step, progress, minutesLeft, reflection, busy, error, onSubmit, field }: Props) {
   const id = useId();
   const q = byId(step.qid);
   const [text, setText] = useState("");
@@ -43,8 +45,7 @@ function QuestionBody({ bucket, step, progress, minutesLeft, reflection, busy, e
   const followUp = step.attempt > 0;
   const chips = chipsFor(q, bucket, step.attempt);
   const showText = !chips || !!chips.withText;
-  const example = pick(q.example, bucket);
-  const more = pick(q.examples, bucket);
+  const { example, examples: more } = exampleFor(q, bucket, field);
   const actions = actionsFor(q.tag);
   const state = saveState(q, bucket, step.attempt, picked, text);
 
@@ -109,6 +110,14 @@ function QuestionBody({ bucket, step, progress, minutesLeft, reflection, busy, e
           e.preventDefault();
           save();
         }}
+        // Ctrl/Cmd+Enter saves from anywhere in the form, chips included. Caught before the chip sees it,
+        // so it never toggles the focused chip; plain Enter or Space still toggles a chip.
+        onKeyDownCapture={(e) => {
+          if (!isSaveShortcut(e)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          save();
+        }}
       >
         {chips && (
           <fieldset>
@@ -142,12 +151,6 @@ function QuestionBody({ bucket, step, progress, minutesLeft, reflection, busy, e
               id={`${id}-a`}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  save();
-                }
-              }}
               aria-describedby={`${id}-ex ${id}-hint`}
               className={`${inputCls} min-h-32 text-[1rem]`}
               placeholder="Type, or use the microphone"

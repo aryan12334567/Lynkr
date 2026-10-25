@@ -123,3 +123,15 @@ No new paid service proposed.
 4. **Your own LinkedIn PDF** for one more parser check (optional).
 5. **Landing copy "No LinkedIn login":** change once Sign in with LinkedIn is on.
 Decided by the lead (reversible): license-key holders without an account may use the free interview and first win, since they have paid.
+
+### Part 8: release checks (2026-10-25)
+- **Done:** e2e and accessibility for v2 (agent H; ReadBack buttons wrap at 375 px); engine fix (vague follow-ups on brief-only questions no longer become facts); Terms approved by Aryan and applied, shown only when `LYNKR_INTERVIEW=v2`; Neon preview branch approved by Aryan; preview database guard (`lib/dbUrl.ts`): previews use `LYNKR_DATABASE_URL` and, without it, get no database instead of production's.
+- **Evidence:** tsc clean; lint 0 errors; unit 148/148; build compiled; v2 e2e 36/36 (18 at 1280 px, 18 at 375 px); v2 accessibility 9/9; v1 e2e 31/31 and accessibility 5/5 with `LYNKR_INTERVIEW=v1`.
+- **Next:** Aryan signs in to the Neon CLI once; lead creates the schema-only `preview` branch, pipes its connection strings into Vercel (Preview and Development only, never printed), runs migrations on the branch, redeploys the preview; five testers.
+
+### Questions for Aryan (updated 2026-10-25)
+1. ~~Neon preview branch~~ approved. Needs one `neonctl auth` sign-in by Aryan.
+2. LinkedIn client ID and secret: Aryan is getting them.
+3. ~~Terms~~ approved and applied behind the switch.
+4. Dodo reviewed the site against "pay first, no free tier": tell Dodo before switching production to v2 (their merchant policy may require it).
+5. Landing copy "No LinkedIn login": change when Sign in with LinkedIn goes on.

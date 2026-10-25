@@ -135,3 +135,8 @@ Decided by the lead (reversible): license-key holders without an account may use
 3. ~~Terms~~ approved and applied behind the switch.
 4. Dodo reviewed the site against "pay first, no free tier": tell Dodo before switching production to v2 (their merchant policy may require it).
 5. Landing copy "No LinkedIn login": change when Sign in with LinkedIn goes on.
+
+### Preview database and accounts (2026-10-25)
+- **Done:** Neon branch `preview` (schema only, no production rows) in project neon-carmine-cave, us-east-1; `LYNKR_DATABASE_URL` and `_UNPOOLED` set for Preview only (piped, never printed); migrations applied to the branch (`001_vertical1.sql`), re-run clean; preview auth uses the preview's own address. Aryan added a preview-only `BETTER_AUTH_SECRET` and extended `RESEND_API_KEY` and `EMAIL_FROM` to Preview. OpenAI stays production-only, so preview drafts are templates.
+- **Evidence:** preview `/api/status` interview v2; `/api/account` accounts true; free interview without sign-in returns 402/401 as designed; production database host differs from the branch host.
+- **Next:** five testers on the branch URL; read metrics; then merge (Aryan), migrate production, set `LYNKR_INTERVIEW=v2`, tell Dodo.

@@ -62,7 +62,7 @@ function FactLine({ fact, onChange, facts }: { fact: StoryFact; facts: StoryFact
   }
 
   return (
-    <li className="flex items-start gap-3 py-2.5" data-fact={fact.id}>
+    <li className="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-start sm:gap-3" data-fact={fact.id}>
       <div className="min-w-0 flex-1">
         <p className={`text-[0.98rem] leading-snug ${removed ? "text-faint line-through" : "text-ink"}`}>{fact.text}</p>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8rem] text-faint">
@@ -75,7 +75,7 @@ function FactLine({ fact, onChange, facts }: { fact: StoryFact; facts: StoryFact
           )}
         </p>
       </div>
-      <div className="flex shrink-0 gap-1">
+      <div className="-ml-3 flex shrink-0 gap-1 sm:ml-0">
         {removed ? (
           <Button variant="quiet" className="min-h-9 py-1" onClick={() => onChange(restoreFact(facts, fact.id))} aria-label={`Put back: ${fact.text}`}>
             <Undo2 size={15} aria-hidden /> Put back

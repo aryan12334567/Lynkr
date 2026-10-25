@@ -1,3 +1,4 @@
+import { databaseUrl } from "./dbUrl";
 import { Pool } from "pg";
 import type { FactConfidence, FactKind, ReviewStatus, StoryFact } from "./schemas";
 import type { Answer } from "./interview/engine";
@@ -14,9 +15,9 @@ export type Db = { query: <R = Record<string, unknown>>(text: string, params?: u
 
 let pool: Pool | null = null;
 
-/** The app's pooled connection (DATABASE_URL). Created on first use. */
+/** The app's pooled connection (see lib/dbUrl.ts). Created on first use. */
 export function getDb(): Db {
-  if (!pool) pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 3 });
+  if (!pool) pool = new Pool({ connectionString: databaseUrl(), max: 3 });
   return pool as unknown as Db;
 }
 
@@ -28,7 +29,7 @@ let ready: { ok: boolean; at: number } | null = null;
  * shares a database nobody has migrated), the app keeps the person's context in the browser instead.
  */
 export async function cloudReady(db?: Db): Promise<boolean> {
-  if (!process.env.DATABASE_URL?.trim() && !db) return false;
+  if (!databaseUrl() && !db) return false;
   if (!db && ready && Date.now() - ready.at < 5 * 60_000) return ready.ok;
   let ok = false;
   try {

@@ -1,3 +1,4 @@
+import { databaseUrl } from "./dbUrl";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, magicLink, oneTap } from "better-auth/plugins";
@@ -12,11 +13,11 @@ import { sendEmail } from "./email";
  * Lynkr accounts (Better Auth on Postgres). The account holds only sign-in details and the link to the
  * person's Dodo customer: the Story Vault, drafts and plan stay in their browser.
  *
- * Off until DATABASE_URL and BETTER_AUTH_SECRET are set; the app then falls back to license keys only.
+ * Off until a database (see lib/dbUrl.ts) and BETTER_AUTH_SECRET are set; the app then falls back to license keys only.
  * Sign-in methods: email + password (verified email), a one-time email code, passkeys, and Google (with One Tap)
  * Apple and LinkedIn when their clients are configured. A magic link is used only for "continue on your laptop".
  */
-export const accountsConfigured = (): boolean => Boolean(process.env.DATABASE_URL?.trim() && process.env.BETTER_AUTH_SECRET?.trim());
+export const accountsConfigured = (): boolean => Boolean(databaseUrl() && process.env.BETTER_AUTH_SECRET?.trim());
 export const googleConfigured = (): boolean => Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim());
 /** Apple needs a Services ID and a client secret (a signed JWT that Apple lets live for at most six months). */
 export const appleConfigured = (): boolean => Boolean(process.env.APPLE_CLIENT_ID?.trim() && process.env.APPLE_CLIENT_SECRET?.trim());
@@ -38,7 +39,7 @@ function build() {
     appName: "Lynkr",
     baseURL: site,
     secret: process.env.BETTER_AUTH_SECRET,
-    database: new Pool({ connectionString: process.env.DATABASE_URL, max: 3 }),
+    database: new Pool({ connectionString: databaseUrl(), max: 3 }),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,

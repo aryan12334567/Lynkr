@@ -7,7 +7,8 @@
  *   npm run db:migrate            apply
  *   npm run db:migrate -- --print show what would change, change nothing
  *
- * Uses the unpooled connection (DATABASE_URL_UNPOOLED) when present: migrations need a direct session.
+ * Uses the direct connection from lib/dbUrl.ts (LYNKR_DATABASE_URL_UNPOOLED for a preview branch, else
+ * DATABASE_URL_UNPOOLED): migrations need a direct session.
  * Reads .env.local when present. Prints table names, file names and SQL, never the connection string.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -15,13 +16,17 @@ import { join } from "node:path";
 import pg from "pg";
 
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
-if (process.env.DATABASE_URL_UNPOOLED?.trim()) process.env.DATABASE_URL = process.env.DATABASE_URL_UNPOOLED.trim();
-if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) {
-  console.error("Set DATABASE_URL and BETTER_AUTH_SECRET first (in .env.local or the environment).");
+const { databaseUrlUnpooled } = await import("../lib/dbUrl");
+const target = databaseUrlUnpooled();
+if (!target || !process.env.BETTER_AUTH_SECRET) {
+  console.error("Set a database (DATABASE_URL, or LYNKR_DATABASE_URL for a preview branch) and BETTER_AUTH_SECRET first.");
   process.exit(1);
 }
+// Better Auth and the SQL migrations below must hit the same database: pin both to the direct connection.
+process.env.LYNKR_DATABASE_URL = target;
+process.env.DATABASE_URL = target;
 const print = process.argv.includes("--print");
-console.log(`Database host: ${new URL(process.env.DATABASE_URL).hostname.replace(/^[^.]+/, "***")}${print ? " (print only)" : ""}`);
+console.log(`Database host: ${new URL(target).hostname.replace(/^[^.]+/, "***")}${print ? " (print only)" : ""}`);
 
 // 1. Better Auth
 const { getAuth } = await import("../lib/auth");

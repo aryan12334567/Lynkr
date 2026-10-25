@@ -119,7 +119,7 @@ export function DraftCard({
       {used.length > 0 && (
         <details className="mt-4 text-[0.88rem]">
           <summary className="cursor-pointer text-soft">
-            Built from {used.length} of your fact{used.length === 1 ? "" : "s"}
+            {used.length === 1 ? "Built from one of your facts" : `Built from ${used.length} of your facts`}
           </summary>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-soft">
             {used.map((f) => (

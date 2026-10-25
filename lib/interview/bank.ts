@@ -490,7 +490,7 @@ export const BANK: readonly Question[] = [
 
 /**
  * Example answers in the person's own field (the A3 answer), by question id. They replace the default
- * wording only where the bucket has none of its own (fresher and networker wording stays). The default
+ * wording only where the bucket has none of its own (networker wording stays; freshers use FRESHER_FIELD_EXAMPLES). The default
  * wording is written for sales, so Sales needs no entry; fields without an entry keep the default.
  */
 export const FIELD_EXAMPLES: Readonly<Record<string, Partial<Record<FieldChip, FieldExamples>>>> = {
@@ -556,16 +556,77 @@ export const FIELD_EXAMPLES: Readonly<Record<string, Partial<Record<FieldChip, F
   },
 };
 
+/**
+ * Fresher examples in the person's own field, by question id: student projects, internships and fests
+ * rather than jobs. The fresher default wording is written for data and analytics, so that field needs
+ * no entry; fields without an entry keep the default.
+ */
+export const FRESHER_FIELD_EXAMPLES: Readonly<Record<string, Partial<Record<FieldChip, FieldExamples>>>> = {
+  A2: {
+    Design: { example: "Making the posters and slides for every club event.", examples: ["Fixing the layout of group project reports.", "Sketching app screens for hackathon teams."] },
+    Software: { example: "Debugging everyone's code the night before a lab submission.", examples: ["Setting up Git for group projects.", "Explaining recursion before exams."] },
+    Marketing: { example: "Running the Instagram page for our college fest.", examples: ["Writing captions for club posts.", "Getting sponsors to reply to emails."] },
+    Sales: { example: "Getting local shops to sponsor our fest.", examples: ["Selling tickets for college events.", "Pitching our team's idea in competitions."] },
+    Finance: { example: "Explaining balance sheets before the accounts exam.", examples: ["Managing the budget for our club.", "Checking everyone's tax calculations."] },
+  },
+  B2: {
+    Design: { example: "UI/UX designer, entry level.", examples: ["Junior product designer.", "Graphic designer at an agency."] },
+    Software: { example: "Software engineer, entry level.", examples: ["Backend developer intern.", "Frontend developer at a startup."] },
+    Marketing: { example: "Marketing executive, entry level.", examples: ["Social media intern.", "Content writer at a D2C brand."] },
+    Sales: { example: "Business development associate.", examples: ["Inside sales at a SaaS company.", "Sales trainee at a bank."] },
+    Finance: { example: "Financial analyst, entry level.", examples: ["Audit associate at a Big 4 firm.", "Accounts executive."] },
+  },
+  B3: {
+    Design: { example: "Razorpay, CRED, or design agencies in Bengaluru.", examples: ["Swiggy or Zomato.", "Any startup with a design team."] },
+    Software: { example: "Zoho, Freshworks, or product startups in Bengaluru.", examples: ["Infosys or TCS for a start.", "Series A fintechs."] },
+    Marketing: { example: "Mamaearth, boAt, or a digital marketing agency in Mumbai.", examples: ["D2C brands.", "Media agencies."] },
+    Sales: { example: "Zoho, Freshworks, or any SaaS company hiring inside sales.", examples: ["Banks hiring sales trainees.", "Edtech companies."] },
+    Finance: { example: "Deloitte, EY, or finance teams at banks in Pune.", examples: ["CA firms.", "Fintech startups."] },
+  },
+  C1: {
+    Design: { example: "For our college fest app I redesigned the ticket booking screens and tested them with 10 classmates.", examples: ["I designed the brand and posters for our department fest.", "In my internship I made 15 screens for a food delivery app in Figma."] },
+    Software: { example: "I built an attendance app for my class in Flutter that 60 students used every day.", examples: ["In my internship I wrote the API for a booking feature.", "Our hackathon team built a bus tracker and I wrote the backend."] },
+    Marketing: { example: "I ran the Instagram page for our college fest and grew it from 800 to 3,000 followers in a month.", examples: ["In my internship I wrote 20 product descriptions for a D2C brand.", "I planned the email campaign that sold out our fest passes."] },
+    Sales: { example: "I got 12 local shops to sponsor our college fest, which raised ₹1.5 lakh.", examples: ["In my internship I called 200 leads and booked 15 demos.", "I sold the most tickets in our club for two years."] },
+    Finance: { example: "In my articleship I reconciled 6 months of a client's bank statements and found ₹40,000 in errors.", examples: ["I managed our club's ₹2 lakh budget and kept every bill.", "I built a stock tracker in Excel for our investment club."] },
+  },
+  C1b: {
+    Design: { example: "I led the design team of 4 for our fest and we shipped every poster on time.", examples: ["I taught Figma to 20 juniors in a weekend workshop.", "Our UI won second place at a college hackathon."] },
+    Software: { example: "Our team of 3 reached the finals of Smart India Hackathon.", examples: ["I solved 300 problems on LeetCode.", "I taught Python to first-years in our coding club."] },
+    Marketing: { example: "I led a team of 5 that ran our fest's social media.", examples: ["Our case study won a marketing competition.", "I started our college's podcast."] },
+    Sales: { example: "I led the sponsorship team of 6 for our fest.", examples: ["Our team won a B-plan competition.", "I ran a small online store in my second year."] },
+    Finance: { example: "I cleared CA Intermediate in the first attempt.", examples: ["Our team won an equity research competition.", "I was treasurer of the commerce society."] },
+  },
+  C4: {
+    Design: { example: "My portfolio on Behance has the fest app case study.", examples: ["My Dribbble shots.", "The Google UX Design certificate."] },
+    Software: { example: "My attendance app is on GitHub, and it's live on the Play Store.", examples: ["My LeetCode profile.", "A blog post on what I learnt at the hackathon."] },
+    Marketing: { example: "The fest's Instagram page, and the Google Digital Marketing certificate.", examples: ["My blog on Medium.", "A case study from my internship."] },
+    Sales: { example: "A letter from our fest committee, and the HubSpot sales certificate.", examples: ["My B-plan competition deck.", "Feedback from my internship manager."] },
+    Finance: { example: "My equity research report on a listed company, and the NISM certificate.", examples: ["My CA Intermediate results.", "My Excel models on GitHub."] },
+  },
+  D1: {
+    Design: { example: "Designers who joined Razorpay or CRED in the last two years.", examples: ["Seniors from my college now in UX roles.", "Design agency founders in Bengaluru."] },
+    Software: { example: "Engineers who joined Zoho or Freshworks in the last two years.", examples: ["Seniors from my college at product startups.", "Hackathon organisers."] },
+    Marketing: { example: "Marketers who joined D2C brands in the last two years.", examples: ["Seniors from my college in agencies.", "Founders who post about growth."] },
+    Sales: { example: "Sales associates who joined SaaS companies in the last two years.", examples: ["Seniors from my college in banking sales.", "Sales managers who hire freshers."] },
+    Finance: { example: "Analysts who joined Big 4 firms in the last two years.", examples: ["Seniors from my college doing CA.", "Finance alumni at banks."] },
+  },
+};
+
 /** True when the per-bucket value has wording of its own for this bucket (not the default). */
 function hasOwn(v: ByBucket<unknown>, bucket: Bucket): boolean {
   return v !== null && typeof v === "object" && !Array.isArray(v) && "default" in (v as object) && bucket in (v as object);
 }
 
 /**
- * The example answer and the stuck-ladder examples to show: the person's field when one is known and the
- * bucket has no wording of its own, otherwise the bucket's.
+ * The example answer and the stuck-ladder examples to show: for a fresher, the fresher example in their
+ * field; otherwise the person's field when one is known and the bucket has no wording of its own; else the bucket's.
  */
 export function exampleFor(q: Question, bucket: Bucket, field?: string | null): FieldExamples {
+  if (bucket === "fresher" && field) {
+    const fresher = FRESHER_FIELD_EXAMPLES[q.id]?.[field as FieldChip];
+    if (fresher) return fresher;
+  }
   const own = hasOwn(q.example, bucket) || hasOwn(q.examples, bucket);
   const byField = !own && field ? FIELD_EXAMPLES[q.id]?.[field as FieldChip] : undefined;
   return byField ?? { example: pick(q.example, bucket), examples: pick(q.examples, bucket) };
@@ -577,7 +638,7 @@ export function allExamples(q: Question): string[] {
     const values = v !== null && typeof v === "object" && !Array.isArray(v) ? Object.values(v as object) : [v];
     return values.flat() as string[];
   };
-  const fields = Object.values(FIELD_EXAMPLES[q.id] ?? {}).flatMap((f) => (f ? [f.example, ...f.examples] : []));
+  const fields = [FIELD_EXAMPLES, FRESHER_FIELD_EXAMPLES].flatMap((m) => Object.values(m[q.id] ?? {}).flatMap((f) => (f ? [f.example, ...f.examples] : [])));
   return [...all(q.example), ...all(q.examples), ...fields];
 }
 

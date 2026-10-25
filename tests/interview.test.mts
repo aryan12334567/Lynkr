@@ -300,18 +300,24 @@ test("reflection leads read as plain sentences whatever the answer's shape", () 
 });
 
 test("field-aware examples: a designer sees design examples; buckets with their own wording keep it", async () => {
-  const { exampleFor, FIELD_EXAMPLES } = await import("../lib/interview/bank");
+  const { exampleFor, FIELD_EXAMPLES, FRESHER_FIELD_EXAMPLES } = await import("../lib/interview/bank");
   const c1 = BANK.find((x) => x.id === "C1")!;
   const e1 = BANK.find((x) => x.id === "E1")!;
   assert.match(exampleFor(c1, "experienced", "Design").example, /screen|design/i);
   assert.ok(!/sales|renewal|forecast/i.test(exampleFor(e1, "experienced", "Design").example));
   assert.equal(exampleFor(c1, "experienced", "Sales").example, pick(c1.example, "experienced"), "Sales keeps the default wording");
   assert.equal(exampleFor(c1, "experienced", null).example, pick(c1.example, "experienced"), "no field yet keeps the default");
-  assert.equal(exampleFor(c1, "fresher", "Design").example, pick(c1.example, "fresher"), "fresher wording stays");
+  // Freshers get student-level examples in their field, never the experienced ones.
+  const fresherDesign = exampleFor(c1, "fresher", "Design").example;
+  assert.match(fresherDesign, /design|screen|poster/i);
+  assert.ok(!/Power BI|SQL/.test(fresherDesign), "a design student doesn't see the data example");
+  assert.notEqual(fresherDesign, exampleFor(c1, "experienced", "Design").example);
+  assert.equal(exampleFor(c1, "fresher", "Data and analytics").example, pick(c1.example, "fresher"), "the fresher default is the data example");
+  assert.equal(exampleFor(c1, "fresher", null).example, pick(c1.example, "fresher"), "no field yet keeps the fresher default");
   const b2 = BANK.find((x) => x.id === "B2")!;
   assert.equal(exampleFor(b2, "networker", "Software").example, pick(b2.example, "networker"), "networker wording stays");
   // Every field example exists on a real question, and none can be saved unedited, in any bucket.
-  for (const [qid, fields] of Object.entries(FIELD_EXAMPLES)) {
+  for (const [qid, fields] of [...Object.entries(FIELD_EXAMPLES), ...Object.entries(FRESHER_FIELD_EXAMPLES)]) {
     const q = BANK.find((x) => x.id === qid);
     assert.ok(q, qid);
     for (const f of Object.values(fields)) {

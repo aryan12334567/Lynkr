@@ -71,6 +71,21 @@ function clip(s: string, n: number): string {
   return (space > n * 0.5 ? cut.slice(0, space) : cut).replace(/[,;:\s]+$/, "") + "…";
 }
 
+/**
+ * For a sentence inside a draft: end at a clause (";", ". " or ", ") when the fact is too long, so a message
+ * never breaks off mid-thought. Falls back to clip. No trailing full stop; the template adds it.
+ */
+function clipClause(s: string, n: number): string {
+  const t = s.replace(/\s+/g, " ").trim().replace(/[.\s]+$/, "");
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n);
+  const at = Math.max(cut.lastIndexOf("; "), cut.lastIndexOf(". "), cut.lastIndexOf(", "));
+  return at > n * 0.4 ? cut.slice(0, at) : clip(t, n);
+}
+
+/** Collapse spaces, and drop the template's full stop after a clipped "…" so it never reads "….". */
+const tidy = (body: string) => body.replace(/\s+/g, " ").replace(/…\./g, "…");
+
 const KIND_OF: Record<Key, VaultReply["facts"][number]["kind"]> = {
   project: "project",
   contribution: "contribution",
@@ -145,7 +160,7 @@ export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateR
   const opinion = of("opinion");
   const constraint = of("constraint");
   const refs = (...fs: (FactRef | null)[]) => fs.filter((f): f is FactRef => !!f).map((f) => f.id);
-  const t = (f: FactRef | null, blank: string, n = 200) => (f ? clip(f.text, n).replace(/[.\s]+$/, "") : `[[${blank}]]`);
+  const t = (f: FactRef | null, blank: string, n = 200) => (f ? clipClause(f.text, n) : `[[${blank}]]`);
   const readers = profile.audiences.filter((a) => a !== "not_sure").map((a) => AUDIENCE_LABEL[a].toLowerCase());
   const forReaders = readers.length ? `Written for ${readers.join(" and ")}.` : `Written for people working in or hiring for ${hideTarget ? "your field" : role}.`;
   const who = whoLine(profile);
@@ -173,19 +188,19 @@ export function mockGenerate(profile: ProfileInput, facts: FactRef[]): GenerateR
       stranger: {
         title: "First message to a stranger",
         why: "One real question, no favour asked.",
-        body: `Hi [[their first name]], I read [[one specific thing they posted or built]]. ${who} ${project ? `${clip(project.text, 110).replace(/[.\s]+$/, "")}.` : ""} One question: [[your one specific question about their work]]? No worries if you're busy.`.replace(/\s+/g, " "),
+        body: tidy(`Hi [[their first name]], I read [[one specific thing they posted or built]]. ${who} ${project ? `${clipClause(project.text, 110)}.` : ""} One question: [[your one specific question about their work]]? No worries if you're busy.`),
         factRefs: refs(project),
       },
       alumni: {
         title: "Message to someone from your college",
         why: "Shared college plus a small, clear ask.",
-        body: `Hi [[their first name]], I'm a [[your year and course]] at [[your college]], where you studied too. ${who} ${project ? `${clip(project.text, 110).replace(/[.\s]+$/, "")}.` : ""} Would you be open to a 15-minute call next week about how you got into [[their team or role]]? No worries if it's not a good time.`.replace(/\s+/g, " "),
+        body: tidy(`Hi [[their first name]], I'm a [[your year and course]] at [[your college]], where you studied too. ${who} ${project ? `${clipClause(project.text, 110)}.` : ""} Would you be open to a 15-minute call next week about how you got into [[their team or role]]? No worries if it's not a good time.`),
         factRefs: refs(project),
       },
       referral: {
         title: "Referral request",
         why: "Short, specific, easy to say no to.",
-        body: `Hi [[their first name]], I'm applying for [[role title]] at [[company]] ([[job ID or link]]). ${t(project, "one thing you built or did", 140)}. ${evidence ? `${t(evidence, "", 120)}.` : ""} My resume is attached. Would you be comfortable referring me? If it's not a fit, no worries at all.`.replace(/\s+/g, " "),
+        body: tidy(`Hi [[their first name]], I'm applying for [[role title]] at [[company]] ([[job ID or link]]). ${t(project, "one thing you built or did", 140)}. ${evidence ? `${t(evidence, "", 120)}.` : ""} My resume is attached. Would you be comfortable referring me? If it's not a fit, no worries at all.`),
         factRefs: refs(project, evidence),
       },
       hiring_manager: {

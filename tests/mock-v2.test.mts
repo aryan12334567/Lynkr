@@ -57,3 +57,10 @@ test("currentRolePhrase and headlinePhrase", () => {
   assert.equal(headlinePhrase(facts[2], 60), "Merchants were abandoning sign-up at the bank details step");
   assert.equal(headlinePhrase({ id: "F9", kind: "project", text: "x ".repeat(80) }, 40), null);
 });
+
+test("outreach drafts end a long fact at a clause, never mid-thought or with '….'", () => {
+  const long: FactRef = { id: "F9", kind: "project", text: "For our department fest I redesigned the event app ticket booking flow in Figma and tested it with 12 classmates; booking time dropped from 3 minutes to 1" };
+  const r = mockGenerate(ProfileInput.parse({ goal: "job", targetRole: "UX designer", background: "Final year B.Des", bucket: "fresher" }), [long]);
+  for (const d of Object.values(r.outreach)) assert.ok(!/…\./.test(d.body), d.body);
+  assert.match(r.outreach.referral.body, /tested it with 12 classmates\. /, r.outreach.referral.body);
+});

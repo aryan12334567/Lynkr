@@ -32,9 +32,28 @@ function relyingParty(site: string): string {
 /** The checkout slug the browser asks for; mapped to DODO_PRODUCT_ID on the server. */
 export const PLAN_SLUG = "lynkr-monthly";
 
+/**
+ * The site's own address for sign-in links and callbacks. Production sets BETTER_AUTH_URL; a Vercel preview
+ * uses its stable branch address, so testers' email links come back to the same preview.
+ */
+function siteUrl(): string {
+  const set = process.env.BETTER_AUTH_URL?.trim();
+  if (process.env.VERCEL_ENV === "preview") {
+    const host = process.env.VERCEL_BRANCH_URL?.trim() || process.env.VERCEL_URL?.trim();
+    if (host) return `https://${host}`;
+  }
+  return set || "http://localhost:3000";
+}
+
+/** A preview is reachable at its branch address and its per-deployment address; both may sign in. */
+function previewOrigins(): string[] {
+  if (process.env.VERCEL_ENV !== "preview") return [];
+  return [process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL].filter((h): h is string => !!h?.trim()).map((h) => `https://${h.trim()}`);
+}
+
 function build() {
   const dodo = new DodoPayments({ bearerToken: process.env.DODO_PAYMENTS_API_KEY || "unset", baseURL: dodoBaseUrl(), maxRetries: 1, timeout: 15_000 });
-  const site = process.env.BETTER_AUTH_URL?.trim() || "http://localhost:3000";
+  const site = siteUrl();
   return betterAuth({
     appName: "Lynkr",
     baseURL: site,
@@ -57,7 +76,7 @@ function build() {
       ...(linkedinConfigured() && { linkedin: { clientId: process.env.LINKEDIN_CLIENT_ID!, clientSecret: process.env.LINKEDIN_CLIENT_SECRET! } }),
     },
     // Apple returns to the site with a form POST from its own origin.
-    trustedOrigins: appleConfigured() ? ["https://appleid.apple.com"] : [],
+    trustedOrigins: [...previewOrigins(), ...(appleConfigured() ? ["https://appleid.apple.com"] : [])],
     account: { accountLinking: { enabled: true, trustedProviders: ["google", "apple", "linkedin"] } },
     rateLimit: { enabled: true, window: 60, max: 30 },
     plugins: [

@@ -154,3 +154,8 @@ Decided by the lead (reversible): license-key holders without an account may use
 - **Evidence:** tsc clean; lint 0 errors (9 warnings, unchanged); unit 160/160; build compiled; v2 e2e 36/36 (1280 and 375 px) and accessibility 9/9; v1 e2e 31/31 and accessibility 5/5.
 - **Next:** five testers on the preview; read the count-only metrics against the target (70% finish, median under 15 minutes, rating 4 or more); then Aryan merges, migrates production, sets `LYNKR_INTERVIEW=v2`, tells Dodo.
 - **Resume from a new session:** read this file, `git status` on `feat/interview-v2`, then continue from "Next".
+
+### Release (2026-10-27)
+- **Done:** production migration `001_vertical1.sql` (additive; re-run is a no-op), approved by Aryan; `LYNKR_INTERVIEW=v2` set on Production (config, approved); `CRON_SECRET` added by Aryan; PR #13 merged on Aryan's instruction (4d47b3a), deployed to www.lynkr.cloud.
+- **Evidence (production):** `/api/status` interview v2, OpenAI, paywall and checkout on; signed-out interview returns 401 `account_required`; first win 401; cron without the secret 401; landing shows "Start free" and the free-interview pricing line; Terms carry the free-interview section; a signed-in account reports `cloud: true` (account storage live); no app console errors.
+- **Open:** tell Dodo about the free interview (Aryan); LinkedIn client ID and secret (sign-in stays off; change the "No LinkedIn login" copy when it goes on); five testers against the target; fresher examples for B2 and B3 questions beyond the five fields covered.

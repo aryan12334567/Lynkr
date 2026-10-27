@@ -63,7 +63,7 @@ function GoogleMark() {
 
 const COLUMNS = [
   ["Facts you confirmed, nothing invented", "Blanks for anything Lynkr doesn't know", "Under 200 characters for a connection note", "One clear ask per message"],
-  ["No LinkedIn login, ever", "Nothing posted or sent for you", "Your Story Vault stays in your browser", "Top three profile fixes first"],
+  ["Never your LinkedIn password", "Nothing posted or sent for you", "Your Story Vault, saved to your account", "Top three profile fixes first"],
   ["A Monday to Friday plan", "Comments that use your own point", "Marks the exact words to change", "Cancel any time"],
 ];
 
@@ -506,7 +506,7 @@ export function AuthScreen({ mode, token = "", linkError = "" }: { mode: AuthMod
         </motion.main>
 
         <p className="relative flex items-center justify-center gap-1.5 text-[0.78rem] text-faint">
-          <ShieldCheck size={13} aria-hidden /> No LinkedIn login. Your stories stay in your browser.
+          <ShieldCheck size={13} aria-hidden /> Never your LinkedIn password. Nothing posted for you.
         </p>
       </div>
       <Showcase />

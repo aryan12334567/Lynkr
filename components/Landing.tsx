@@ -228,8 +228,8 @@ const FAQ = [
   ["How much does it cost?", `${SITE.price} a ${SITE.period}, taxes included. You subscribe first, then use Lynkr. Cancel any time, and your first payment can be refunded within ${SITE.refundDays} days.`],
   ["Is there a free trial?", "No. Create your account, subscribe, and Lynkr unlocks straight away on any device you sign in on."],
   ["Will it sound like AI wrote it?", "It writes only from facts you confirm, in plain words, and leaves blanks for anything it doesn't know. You can edit every line before you copy it."],
-  ["Does it log in to my LinkedIn?", "No. Lynkr never asks for your LinkedIn password and never opens LinkedIn pages. You copy each draft and send it yourself."],
-  ["What happens to my answers?", "Your Story Vault, drafts and tracker stay in your browser. Posts you paste and profile files you import are used once and never saved."],
+  ["Does it log in to my LinkedIn?", "No. Lynkr never asks for your LinkedIn password and never opens LinkedIn pages. If you sign in with LinkedIn, it gets only your name, email and photo, never access to post or message. You copy each draft and send it yourself."],
+  ["What happens to my answers?", "With an account, your Story Vault, interview answers and drafts are saved to it so you can use them on any device. You can switch saving answers off, download everything or delete it. Profile PDFs are read in your browser and never uploaded."],
   ["Will this get me replies?", "No tool can promise that. Lynkr checks there's a real reason to write, keeps the ask small and the message short, then leaves the call to you."],
   ["Can I use it on my phone?", "Yes. It works in the browser on any phone, and you can answer the interview by speaking."],
 ];
@@ -262,7 +262,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 /* ---------- Page ---------- */
 
-const PROMISES = ["No LinkedIn login", "No profile scraping", "Nothing posted for you", "Only facts you confirmed", "Blanks, never guesses", `${SITE.price} a ${SITE.period}, cancel any time`, "Works on your phone"];
+const PROMISES = ["No LinkedIn password", "No profile scraping", "Nothing posted for you", "Only facts you confirmed", "Blanks, never guesses", `${SITE.price} a ${SITE.period}, cancel any time`, "Works on your phone"];
 
 const STATS = [
   ["7", "tools, one Story Vault"],
@@ -373,7 +373,7 @@ export function Landing({
                   </button>
                 )}
               </div>
-              <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period}, taxes included. Cancel any time. No LinkedIn login. {mock ? "Running in demo mode." : ""}</p>
+              <p className="mt-4 text-[0.85rem] text-faint">{SITE.price} a {SITE.period}, taxes included. Cancel any time. Never your LinkedIn password. {mock ? "Running in demo mode." : ""}</p>
             </motion.div>
           </div>
           <div className="relative mt-16 sm:mt-24">
@@ -489,7 +489,7 @@ export function Landing({
             <p className="mt-5 max-w-[52ch] text-[1.05rem] text-soft">It drafts. You decide what&apos;s true and what gets sent.</p>
             <ul data-reveal className="mt-12 grid gap-4 sm:grid-cols-2">
               {[
-                [Lock, "Ask for your LinkedIn login", "No password, no cookies, no connected account. Ever."],
+                [Lock, "Ask for your LinkedIn password", "No password, no cookies, no access to post or message. LinkedIn sign-in shares only your name, email and photo."],
                 [EyeOff, "Scrape profiles or name strangers", "It suggests kinds of people to look for. You find and choose them."],
                 [Send, "Post, comment or message for you", "Every draft is copied and sent by you, in LinkedIn."],
                 [ShieldCheck, "Invent a fact about you", "Drafts use only facts you confirmed. Anything else stays a blank."],
@@ -568,7 +568,7 @@ export function Landing({
           <div>
             <Wordmark className="text-[1.25rem]" />
             <p className="mt-2 max-w-[48ch] text-[0.88rem] text-faint">
-              A LinkedIn drafting tool. Not affiliated with LinkedIn or Microsoft. Your data stays in your browser.
+              A LinkedIn drafting tool. Not affiliated with LinkedIn or Microsoft. Your data is yours to download or delete.
             </p>
             <LegalLinks className="mt-4" />
           </div>

@@ -204,9 +204,10 @@ async function callOpenAI<S extends z.ZodType>(opts: {
   }
 
   if (!res.ok) {
-    // The provider's own message goes to the server log only (it never contains the key); users get a plain one.
+    // Only the status and the provider's error code go to the log: the body can echo the prompt, which holds answers.
     const detail = await res.text().catch(() => "");
-    console.error(`[lynkr] AI request failed (${res.status}) for model ${model}: ${detail.slice(0, 400)}`);
+    const code = /"(?:code|type)"\s*:\s*"([\w.-]{1,60})"/.exec(detail)?.[1] ?? "unknown";
+    console.error(`[lynkr] AI request failed (${res.status}, ${code}) for model ${model}`);
     if (res.status === 401 || res.status === 403) throw new LlmError("The server's AI key is invalid.", 500);
     if (res.status === 404) throw new LlmError("The AI model set on the server isn't available. Check LLM_MODEL.", 500);
     if (res.status === 429) {

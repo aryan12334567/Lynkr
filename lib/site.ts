@@ -15,5 +15,5 @@ export const SITE = {
   refundDays: 7,
   /** Published on the Terms, Privacy, Refunds and Contact pages. NEXT_PUBLIC_CONTACT_EMAIL (build time) overrides it. */
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "aryansubramanya@gmail.com",
-  updated: "20 October 2026",
+  updated: "24 October 2026",
 } as const;

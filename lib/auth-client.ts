@@ -14,12 +14,14 @@ export type Account = {
   /** Public Google client ID, for One Tap. */
   googleClientId: string | null;
   apple: boolean;
+  /** Sign in with LinkedIn is configured. */
+  linkedin: boolean;
   signedIn: boolean;
   email: string | null;
   subscribed: boolean;
 };
 
-export const NO_ACCOUNT: Account = { accounts: false, google: false, googleClientId: null, apple: false, signedIn: false, email: null, subscribed: false };
+export const NO_ACCOUNT: Account = { accounts: false, google: false, googleClientId: null, apple: false, linkedin: false, signedIn: false, email: null, subscribed: false };
 
 /** True when this browser can create and use passkeys (fingerprint, face or device PIN). */
 export const passkeysSupported = (): boolean => typeof window !== "undefined" && typeof window.PublicKeyCredential === "function";

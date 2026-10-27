@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { ContactEmail, LegalPage, Section } from "@/components/LegalPage";
+import { interviewVersion } from "@/lib/interview/flags";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Terms of Service | Lynkr", description: "The terms for using Lynkr, a paid LinkedIn drafting tool." };
 
 export default function Terms() {
+  // The free interview and account storage ship with interview v2, so the wording follows the same switch.
+  const v2 = interviewVersion() === "v2";
   return (
     <LegalPage title="Terms of Service">
       <p>
@@ -21,7 +24,11 @@ export default function Terms() {
 
       <Section title="2. Subscription and payment">
         <p>
-          Lynkr costs {SITE.price} per {SITE.period}, including applicable taxes (GST). You pay first, then use Lynkr: there is no free tier and no free trial. Payments are processed by Dodo Payments,
+          Lynkr costs {SITE.price} per {SITE.period}, including applicable taxes (GST).{" "}
+          {v2
+            ? "With a free Lynkr account you can do the interview, keep your Story Vault and get a first draft (a headline and one referral message) without paying. Free use has daily limits. Everything else, including full profile fixes, outreach and follow-up messages, posts, comments, Connect Coach and the weekly plan, needs an active subscription. There is no free trial of the paid features."
+            : "You pay first, then use Lynkr: there is no free tier and no free trial."}{" "}
+          Payments are processed by Dodo Payments,
           which acts as the Merchant of Record for Lynkr purchases. We never receive your card details.
         </p>
         <p>
@@ -30,10 +37,11 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="3. Your license key">
+      <Section title="3. Your account and access">
         <p>
-          After you subscribe, Dodo Payments emails you a license key. You enter it in Lynkr to unlock access. The key is for your own use, works in a limited number of browsers, and must not be shared, sold or posted
-          publicly. A key stops working when the subscription is cancelled or ends, when a payment fails, or after a refund. We may disable a key that is shared or misused.
+          You subscribe from your Lynkr account, and access follows that account on any device you sign in on. Your account is for your own use and must not be shared. If you subscribed earlier and received a license
+          key, it keeps working: it is for your own use, works in a limited number of browsers, and must not be shared, sold or posted publicly. Access, by account or by key, stops when the subscription is cancelled or
+          ends, when a payment fails, or after a refund. We may suspend an account or key that is shared or misused.
         </p>
       </Section>
 
@@ -55,7 +63,10 @@ export default function Terms() {
 
       <Section title="6. Your content and data">
         <p>
-          What you type is yours. Your Story Vault, drafts and plan are kept in your browser. To write drafts, what you enter is sent through our server to an AI provider and is not stored by Lynkr. The{" "}
+          {v2
+            ? "What you type is yours. With an account, your context (the brief from your interview, your Story Vault, your answers unless you switch saving them off, your drafts and your plan) is stored in your account so it's the same on every device; you can download it or delete it at any time in the app, and it is deleted automatically after 12 months without activity. Without an account, it stays in your browser. To write drafts, what you enter is sent through our server to an AI provider. Files you import, such as your LinkedIn PDF, are read in your browser and never uploaded."
+            : "What you type is yours. Your Story Vault, drafts and plan are kept in your browser. To write drafts, what you enter is sent through our server to an AI provider and is not stored by Lynkr."}{" "}
+          The{" "}
           <a className="text-ink underline underline-offset-4" href="/privacy">Privacy Policy</a> explains this in detail.
         </p>
       </Section>

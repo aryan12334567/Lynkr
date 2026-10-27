@@ -46,3 +46,5 @@ research/evidence/
 
 # Aryan's private reviewer brief for GitHub Copilot: never commit
 Copilot.md
+.vercel
+.env*

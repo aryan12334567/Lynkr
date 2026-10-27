@@ -1,4 +1,4 @@
-import { accountsConfigured, appleConfigured, googleConfigured, sessionUser } from "@/lib/auth";
+import { accountsConfigured, appleConfigured, googleConfigured, linkedinConfigured, sessionUser } from "@/lib/auth";
 import { subscriptionActive } from "@/lib/billing";
 
 /**
@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     google: googleConfigured(),
     googleClientId: googleConfigured() ? process.env.GOOGLE_CLIENT_ID!.trim() : null,
     apple: appleConfigured(),
+    linkedin: linkedinConfigured(),
     signedIn: Boolean(user),
     email: user?.email ?? null,
     subscribed: user ? await subscriptionActive(user.dodoCustomerId) : false,

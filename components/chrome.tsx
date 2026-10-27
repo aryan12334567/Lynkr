@@ -39,15 +39,15 @@ export function ConfirmReset({ onReset, className = "", label = "Start over" }: 
   );
 }
 
-/** Docs-style reassurance: everything is kept in this browser as you go. */
-export function SavedHint() {
+/** Docs-style reassurance: everything is kept as you go, in this browser or (signed in with account storage) in the account. */
+export function SavedHint({ inAccount = false }: { inAccount?: boolean }) {
   return (
     <span className="hidden items-center gap-1.5 text-[0.82rem] text-faint sm:inline-flex">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.34 9.1 4 4 0 0 0 7 19h10.5Z" />
         <path d="m9.5 14 2 2 3.5-3.5" />
       </svg>
-      Saved in this browser
+      {inAccount ? "Saved to your account" : "Saved in this browser"}
     </span>
   );
 }

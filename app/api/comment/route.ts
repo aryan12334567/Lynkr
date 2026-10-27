@@ -1,3 +1,4 @@
+import { resolveContext } from "@/lib/context";
 import { requireLicense } from "@/lib/billing";
 import { CommentReply, CommentRequest } from "@/lib/schemas";
 import { BODY_LIMIT, readJson } from "@/lib/http";
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Paste 20 to 3,000 characters of the post, pick up to 3 facts, and keep your thought under 500 characters." }, { status: 400 });
   }
-  const { targetRole, domain, audiences, industry, excerpt, facts, perspective, anchor } = parsed.data;
+  const { targetRole, domain, audiences, industry, excerpt, facts, perspective, anchor } = await resolveContext(req, parsed.data, "picked");
 
   if (!perspective && facts.length === 0) {
     return Response.json({

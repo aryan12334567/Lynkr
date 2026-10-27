@@ -175,12 +175,17 @@ export async function subscriptionActive(customerId: string | null): Promise<boo
   }
 }
 
+/** True when the request carries a license key that Dodo confirms for this browser. */
+export async function hasValidLicense(req: Request): Promise<boolean> {
+  const key = req.headers.get(LICENSE_HEADER)?.trim() ?? "";
+  const instance = req.headers.get(INSTANCE_HEADER)?.trim() ?? "";
+  return Boolean(key && instance && key.length <= 200 && instance.length <= 100 && (await validateLicense(key, instance)));
+}
+
 /** Gate for every AI route: null means carry on, otherwise return the 402 response. See paywallEnabled(). */
 export async function requireLicense(req: Request): Promise<Response | null> {
   if (!paywallEnabled()) return null;
-  const key = req.headers.get(LICENSE_HEADER)?.trim() ?? "";
-  const instance = req.headers.get(INSTANCE_HEADER)?.trim() ?? "";
-  if (key && instance && key.length <= 200 && instance.length <= 100 && (await validateLicense(key, instance))) return null;
+  if (await hasValidLicense(req)) return null;
   // Imported here, not at the top: lib/auth imports this file.
   const { sessionUser } = await import("./auth");
   const user = await sessionUser(req);

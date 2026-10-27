@@ -24,7 +24,7 @@ export function clientIp(req: Request): string {
   return (fwd ? fwd.split(",")[0].trim() : req.headers.get("x-real-ip")) || "unknown";
 }
 
-export type LimitKind = "interview" | "generate" | "enrich" | "checkout" | "license";
+export type LimitKind = "interview" | "interview2" | "generate" | "enrich" | "checkout" | "license";
 
 /** Returns an error message if the request should be refused, else null. */
 export function checkLimits(req: Request, kind: LimitKind): string | null {
@@ -49,7 +49,8 @@ export function checkLimits(req: Request, kind: LimitKind): string | null {
     if (!hit(`ip:license:${clientIp(req)}`, 30, HOUR)) return "Too many attempts. Please try again in an hour.";
     return null;
   }
-  const perHour = kind === "interview" ? 40 : 6;
+  // Interview v2 saves every answer and follow-up: about 25 to 40 calls per interview.
+  const perHour = kind === "interview2" ? 120 : kind === "interview" ? 40 : 6;
   const dailyCap = Number(process.env.LYNKR_DAILY_CAP) || 400;
   if (!hit(`ip:${kind}:${clientIp(req)}`, perHour, HOUR)) {
     return "You have used a lot of requests this hour. Please try again later.";

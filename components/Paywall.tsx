@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Loader2, Lock } from "lucide-react";
 import { LegalLinks, Wordmark } from "./chrome";
+import { MyData } from "./MyData";
 import { ErrorNote } from "./ui";
 import { SITE } from "@/lib/site";
 import { authClient, startCheckout, type Account } from "@/lib/auth-client";
 
-const INCLUDED = ["Profile, messages and posts drafted from your own facts", "A message checker and a weekly plan", "Your Story Vault stays in your browser"];
+const INCLUDED = ["Profile, messages and posts drafted from your own facts", "A message checker and a weekly plan", "Your Story Vault, saved to your account"];
 
 const PRIMARY =
   "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-[1rem] font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50";
@@ -158,6 +159,12 @@ export function Paywall({
         <p className="mt-6 text-center text-[0.82rem] text-faint">
           Secure checkout by Dodo Payments. First payment refundable within {SITE.refundDays} days.
         </p>
+        {/* Free users can reach their data too: download and delete must not sit behind the paywall. */}
+        {signedIn && (
+          <div className="mt-8">
+            <MyData />
+          </div>
+        )}
       </main>
 
       <footer className="mx-auto w-full max-w-5xl border-t border-line pt-6">

@@ -21,6 +21,9 @@ const display = Mona_Sans({
 export const metadata: Metadata = {
   title: "Lynkr",
   description: "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts your profile, messages and posts from facts you confirm.",
+  verification: {
+    google: "D2FKxikgMBg1m6UZKzFROoJdya6hOau3b0hMkD-JayI",
+  },
 };
 
 export const viewport: Viewport = {
@@ -35,3 +38,4 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     </html>
   );
 }
+

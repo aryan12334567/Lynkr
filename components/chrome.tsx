@@ -76,10 +76,10 @@ export function DemoPill() {
 export function TrustNote({ mock }: { mock: boolean | null }) {
   return (
     <p className="text-[0.85rem] leading-relaxed text-faint">
-      <strong className="font-medium text-soft">No LinkedIn login, no scraping, nothing posted or sent for you.</strong>{" "}
+      <strong className="font-medium text-soft">Never your LinkedIn password, no scraping, nothing posted or sent for you.</strong>{" "}
       {mock
         ? "Demo mode: your answers go only to Lynkr's server to fill templates. No AI sees them and nothing is stored."
-        : "Your answers and anything you paste go through Lynkr's server to the AI provider only to write drafts. Lynkr doesn't store them."}{" "}
+        : "Your answers go through Lynkr's server to the AI provider only to write drafts. With an account, your Story Vault and answers are saved to it; you can switch saving answers off, download or delete it."}{" "}
       Your Story Vault, drafts, plan and tracker stay in this browser. Imported profile files and pasted posts are never saved.
     </p>
   );

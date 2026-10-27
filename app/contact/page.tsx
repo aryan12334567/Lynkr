@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ContactEmail, LegalPage, Section } from "@/components/LegalPage";
 import { SITE } from "@/lib/site";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Contact | Lynkr", description: "How to reach Lynkr for support, billing and privacy questions." };
 
 export default function Contact() {

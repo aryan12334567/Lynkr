@@ -28,7 +28,7 @@ const stepOf = (stage: Saved["stage"]) =>
  */
 type Route = { name: "home" } | { name: "start" } | { name: "check" } | { name: "app"; tab: Tab };
 
-function parseRoute(hash: string, s: Saved): Route {
+function parseRoute(hash: string): Route {
   const h = hash.replace(/^#\/?/, "");
   if (h === "home") return { name: "home" };
   if (h === "start") return { name: "start" };
@@ -37,9 +37,8 @@ function parseRoute(hash: string, s: Saved): Route {
     const t = h.split("/")[1] as Tab;
     return { name: "app", tab: TAB_IDS.includes(t) ? t : "today" };
   }
-  // No address yet: returning users with drafts land in the app, everyone else on the home page.
-  if (s.stage === "results" && s.result) return { name: "app", tab: "today" };
-  if (s.profile || s.v2.startedAt) return { name: "start" };
+  // No address yet (a fresh visit to the site): always the home page. Returning people resume from
+  // its main button, which reads "Continue where you left off" or "Open my drafts".
   return { name: "home" };
 }
 
@@ -65,7 +64,7 @@ export function LynkrApp() {
   const skipNextSave = useRef(false);
   const [mock, setMock] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash, s));
+  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   // In memory only, never saved: the user's own export fields and a pasted job description.
   const [imported, setImported] = useState<ImportedProfile | null>(null);
   const [jobDescription, setJobDescription] = useState("");
@@ -139,7 +138,7 @@ export function LynkrApp() {
   // Keep the address in step with the screen, and follow Back/Forward.
   useEffect(() => {
     if (window.location.hash !== toHash(route)) window.history.replaceState(null, "", toHash(route));
-    const onHash = () => setRoute(parseRoute(window.location.hash, s));
+    const onHash = () => setRoute(parseRoute(window.location.hash));
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps

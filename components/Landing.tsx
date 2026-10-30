@@ -11,7 +11,6 @@ import {
   Copy,
   EyeOff,
   House,
-  IdCard,
   Library,
   Lock,
   MessageSquareText,
@@ -70,7 +69,6 @@ function HeroWindow() {
             {[
               [House, "Today"],
               [Library, "Story Vault"],
-              [IdCard, "Profile fix"],
               [Send, "Outreach"],
               [PenLine, "Posts"],
               [CalendarDays, "This week"],
@@ -78,7 +76,7 @@ function HeroWindow() {
             ].map(([Icon, label], i) => {
               const I = Icon as typeof House;
               return (
-                <div key={label as string} className={`mb-0.5 flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8rem] ${i === 3 ? "bg-surface font-medium text-ink shadow-sm" : "text-soft"}`}>
+                <div key={label as string} className={`mb-0.5 flex items-center gap-2 rounded-md px-2 py-1.5 text-[0.8rem] ${i === 2 ? "bg-surface font-medium text-ink shadow-sm" : "text-soft"}`}>
                   <I size={14} strokeWidth={1.8} aria-hidden />
                   {label as string}
                 </div>
@@ -265,7 +263,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 const PROMISES = ["No LinkedIn password", "No profile scraping", "Nothing posted for you", "Only facts you confirmed", "Blanks, never guesses", `${SITE.price} a ${SITE.period}, cancel any time`, "Works on your phone"];
 
 const STATS = [
-  ["7", "tools, one Story Vault"],
+  ["6", "tools, one Story Vault"],
   ["200", "characters, the most a connection note gets"],
   ["0", "passwords asked, ever"],
 ];
@@ -359,7 +357,7 @@ export function Landing({
             >
               <p className="mt-6 text-[1.3rem] leading-snug text-ink sm:text-[1.6rem]">Write to one person. Sound like you.</p>
               <p className="mx-auto mt-4 max-w-[54ch] text-[1rem] leading-relaxed text-soft sm:text-[1.08rem]">
-                Lynkr interviews you about one real piece of work, keeps the facts in your Story Vault, and drafts your LinkedIn profile, messages
+                Lynkr interviews you about one real piece of work, keeps the facts in your Story Vault, and drafts your LinkedIn messages
                 and posts from them. Anything it doesn&apos;t know stays a blank only you can fill.
               </p>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -424,20 +422,9 @@ export function Landing({
                   Everything you need to get noticed, nothing that fakes it.
                 </h2>
               </div>
-              <p className="text-[1.05rem] text-soft md:pb-2">Seven tools, one Story Vault. Every draft points back to the facts it used.</p>
+              <p className="text-[1.05rem] text-soft md:pb-2">Tools built on one Story Vault. Every draft points back to the facts it used.</p>
             </div>
             <div data-reveal className="mt-12 grid gap-4 md:grid-cols-6">
-              <Tile className="md:col-span-4" title="Profile fix" body="Your headline, About and every section checked against the role you want. Top three fixes first, each with what it's based on.">
-                <div className="rounded-xl bg-muted p-4 text-[0.85rem]">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-accent">1.</span>
-                    <span className="font-semibold">Headline</span>
-                    <span className="rounded-full bg-bad/10 px-2 py-0.5 text-[0.75rem] text-bad">Fix first</span>
-                  </div>
-                  <p className="mt-2 text-soft line-through decoration-bad/60">Commerce student | Hardworking</p>
-                  <p className="mt-1 text-[1rem]">Data analyst | Power BI dashboard tracking 40 sponsors | SQL</p>
-                </div>
-              </Tile>
               <Tile className="md:col-span-2" title="Message checker" body="Marks the exact words to change and fixes them in one click.">
                 <div className="sheet text-[0.85rem] leading-relaxed">
                   Hello <mark className="blank">sir</mark>, <mark className="blank">kindly revert</mark> on the analyst role.
@@ -521,7 +508,7 @@ export function Landing({
                 {SITE.price} <span className="text-[1.05rem] font-normal tracking-normal text-soft">a {SITE.period}, taxes included</span>
               </p>
               <ul className="mt-6 space-y-2.5 text-[0.98rem] text-soft">
-                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Every tool: interview, Story Vault, profile fix, outreach, posts, Connect and the weekly plan</li>
+                <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Every tool: interview, Story Vault, outreach, posts, Connect and the weekly plan</li>
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Cancel any time; access runs to the end of the month you paid for</li>
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> Your first payment can be refunded within {SITE.refundDays} days</li>
                 <li className="flex gap-2.5"><Check size={17} className="mt-1 shrink-0 text-accent" aria-hidden /> {freeStart ? "The interview and your first draft are free with an account." : "No free tier and no free trial."} Payments are handled by Dodo Payments, our Merchant of Record</li>

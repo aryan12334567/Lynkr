@@ -276,19 +276,25 @@ export async function takeDaily(db: Db, userId: string, kind: string, max: numbe
 
 // ---- export and delete ----
 
-const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user"] as const;
+const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"] as const;
 
 /** Everything Lynkr holds for this user, as plain JSON ("Download my data"). */
 export async function exportAll(db: Db, userId: string): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = { exportedAt: new Date().toISOString() };
-  for (const t of TABLES) out[t] = (await db.query(`select * from ${t} where user_id = $1`, [userId])).rows.map(({ user_id, ...rest }) => (void user_id, rest));
+  for (const t of TABLES) {
+    if (["contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"].includes(t) && !(await db.query<{ t: string | null }>("select to_regclass($1)::text as t", [`public.${t}`])).rows[0]?.t) continue;
+    out[t] = (await db.query(`select * from ${t} where user_id = $1`, [userId])).rows.map(({ user_id, token_hash, ...rest }) => (void user_id, void token_hash, rest));
+  }
   return out;
 }
 
 /** "Delete my data": every Lynkr row for this user, in every table. The sign-in account itself stays. */
 export async function deleteAll(db: Db, userId: string): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
-  for (const t of TABLES) counts[t] = (await db.query(`delete from ${t} where user_id = $1 returning 1`, [userId])).rows.length;
+  for (const t of TABLES) {
+    if (["contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"].includes(t) && !(await db.query<{ t: string | null }>("select to_regclass($1)::text as t", [`public.${t}`])).rows[0]?.t) continue;
+    counts[t] = (await db.query(`delete from ${t} where user_id = $1 returning 1`, [userId])).rows.length;
+  }
   return counts;
 }
 

@@ -58,12 +58,6 @@ export default function Privacy() {
         </p>
       </Section>
 
-      <Section title="Job-page import">
-        <p>
-          If you paste a link to a public job posting and ask Lynkr to import it, the link is sent to a scraping service (Apify) that reads that public page. Only the link is sent, and only when you use this option.
-        </p>
-      </Section>
-
       <Section title="Payments and license keys">
         <p>
           Payments are processed by Dodo Payments, the Merchant of Record. Dodo collects your payment details and email address under its own privacy policy, and Lynkr never sees your card details. When you enter a license
@@ -89,7 +83,6 @@ export default function Privacy() {
           <li>Google: only if you choose &quot;Continue with Google&quot;.</li>
           <li>Apple: only if you choose &quot;Continue with Apple&quot;.</li>
           <li>LinkedIn: only if you choose Sign in with LinkedIn: your name, email and photo.</li>
-          <li>Apify: reads a public job page, only if you use the import.</li>
         </ul>
       </Section>
 

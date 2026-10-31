@@ -1,10 +1,12 @@
 ﻿import { createHash, randomUUID } from "node:crypto";
+import { z } from "zod";
 import type { Db } from "../db";
 import type { Bridge, Intent } from "../schemas";
 import type { Relationship } from "../checker";
 
 export type OutreachGoal = "job" | "internship" | "referral" | "network" | "mentor" | "clients" | "hiring" | "funding" | "buy_business" | "partner" | "reconnect";
-export type ContactStatus = "to_contact" | "invited" | "accepted" | "messaged" | "replied" | "outcome";
+export type ContactStatus = "to_contact" | "invited" | "accepted" | "messaged" | "replied" | "meeting" | "outcome";
+export type WhySource = "comment" | "finder" | "connections" | "manual";
 export type Contact = {
   id: string; userId: string; name: string; company: string | null; role: string | null;
   profileUrl: string | null; relationship: Relationship | null; bridge: Bridge; goal: OutreachGoal;
@@ -12,10 +14,26 @@ export type Contact = {
   status: ContactStatus; invitedAt: Date | null; acceptedAt: Date | null; messagedAt: Date | null;
   repliedAt: Date | null; outcomeAt: Date | null; nextActionAt: Date | null;
   outcome: "positive" | "negative" | "no_response" | null; noteUsed: boolean; angleUsed: string | null;
-  brief: Record<string, unknown> | null; createdAt: Date; updatedAt: Date;
+  brief: Record<string, unknown> | null; whyText: string | null; whySource: WhySource | null;
+  goalReachedAt: Date | null; closedAt: Date | null; createdAt: Date; updatedAt: Date;
 };
-export type ContactInput = Pick<Contact, "name" | "bridge" | "goal" | "intent" | "tier"> & Partial<Pick<Contact, "company" | "role" | "profileUrl" | "relationship" | "source" | "brief">>;
+export type ContactInput = Pick<Contact, "name" | "bridge" | "goal" | "intent" | "tier"> & Partial<Pick<Contact, "company" | "role" | "profileUrl" | "relationship" | "source" | "brief" | "whyText" | "whySource">>;
 export type ContactPatch = Partial<Omit<Contact, "id" | "userId" | "createdAt" | "updatedAt">>;
+/** Request bodies for /api/outreach/contacts. Stage, outcome and next-step fields are not here on purpose:
+ * the timeline (lib/outreach/timeline.ts) is the only writer of them, so a PATCH that sends one is rejected. */
+export const contactBody = z.object({
+  name: z.string().trim().min(1).max(200), company: z.string().trim().max(200).nullable().optional(), role: z.string().trim().max(200).nullable().optional(),
+  profileUrl: z.string().max(500).nullable().optional(), relationship: z.enum(["stranger", "alumni", "knows_me"]).nullable().optional(),
+  bridge: z.enum(["knows_me", "worked_studied", "alumni", "event", "mutual_intro", "public_work", "live_role", "none"]),
+  goal: z.enum(["job", "internship", "referral", "network", "mentor", "clients", "hiring", "funding", "buy_business", "partner", "reconnect"]),
+  intent: z.enum(["learn_role", "work_question", "feedback", "explore_team", "live_job", "referral", "follow_up", "thank_you"]),
+  tier: z.enum(["tier_1", "tier_2"]), source: z.enum(["connections", "manual", "finder", "extension"]).nullable().optional(),
+  brief: z.record(z.string(), z.unknown()).nullable().optional(),
+  whyText: z.string().trim().max(200).nullable().optional(), whySource: z.enum(["comment", "finder", "connections", "manual"]).nullable().optional(),
+}).strict();
+export const contactPatch = contactBody.partial().extend({
+  id: z.string().uuid(), noteUsed: z.boolean().optional(), angleUsed: z.string().regex(/^angle_[a-z0-9_]+$/).nullable().optional(),
+}).strict();
 const date = (x: unknown) => x ? new Date(x as string) : null;
 const toContact = (r: Record<string, unknown>): Contact => ({
   id: r.id as string, userId: r.user_id as string, name: r.name as string, company: r.company as string | null,
@@ -24,8 +42,14 @@ const toContact = (r: Record<string, unknown>): Contact => ({
   source: r.source as Contact["source"], status: r.status as ContactStatus, invitedAt: date(r.invited_at), acceptedAt: date(r.accepted_at),
   messagedAt: date(r.messaged_at), repliedAt: date(r.replied_at), outcomeAt: date(r.outcome_at), nextActionAt: date(r.next_action_at),
   outcome: r.outcome as Contact["outcome"], noteUsed: r.note_used as boolean, angleUsed: r.angle_used as string | null,
-  brief: r.brief as Contact["brief"], createdAt: new Date(r.created_at as string), updatedAt: new Date(r.updated_at as string),
+  brief: r.brief as Contact["brief"], whyText: (r.why_text as string | null) ?? null, whySource: (r.why_source as WhySource | null) ?? null,
+  goalReachedAt: date(r.goal_reached_at), closedAt: date(r.closed_at), createdAt: new Date(r.created_at as string), updatedAt: new Date(r.updated_at as string),
 });
+/** The why-you-connected columns come from migration 005; they are only named in the insert when given, so contacts still save on a database that hasn't run it. */
+function whyCols(data: ContactInput) {
+  const has = data.whyText !== undefined || data.whySource !== undefined;
+  return has ? { cols: ",why_text,why_source", vals: ",$14,$15", params: [data.whyText ?? null, data.whySource ?? null] } : { cols: "", vals: "", params: [] as (string | null)[] };
+}
 export function normalizeProfileUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
   let u: URL; try { u = new URL(raw); } catch { throw new Error("Invalid LinkedIn profile URL"); }
@@ -40,9 +64,9 @@ export async function getContact(db: Db, userId: string, contactId: string): Pro
   const r = await db.query("select * from contacts where user_id = $1 and id = $2", [userId, contactId]); return r.rows[0] ? toContact(r.rows[0]) : null;
 }
 export async function addContact(db: Db, userId: string, data: ContactInput): Promise<Contact> {
-  const r = await db.query(`insert into contacts (id,user_id,name,company,role,profile_url,relationship,bridge,goal,intent,tier,source,brief)
-    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb) returning *`,
-    [randomUUID(), userId, data.name.trim(), data.company ?? null, data.role ?? null, normalizeProfileUrl(data.profileUrl), data.relationship ?? null, data.bridge, data.goal, data.intent, data.tier, data.source ?? "manual", data.brief ? JSON.stringify(data.brief) : null]);
+  const r = await db.query(`insert into contacts (id,user_id,name,company,role,profile_url,relationship,bridge,goal,intent,tier,source,brief${whyCols(data).cols})
+    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb${whyCols(data).vals}) returning *`,
+    [randomUUID(), userId, data.name.trim(), data.company ?? null, data.role ?? null, normalizeProfileUrl(data.profileUrl), data.relationship ?? null, data.bridge, data.goal, data.intent, data.tier, data.source ?? "manual", data.brief ? JSON.stringify(data.brief) : null, ...whyCols(data).params]);
   return toContact(r.rows[0]);
 }
 /** Atomically reserve one monthly slot and insert the contact in the same statement.
@@ -61,13 +85,13 @@ export async function addContactCapped(db: Db, userId: string, data: ContactInpu
        or lynkr_user_outreach.last_monthly_contacts_count < lynkr_user_outreach.monthly_new_contacts_limit
     returning user_id
   )
-  insert into contacts (id,user_id,name,company,role,profile_url,relationship,bridge,goal,intent,tier,source,brief)
-  select $1,quota.user_id,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb from quota returning *`,
+  insert into contacts (id,user_id,name,company,role,profile_url,relationship,bridge,goal,intent,tier,source,brief${whyCols(data).cols})
+  select $1,quota.user_id,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb${whyCols(data).vals} from quota returning *`,
     [randomUUID(), userId, data.name.trim(), data.company ?? null, data.role ?? null, url, data.relationship ?? null,
-     data.bridge, data.goal, data.intent, data.tier, data.source ?? "manual", data.brief ? JSON.stringify(data.brief) : null]);
+     data.bridge, data.goal, data.intent, data.tier, data.source ?? "manual", data.brief ? JSON.stringify(data.brief) : null, ...whyCols(data).params]);
   return r.rows[0] ? toContact(r.rows[0]) : null;
 }
-const COLUMNS: Record<keyof ContactPatch, string> = { name:"name", company:"company", role:"role", profileUrl:"profile_url", relationship:"relationship", bridge:"bridge", goal:"goal", intent:"intent", tier:"tier", source:"source", status:"status", invitedAt:"invited_at", acceptedAt:"accepted_at", messagedAt:"messaged_at", repliedAt:"replied_at", outcomeAt:"outcome_at", nextActionAt:"next_action_at", outcome:"outcome", noteUsed:"note_used", angleUsed:"angle_used", brief:"brief" };
+const COLUMNS: Record<keyof ContactPatch, string> = { name:"name", company:"company", role:"role", profileUrl:"profile_url", relationship:"relationship", bridge:"bridge", goal:"goal", intent:"intent", tier:"tier", source:"source", status:"status", invitedAt:"invited_at", acceptedAt:"accepted_at", messagedAt:"messaged_at", repliedAt:"replied_at", outcomeAt:"outcome_at", nextActionAt:"next_action_at", outcome:"outcome", noteUsed:"note_used", angleUsed:"angle_used", brief:"brief", whyText:"why_text", whySource:"why_source", goalReachedAt:"goal_reached_at", closedAt:"closed_at" };
 export async function updateContact(db: Db, userId: string, contactId: string, data: ContactPatch): Promise<Contact | null> {
   const entries = Object.entries(data).filter(([key, value]) => key in COLUMNS && value !== undefined);
   if (!entries.length) return getContact(db,userId,contactId);

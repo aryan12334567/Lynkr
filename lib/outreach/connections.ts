@@ -1,56 +1,63 @@
-﻿import { listZip, readZipEntry, parseCsv } from "../linkedinExport";
+import { listZip, readZipEntry, parseConnectionsCsv, normalizeProfileUrl, isConnectionsFile, CONNECTIONS_NOT_FOUND, type Connection } from "../linkedinExport";
 
-/** Kept on this device; LinkedIn's email column is deliberately discarded. */
-export type Connection = { name: string; company: string; role: string; profileUrl: string; connectedOn: string };
+export type { Connection };
+export { normalizeProfileUrl };
 
-export function parseConnections(text: string): Connection[] {
-  const rows = parseCsv(text);
-  const headerAt = rows.findIndex(row => row.some(x => x.trim().toLowerCase() === "first name") && row.some(x => x.trim().toLowerCase() === "last name"));
-  if (headerAt < 0) throw new Error("Connections file not found in this archive.");
-  const headers = rows[headerAt].map(x => x.trim().toLowerCase());
-  const col = (name: string) => headers.indexOf(name);
-  const get = (row: string[], name: string) => (row[col(name)] ?? "").trim();
-  return rows.slice(headerAt + 1).map(row => ({
-    name: [get(row, "first name"), get(row, "last name")].filter(Boolean).join(" "),
-    company: get(row, "company"), role: get(row, "position"),
-    profileUrl: normalizeProfileUrl(get(row, "url")), connectedOn: get(row, "connected on"),
-  })).filter(c => !!c.name);
-}
-
-export function normalizeProfileUrl(value: string): string {
-  try {
-    const u = new URL(value);
-    const match = /^\/in\/([a-z0-9-]+)\/?$/i.exec(u.pathname);
-    if (u.protocol !== "https:" || !["www.linkedin.com", "linkedin.com"].includes(u.hostname.toLowerCase()) || !match || u.username || u.password || u.port) return "";
-    return `https://www.linkedin.com/in/${match[1]}/`;
-  } catch { return ""; }
-}
+/** Parsed entirely in the browser. LinkedIn's email column is dropped during parsing. */
+export const parseConnections = parseConnectionsCsv;
 
 /** Only opens Connections.csv, even when the archive contains private messages. */
 export async function readConnections(files: { name: string; buffer: ArrayBuffer }[]): Promise<Connection[]> {
   for (const file of files) {
     if (/\.zip$/i.test(file.name)) {
-      const entry = listZip(file.buffer).find(e => /(^|[\\/])connections\.csv$/i.test(e.name));
+      const entry = listZip(file.buffer).find(e => isConnectionsFile(e.name));
       if (entry) return parseConnections(await readZipEntry(file.buffer, entry));
-    } else if (/(^|[\\/])connections\.csv$/i.test(file.name)) {
+    } else if (isConnectionsFile(file.name)) {
       return parseConnections(new TextDecoder().decode(file.buffer));
     }
   }
-  throw new Error("Connections file not found in this archive.");
+  throw new Error(CONNECTIONS_NOT_FOUND);
+}
+
+/** Reads, then saves. If the file is missing or unreadable nothing is saved and the stored list is untouched. */
+export async function importConnectionsFiles(
+  files: { name: string; buffer: ArrayBuffer }[],
+  io: { save: (c: Connection[]) => Promise<void> } = { save: saveConnections },
+): Promise<{ ok: true; connections: Connection[] } | { ok: false; message: string }> {
+  let connections: Connection[];
+  try { connections = await readConnections(files); }
+  catch (e) { return { ok: false, message: e instanceof Error ? e.message.replace(/\.$/, "") : "Couldn't read that file" }; }
+  await io.save(connections);
+  return { ok: true, connections };
 }
 
 const norm = (s: string) => s.toLowerCase().trim();
+/** Company match counts 10, role match 2, so any company match outranks a role-only match. */
 export function rankConnections(connections: Connection[], targets: { companies: string[]; roles: string[] }, now = new Date()): (Connection & { dormant: boolean; score: number })[] {
   const includes = (value: string, options: string[]) => options.some(x => norm(x).length > 1 && norm(value).includes(norm(x)));
+  const cutoff = new Date(now); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
   return connections.map(c => {
     const date = Date.parse(c.connectedOn);
-    const cutoff = new Date(now); cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 2);
     return { ...c, dormant: Number.isFinite(date) && date < cutoff.getTime(), score: (includes(c.company, targets.companies) ? 10 : 0) + (includes(c.role, targets.roles) ? 2 : 0) };
   }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 }
 
 /** The only fields copied out of the device-local address book when the user adds someone. */
 export function contactFields(c: Connection) { return { name: c.name, company: c.company, role: c.role, profileUrl: c.profileUrl }; }
+
+export type AddDefaults = { goal: string; intent: string; bridge: string; tier: "tier_1" | "tier_2" };
+
+/** Creates a contact from one connection. The request carries name, company, role and link, plus the contact's own settings. */
+export async function addConnectionAsContact<T = { id: string }>(c: Connection, defaults: AddDefaults, fetchImpl: typeof fetch = fetch): Promise<T> {
+  const res = await fetchImpl("/api/outreach/contacts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...contactFields(c), profileUrl: c.profileUrl || null, ...defaults, source: "connections" }),
+  });
+  const data = await res.json().catch(() => ({})) as { contact?: T; error?: string };
+  if (!res.ok || !data.contact) throw new Error(data.error || "Couldn't add this person. Try again.");
+  return data.contact;
+}
 
 const DB = "lynkr-connections";
 const STORE = "connections";

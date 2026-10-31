@@ -99,6 +99,8 @@ export const FACT_KINDS = [
   "warm_path",
   "offer",
   "must_have",
+  // Outreach v2: an answer to a goal question (for example the role you are looking for).
+  "goal_detail",
 ] as const;
 export type FactKind = (typeof FACT_KINDS)[number];
 
@@ -116,10 +118,11 @@ export const FACT_KIND_LABEL: Record<FactKind, string> = {
   warm_path: "A way in you already have",
   offer: "What you can offer",
   must_have: "Must-have",
+  goal_detail: "Detail about your goal",
 };
 
 /** Kinds that only ever go into private outreach, never a headline, About or post. */
-export const OUTREACH_ONLY_KINDS: readonly FactKind[] = ["target", "goal", "target_company", "warm_path", "must_have"];
+export const OUTREACH_ONLY_KINDS: readonly FactKind[] = ["target", "goal", "target_company", "warm_path", "must_have", "goal_detail"];
 
 /**
  * How solid a fact is, worked out from the answer itself: is there a concrete example,

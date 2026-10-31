@@ -41,6 +41,7 @@ const KIND_SECTION: Record<FactKind, ReadBackSection> = {
   learning: "wins",
   opinion: "wins",
   goal: "want",
+  goal_detail: "want",
   target: "people",
   target_company: "people",
   warm_path: "people",

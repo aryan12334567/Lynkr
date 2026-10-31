@@ -421,3 +421,50 @@ export const FirstWinRequest = z.object({
 
 export const FirstWinReply = z.object({ headline: z.string(), referral: Draft });
 export type FirstWinReply = z.infer<typeof FirstWinReply>;
+
+// ---- outreach draft engine v2 (build plan U3) ----
+
+/** One answer to a goal question ("Make it stronger"). It is saved as a confirmed goal_detail fact. */
+export const DraftAnswer = z.object({ key: z.string().trim().min(1).max(40), text: z.string().trim().min(1).max(200) }).strict();
+
+export const DraftRequest = z
+  .object({
+    contactId: z.string().uuid(),
+    channel: z.enum(CHANNELS),
+    /** 200 on a free LinkedIn account, 300 on Premium. Only the connection note reads it. */
+    noteLimit: z.union([z.literal(200), z.literal(300)]).optional(),
+    /** Notes the person gets each month. Defaults to 3 (KD7). */
+    monthlyNotes: z.number().int().min(0).max(30).optional(),
+    /** "Write a note anyway" after the advice was a blank invite. */
+    forceNote: z.boolean().optional(),
+    answer: DraftAnswer.optional(),
+  })
+  .strict();
+export type DraftRequest = z.infer<typeof DraftRequest>;
+
+/** What the model returns: versions only. Data decides angle, ask and length; the model writes the words. */
+export const DraftModelReply = z.object({
+  versions: z.array(z.object({ angle: z.string(), body: z.string(), factRefs: z.array(z.string()), briefRefs: z.array(z.string()) })).max(4),
+});
+export type DraftModelReply = z.infer<typeof DraftModelReply>;
+
+export const DRAFT_ADVICE = ["note", "blank_invite", "message"] as const;
+
+/** What the route returns. strongerQuestion is "" when nothing more would clearly help; strongerKey and strongerOptions let the screen offer tap answers. */
+export const DraftReply = z.object({
+  versions: z
+    .array(z.object({ angle: z.string(), body: z.string(), factRefs: z.array(z.string()), briefRefs: z.array(z.string()), verdict: z.string() }))
+    .min(1)
+    .max(3),
+  strongerQuestion: z.string(),
+  strongerKey: z.string().optional(),
+  strongerOptions: z.array(z.string()).optional(),
+  recommendation: z.string().optional(),
+  advice: z.enum(DRAFT_ADVICE).optional(),
+  /** The channel the versions are written for. It differs from the request when the advice is a blank invite. */
+  channel: z.enum(CHANNELS).optional(),
+  notesLeft: z.number().int().optional(),
+  canWriteNote: z.boolean().optional(),
+});
+export type DraftReply = z.infer<typeof DraftReply>;
+

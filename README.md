@@ -1,5 +1,7 @@
 # Lynkr
 
+Profile Fix and its job-page import have been removed from the app. Historical notes and screenshots below describe earlier versions.
+
 A LinkedIn co-pilot (₹499 a month, taxes included) for freshers, experienced job seekers and networkers. It interviews you (voice or typing), builds a private Story Vault of your real facts, then drafts a profile fix, outreach and referral messages, connection notes, 3 posts and 2 comments with fill-in-the-blank gaps. You copy and send everything yourself in LinkedIn. Nothing is posted for you.
 
 Full product spec, feature matrix and decisions: [`CONTEXT.md`](CONTEXT.md). Reddit evidence: [`research/reddit-pain-points.md`](research/reddit-pain-points.md). Build plan: [`research/build-plan.md`](research/build-plan.md).

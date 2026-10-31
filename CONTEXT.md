@@ -1,5 +1,7 @@
 # Lynkr — project context
 
+> **Overrides, 2026-10-29 (Aryan: "make changes as per uplinked, override").** For posts, UpLinked's method replaces the older rules below: (1) a per-post interview before every post draft; (2) complete post drafts, no `[[blank]]` slots, still never inventing facts; (3) visuals (AI image, carousel, edit own photo) with a monthly picture allowance; (4) one-click publish and scheduled auto-publish through LinkedIn's official API (Sign in with LinkedIn plus `w_member_social`), one server job per scheduled post. Lines below that say "no LinkedIn login", "no auto-posting", "copy is disabled until every slot is filled", "carousels/visuals" or "one-click publish" as out of scope are superseded for posts. Outreach messages, connection requests and comments still never send automatically. Plan: `research/build-plan-posts.md`. Evidence: `research/feature-evidence-posts.md`. Profile fix is removed.
+
 A LinkedIn co-pilot for freshers, experienced job seekers and networkers (₹499 a month), originally a free "get-noticed" coach for Indian freshers, built on UpLinked's published stack and feature set, with some UpLinked features removed and new ones added, shaped by Reddit pain-point research.
 
 ## Status (2026-10-24)

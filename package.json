@@ -10,7 +10,10 @@
     "test": "node --no-warnings --import ./tests/register.mjs --test tests/*.test.mts",
     "test:e2e": "node tests/e2e.mjs && node tests/e2e-a11y.mjs",
     "db:migrate": "node --no-warnings --import ./tests/register.mjs scripts/db-migrate.mts",
-    "test:e2e:v2": "node tests/e2e-interview.mjs && node tests/e2e-interview-a11y.mjs"
+    "test:e2e:v2": "node tests/e2e-interview.mjs && node tests/e2e-interview-a11y.mjs",
+    "ext:build": "node extension/build.mjs",
+    "test:ext": "node --test tests/ext-extension.test.mjs",
+    "eval:outreach": "node --no-warnings --import ./tests/register.mjs scripts/eval-outreach.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

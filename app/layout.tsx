@@ -25,7 +25,7 @@ const display = Mona_Sans({
 
 export const metadata: Metadata = {
   title: "Lynkr",
-  description: "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts your profile, messages and posts from facts you confirm.",
+  description: "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts messages and posts from facts you confirm.",
   verification: {
     google: "D2FKxikgMBg1m6UZKzFROoJdya6hOau3b0hMkD-JayI",
   },
@@ -41,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en-IN" className={`${sans.variable} ${display.variable} h-full antialiased`}>
       <head>
         <Script
-          id="clarity"
+          id="ms-clarity"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window, document, "clarity", "script", "z4fk3z8waa");`,

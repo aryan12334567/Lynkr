@@ -63,7 +63,7 @@ function GoogleMark() {
 
 const COLUMNS = [
   ["Facts you confirmed, nothing invented", "Blanks for anything Lynkr doesn't know", "Under 200 characters for a connection note", "One clear ask per message"],
-  ["Never your LinkedIn password", "Nothing posted or sent for you", "Your Story Vault, saved to your account", "Top three profile fixes first"],
+  ["Never your LinkedIn password", "Nothing posted or sent for you", "Your Story Vault, saved to your account", "Drafts based on your own facts"],
   ["A Monday to Friday plan", "Comments that use your own point", "Marks the exact words to change", "Cancel any time"],
 ];
 

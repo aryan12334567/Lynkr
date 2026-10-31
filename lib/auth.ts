@@ -77,7 +77,7 @@ function build() {
     },
     // Apple returns to the site with a form POST from its own origin.
     trustedOrigins: [...previewOrigins(), ...(appleConfigured() ? ["https://appleid.apple.com"] : [])],
-    account: { accountLinking: { enabled: true, trustedProviders: ["google", "apple", "linkedin"] } },
+    account: { accountLinking: { enabled: true, trustedProviders: ["google", "apple"] } },
     rateLimit: { enabled: true, window: 60, max: 30 },
     plugins: [
       // A six-digit code instead of a link: it works even when the email opens in a different browser or app.

@@ -4,10 +4,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deflateRawSync } from "node:zlib";
 import { mockComment, mockInterview, mockVault, SKIPPED } from "../lib/mock";
-import { ProfileInput, type StoryFact, type Turn } from "../lib/schemas";
+import { ProfileInput, type Turn } from "../lib/schemas";
 import { matchRole, suggestDomain, suggestTopics } from "../lib/roles";
-import { auditProfile, jdTerms, splitPasted, topFixes } from "../lib/profileAudit";
-import { listZip, parseCsv, readExport, EMPTY_IMPORT } from "../lib/linkedinExport";
+import { listZip, parseCsv, readExport } from "../lib/linkedinExport";
 import { validComment } from "../lib/comment";
 import { migrate } from "../lib/store";
 
@@ -56,44 +55,6 @@ test("roles: domain is suggested from the role text only; topics come from the u
   assert.equal(suggestDomain("Something unusual"), "not_sure");
   assert.equal(matchRole("career coach"), null, "no accidental substring match");
   assert.deepEqual(suggestTopics("Data analyst", ["I used SQL and Power BI for the fest."]), ["SQL", "Power BI"]);
-});
-
-const fact = (id: string, kind: StoryFact["kind"], text: string): StoryFact => ({ id, kind, text, sourceTurnIds: [1], reviewStatus: "confirmed", useInDrafts: true });
-
-test("profile audit: role-specific, evidence-backed, top three, no appearance judgement", () => {
-  const facts = [fact("F1", "project", "I built a Power BI dashboard using SQL for 40 sponsors."), fact("F2", "contribution", "I wrote the SQL queries myself.")];
-  const imported = {
-    ...EMPTY_IMPORT,
-    headline: "Commerce student | Hardworking",
-    summary: "I am a passionate learner.",
-    positions: [{ title: "Intern", company: "Acme", description: "Responsible for reports.", started: "", finished: "" }],
-    skills: ["Excel"],
-    education: [{ school: "Pune College", degree: "B.Com", started: "", finished: "" }],
-  };
-  const findings = auditProfile({ profile, facts, imported, jobDescription: "We need SQL, Tableau and Python.", headlines: ["Data analyst | [[proof]]"], about: "About draft" });
-  const by = (s: string) => findings.filter((f) => f.section === s);
-  assert.equal(by("Headline")[0].status, "fix_first");
-  assert.match(by("Headline")[0].issue, /Data analyst/);
-  assert.equal(by("About")[0].status, "fix_first");
-  assert.equal(by("Experience")[0].status, "fix_first");
-  assert.ok(by("Skills").some((f) => /SQL/.test(f.proposedChange ?? "")), "suggests a skill the user actually used");
-  const gap = by("Skills").find((f) => /job description/.test(f.observedSignal));
-  assert.ok(gap && /Tableau/.test(gap.observedSignal) && !/SQL/.test(gap.observedSignal), "JD gaps exclude skills the user has used");
-  for (const f of findings.filter((x) => x.status === "fix_first")) assert.ok(f.evidenceRefs.length > 0, `${f.section} cites evidence`);
-  assert.ok(topFixes(findings, profile).length <= 3);
-  const photo = by("Profile photo")[0];
-  assert.equal(photo.status, "cannot_assess");
-  assert.doesNotMatch(JSON.stringify(findings), /beard|attractive|skin|smile more|look younger/i);
-  assert.ok(!JSON.stringify(findings).match(/\bscore\b.*\d+\s*\/\s*100/), "no global score");
-});
-
-test("profile audit: without an import, unseen sections say 'check yourself'", () => {
-  const p = ProfileInput.parse({ ...profile, currentProfile: "Aspiring data analyst | SQL\nI built a Power BI dashboard for 40 sponsors at my college fest and cut reporting time by 6 hours a week. I'm looking for analyst roles in Pune." });
-  const findings = auditProfile({ profile: p, facts: [], imported: null, jobDescription: "", headlines: ["x"], about: "y" });
-  assert.equal(findings.find((f) => f.section === "Headline")!.status, "strong");
-  assert.equal(findings.find((f) => f.section === "Experience")!.status, "cannot_assess");
-  assert.deepEqual(splitPasted("Head\nAbout one\nAbout two"), { headline: "Head", about: "About one\nAbout two" });
-  assert.deepEqual(jdTerms(""), []);
 });
 
 /** A minimal ZIP writer for the test: deflate entries plus a central directory. */

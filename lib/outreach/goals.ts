@@ -85,6 +85,23 @@ export const GOALS: readonly GoalDefinition[] = [
 ];
 
 export function goalFor(id: OutreachGoal): GoalDefinition { return GOALS.find(g => g.id === id)!; }
+
+// ---- after-meeting rules (build plan R40, R43) ----
+
+/** Goals that are offered a "referral ask" step after a meeting. It does not change the first message (see defaultIntent). */
+export const REFERRAL_ASK_GOALS: readonly string[] = ["job", "referral"];
+export function allowsReferralAsk(goal: string): boolean { return REFERRAL_ASK_GOALS.includes(goal); }
+
+/** Conversation goals: a meeting marked Useful meets their success text. */
+export const CONVERSATION_GOALS: readonly string[] = ["network", "clients", "hiring", "funding", "buy_business", "partner"];
+
+/** A record that may meet a goal's success text (R40). Rating "good" is how the meeting card stores Useful. */
+export type SuccessRecord = { kind: "reply" } | { kind: "meeting_done"; happened: "yes" | "no_show" | "moved" | null; rating: "good" | "neutral" | "bad" | null };
+/** Whether this record meets the goal's success, so Goal reached is ticked by default (the person can untick it). */
+export function recordMeetsGoal(goal: string, record: SuccessRecord): boolean {
+ if (record.kind === "reply") return goal === "reconnect";
+ return CONVERSATION_GOALS.includes(goal) && record.happened === "yes" && record.rating === "good";
+}
 export function defaultIntent(goal: OutreachGoal, relationship: Relationship): Intent { return goalFor(goal).intents[relationship]; }
 
 const WANT_BY_LABEL = new Map<string, Want>((Object.entries(WANT_LABEL) as [Want, string][]).map(([want, label]) => [label.toLowerCase(), want]));

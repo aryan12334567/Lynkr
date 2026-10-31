@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { transaction, type Db } from "../db";
 import { todayIST } from "../ist";
 import { getContact, type Contact, type ContactStatus } from "./contacts-db";
+import { suggest } from "./followup";
 
 /**
  * The contact timeline (build plan KTD14, KTD15): every step is an event row, and the contact's
@@ -64,12 +65,12 @@ export class TimelineError extends Error {
 }
 
 /**
- * Suggestion rules (KTD16). `followup.suggest(contact, events, now)` takes this seam's place in U15:
- * it returns the ops to apply after the user's op: due events (each with its `opId`, `rule` text and the
- * `triggerId` of the event that caused it) and supersede ops. Until then no suggestions are made.
+ * Suggestion rules (KTD16). `followup.suggest(contact, events, now)` returns the ops to apply after the
+ * user's op: due events (each with its `opId`, `rule` text and the `triggerId` of the event that caused it)
+ * and supersede ops.
  */
 export type Suggest = (contact: Contact, events: TimelineEvent[], now: Date) => Array<InsertOp | SupersedeOp>;
-export const suggest: Suggest = () => [];
+export { suggest };
 
 type Row = Record<string, unknown>;
 const when = (x: unknown) => (x ? new Date(x as string) : null);

@@ -18,7 +18,7 @@ const NOW = new Date("2026-11-10T10:00:00Z");
 const day = (d: number) => new Date(Date.UTC(2026, 10, d, 5, 0, 0)); // 5 Nov 2026 05:00Z is 10:30 IST
 let n = 0;
 const op = (contactId: string, kind: InsertOp["kind"], doneAt: Date, extra: Partial<InsertOp> = {}): InsertOp => ({ type: "insert", opId: `op-${++n}`, contactId, kind, doneAt, ...extra });
-const rec = (db: Db, user: string, o: TimelineOp, opts?: { suggest?: Suggest }) => recordEvent(db, user, o, { now: NOW, ...opts });
+const rec = (db: Db, user: string, o: TimelineOp, opts?: { suggest?: Suggest }) => recordEvent(db, user, o, { now: NOW, suggest: () => [], ...opts });
 
 test("invite_sent, accepted and message_sent give status messaged with the three dates", async () => {
   const { pg, db } = await fresh();

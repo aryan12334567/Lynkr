@@ -1484,3 +1484,29 @@ sequenceDiagram
 - Meeting notes appear only in that contact's drafts and in export (checked by a test on the posts and comment loaders).
 
 **Per unit:** the unit's Verification line holds, its tests are in the repo and pass, and its three-line entry is in the progress file.
+
+---
+
+## Build status at 2026-10-31 (drift check against `feat/combined-build`, commit 619ff6e)
+
+Plan unchanged; no decision invalidated. Hosting moved from Vercel to Render (`render.yaml`); cron-job.org runs the timers. Dodo Test Mode only. LinkedIn keys wait for Interview U16.
+
+| Unit | State in code | What is missing |
+|---|---|---|
+| U0 | Done (extension spike, `tests/fixtures/linkedin-like.html`, `tests/ext-extension.test.mjs`) | Real-LinkedIn confirmation is Aryan's A6 |
+| U1 | Done (`002_outreach.sql`, `contacts-db.ts`, `outreach-db.test.mts`) | — |
+| U2 | Partial: `goals.ts` (23 lines), `playbooks.ts` (21 lines) are stubs | Full goal catalog, goal details, goal x relationship playbooks, interview defaults |
+| U3 | Partial: `draft.ts` (95 lines) | Evidence pack, trace guard, note-vs-blank advice, **`lib/facts.ts`** (the U3 revision), `lib/prompts.ts` changes |
+| U4 | Partial: `search.ts` (48), `brief.ts` (11), brief route (64) | Exa provider with exclusions and caps, bridge detection, sensitive filter, no-hook, identity confirmation |
+| U5 | Mostly done: `connections.ts` (77) | `lib/linkedinExport.ts` link, ranking checks, fixture `connections.csv` |
+| U6 | Stub: `finder.ts` (12) | LAMP, directories, signals, `app/api/outreach/signals/route.ts` |
+| U7 | Partial: `OutreachWorkspace.tsx` only | GoalSetup, PeopleBoard, PersonCard, BriefPanel, DraftVersions, ConnectionsImport, Finder, ExtensionConnect |
+| U8 | Superseded by U15 and U20 | — |
+| U9 | Partial: `app/api/ext/*` small routes | Hardening, tests per plan |
+| U10 | Partial: `extension/src/*` | `api.ts`, sidepanel screens, store listing checks |
+| U11 | Partial: `terms-draft-v3.md`, `extension/store/listing.md` | Privacy page changes listed in "Payments and access changes" |
+| U12 | Partial: `scripts/eval-outreach.mts`, `eval-vertical3.md` | Timeline intents across 10 goals, injection fixtures |
+| U13 | Not started | e2e and a11y scripts, docs |
+| U14–U20 | Not started | Migration 005 (`005_outreach_timeline.sql`; 003 is Posts and 004 is the Commenter, so a gap is expected and `db:migrate` applies files in name order), `timeline.ts`, routes, person card timeline, meeting card, extension taps, Today and weekly plan |
+
+`research/progress-vertical3.md` is stale on U1 ("Agent spawned") and must be rewritten with three lines per unit as each unit is finished.

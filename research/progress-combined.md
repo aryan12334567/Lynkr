@@ -21,4 +21,4 @@
 ## Log
 
 - **2026-10-30:** Wave 0 completed, repository cleaned, decisions locked, ready to execute Wave 1 units in parallel according to `research/build-plan-combined.md` §4.
-- **2026-10-31:** Legal check for D-C8 completed (green light) and Dodo pricing adjustment message sent (B1 completed). Wave 1 implementation units actively executing across Interview, Outreach, Posts, Calendar Stage 1, and Billing Lifecycle.
+- **2026-10-31:** Legal check for D-C8 completed (green light) and Dodo pricing adjustment message sent (B1 completed). Code pushed to GitHub `feat/combined-build` branch. Wave 1 implementation units actively executing across Interview, Outreach, Posts, Calendar Stage 1, and Billing Lifecycle.

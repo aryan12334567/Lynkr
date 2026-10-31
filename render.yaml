@@ -1,0 +1,47 @@
+# Render blueprint for Lynkr. Replaces Vercel (Hobby forbids commercial use; Pro was declined).
+# Secrets use sync: false: Aryan pastes each value in the Render dashboard, never in this file or in chat.
+services:
+  - type: web
+    name: lynkr
+    runtime: node
+    region: singapore
+    plan: starter
+    branch: master
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/status
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: BETTER_AUTH_URL
+        value: https://www.lynkr.cloud
+      # Feature switches: today's behaviour until each part is released.
+      - key: LYNKR_INTERVIEW
+        value: v1
+      - key: LYNKR_OUTREACH
+        value: v1
+      - key: LLM_MODEL
+        value: gpt-5-mini
+      - key: LYNKR_DAILY_CAP
+        value: "200"
+      - key: DODO_ENVIRONMENT
+        value: test_mode
+      - key: LYNKR_ALLOW_TEST_PAYMENTS
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: APIFY_API_KEY
+        sync: false
+      - key: DODO_PAYMENTS_API_KEY
+        sync: false
+      - key: DODO_PAYMENTS_WEBHOOK_KEY
+        sync: false
+      - key: DODO_PRODUCT_ID
+        sync: false
+      - key: CRON_SECRET
+        sync: false

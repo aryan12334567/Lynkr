@@ -15,8 +15,17 @@ The Lynkr Chrome extension helps you use Lynkr drafts on LinkedIn by:
 - Inserting a draft you choose into a LinkedIn text box you clicked
 - Reading text you select and choose to send to Lynkr (through the "Write with Lynkr" menu)
 - Saving a LinkedIn profile URL when you press "Save this profile link"
+- Letting you tap what happened with a contact (for example "Invite sent", "Accepted", "Reply received", "Meeting done")
 
 The extension never reads LinkedIn pages, never clicks or sends anything on LinkedIn, and never acts without you pressing a button or menu item first.
+
+### What Outreach Keeps for You
+
+Outreach is part of the paid plan. In your Lynkr account it keeps your contacts, a one-line "why you connected" for each, at most 3 facts per contact with their sources, your drafts, the dated steps of each contact's timeline, and optional one-line meeting notes. Lynkr records a step only when you record it; it does not read your LinkedIn messages, inbox or calendar. Meeting notes are shown to you only and are not sent to the AI provider. The Privacy Policy lists what is stored and sent in full.
+
+You can download all of it, delete one contact, or delete everything at any time. It is also removed automatically after 12 months without activity. Do not enter other people's private information such as health, money, family or ID details; a short, factual meeting note is fine.
+
+Calendar items you export (Google Calendar link or .ics file) become copies in your own calendar. Lynkr cannot remove them and never sends a calendar invitation.
 
 ### Your Responsibility for Messages
 
@@ -46,6 +55,7 @@ The extension asks for these Chrome permissions:
 - **storage:** Saves your pairing token in the extension so you stay signed in.
 - **sidePanel:** Opens the panel beside LinkedIn.
 - **scripting:** Runs the insert function in the active tab when you click Insert.
+- **Access to lynkr.cloud:** Lets the extension talk to Lynkr's servers (and to localhost during development). It is not access to LinkedIn.
 
 The extension asks for no permission to read `linkedin.com` pages. It can only insert text and read what you explicitly select or the address when you ask.
 
@@ -66,17 +76,19 @@ The extension works only when:
 - You have an active Lynkr subscription (the extension checks this on each request)
 - You've paired the extension from the Lynkr web app
 
-If your subscription ends, the extension shows an upgrade message and stops working until you renew.
+If your subscription ends, the extension shows an upgrade message and stops working until you renew. Writing drafts and recording new steps need an active subscription. You can still read, download and delete your contacts, timelines and notes without one.
 
 ### Data the Extension Sends
 
 When you use the extension:
 - The token is sent with every request to identify you
-- Text you select and confirm is sent once for drafting, then discarded
+- Text you select is sent once for drafting and is not saved by Lynkr
 - Profile URLs you save are sent to add them to your contacts
-- Outcomes you mark are sent to update contact stages
+- Records you tap (invite, accepted, message sent, reply, meeting and so on) are sent to update the contact's timeline
 
-The extension sends data only to Lynkr's servers (`lynkr.cloud` and its preview/local origins during development), never to other sites.
+The extension sends data only to Lynkr's servers (`lynkr.cloud` and its preview/local origins during development), never to other sites. From there:
+- To write a draft, Lynkr sends the AI provider (currently OpenAI) your goal, your confirmed facts, up to 3 facts about the person with their sources, the "why you connected" line and any text you selected. It does not send meeting notes.
+- To find public pages about a person, Lynkr sends the search words (usually a name and company) to Exa, and later fetches only the results you confirm. Searches leave out LinkedIn and social networks.
 
 ### If LinkedIn Changes Its Interface
 
@@ -120,5 +132,5 @@ For the full terms, see the main Terms of Service page.
 
 ---
 
-**Last updated:** 2026-10-28 (draft)  
+**Last updated:** 2026-10-31 (draft)  
 **Effective:** When published after A5 approval

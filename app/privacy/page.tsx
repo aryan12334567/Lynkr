@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { ContactEmail, LegalPage, Section } from "@/components/LegalPage";
 import { SITE } from "@/lib/site";
+import { outreachVersion } from "@/lib/outreach/flags";
+import PrivacyOutreachV2 from "./page-uv2-privacy";
 
 export const metadata: Metadata = { title: "Privacy Policy | Lynkr", description: "What Lynkr does with your data, in plain words." };
 
 export default function Privacy() {
+  // Outreach v2 draft text (U11). With the switch off, the text below is served unchanged.
+  if (outreachVersion() === "v2") return <PrivacyOutreachV2 />;
   return (
     <LegalPage title="Privacy Policy">
       <p>

@@ -2,7 +2,7 @@
 
 **Draft status:** Awaiting A5 approval. Do not publish.
 
-**Testers:** 5 people with existing Lynkr accounts or willing to sign up for free tier
+**Testers:** 5 people with a Lynkr account and an active Lynkr subscription (Outreach is paid; Aryan tells you how your access is arranged)
 
 **Environment:** Chrome desktop, Lynkr preview (or production if v2 is live)
 
@@ -17,7 +17,8 @@ This brief explains what to test, what to look for, and any known limitations. T
 - Your drafts are specific, truthful, and reference real facts
 - The extension insertion works reliably on LinkedIn
 - The briefs and drafts from public pages are accurate
-- You can complete the 6-step check from Aryan's plan without surprises
+- You can complete the 6-step check below without surprises
+- Each contact's timeline, next steps and meeting card make sense and never record anything you did not tap
 
 ---
 
@@ -27,7 +28,7 @@ This brief explains what to test, what to look for, and any known limitations. T
 
 **What to bring:**
 - Chrome browser
-- Lynkr account (free tier is fine)
+- Lynkr account with an active subscription (the extension and drafting do not work without one)
 - Gmail account (optional, to verify syncing)
 - Minutes to write short feedback after each test
 
@@ -59,7 +60,7 @@ This brief explains what to test, what to look for, and any known limitations. T
 - The extension panel opens with your contact list
 - You see "Paired" or "Connected" status
 
-**Known limitation:** If you're on unpaid Lynkr tier, the extension will show an upgrade card instead of contacts until you subscribe
+**Known limitation:** If your subscription is not active, the extension shows an upgrade card instead of contacts. Your contacts stay readable, downloadable and deletable in the web app.
 
 ---
 
@@ -197,6 +198,20 @@ Verify that NO message was sent automatically:
 - [ ] The "Make it stronger" question appears if a goal detail is missing
 - [ ] Answering the question saves it as a `goal_detail` fact, never asked again
 
+### Timeline and Meetings
+
+- [ ] A new contact's card shows "Why you connected" first (one line, up to 200 characters; you can edit it) and a button to record "Invite sent"
+- [ ] The card shows the next step with its reason, a "Write it" button, "Change date" and "Not now"
+- [ ] Tap Invite sent, Accepted, Message sent: each appears in the timeline with a date and a text status (Done, Scheduled, Suggested)
+- [ ] Undo a wrong record: it shows as replaced (struck through), and the steps it had suggested disappear
+- [ ] Lynkr ASKS ("Did she reply?") before it suggests a follow-up or a second person. It never decides on its own that someone did not reply
+- [ ] "Meeting booked" accepts a future date and time; "Meeting done" and the other records accept today or past dates only
+- [ ] About an hour after a meeting's time, the next time you open Lynkr a meeting card asks: did it happen (Yes, No-show, Moved), how was it (optional), what's next
+- [ ] The optional meeting note (max 280 characters) shows only to you, with its date. The hint reads "Skip health, money, family or ID details"
+- [ ] "Add to Google Calendar" or the .ics download works for a meeting. Lynkr sends no invitation
+- [ ] If your subscription is lapsed (ask Aryan to test this once), the timeline is still readable, and records are replaced by "Subscribe to record steps"
+- [ ] My data: "Download my data" includes your contacts, timelines and notes; deleting a contact removes its timeline and notes
+
 ### Extension Side Panel
 
 - [ ] When paired, the panel shows: contact picker → goal/intent → drafts → notes left → Save link → outcome taps
@@ -220,15 +235,21 @@ When reporting bugs during testing, classify by these documented limitations:
 
 2. **No automation of LinkedIn actions:** The extension does not send connection requests or messages. It only gets text ready for you to send. If your test expects auto-send, that's not built.
 
-3. **Daily and monthly search caps:** 20 searches per user per day, 2000 across all users by default. If you hit the limit during testing, search is paused. You can raise the cap in code (environment variable `LYNKR_SEARCH_MONTHLY_CAP`).
+3. **Daily and monthly search caps:** 20 searches per user per day, 2000 across all users by default. If you hit the limit during testing, search is paused. Tell Aryan if you hit it; he can change it.
 
-4. **Selected text is not stored:** The extension receives selected text once, uses it for drafting, and then discards the raw selection. You're responsible for saving anything you want to keep in Lynkr's vault.
+4. **Selected text is not stored:** The extension receives selected text once and uses it for drafting; Lynkr does not save the raw selection. It is sent to the AI provider (OpenAI) to write the draft. You're responsible for saving anything you want to keep in Lynkr's vault.
 
 5. **Extension insertion failure fallback:** If LinkedIn changes its text editor and insertion fails, the extension copies the draft to your clipboard and tells you to paste it. This fallback always works.
 
 6. **Briefs from public pages only:** Brief facts come from public pages outside LinkedIn (Exa, directories, news) that you confirm. Lynkr does not crawl LinkedIn or social networks for personal data.
 
 7. **Breaking with v1 behavior:** If `LYNKR_OUTREACH=v1` in Preview or Production, everything behaves as before: separate Outreach and Connect tabs, browser-tracker people, no goals in the brief. v2 only activates on v1 when you set `LYNKR_OUTREACH=v2` manually (Aryan) or preview auto-detects it.
+
+8. **Lynkr never reads your LinkedIn messages, inbox or calendar.** The timeline moves only when you tap a record. If you replied or had a meeting and did not record it, Lynkr will ask; it does not know.
+
+9. **Meeting notes are shown to you only.** They are not sent to the AI provider and do not appear in drafts in this round.
+
+10. **Privacy and what is stored:** please read the draft Privacy text once before your first session and tell Aryan about any line that does not match what you saw (what is read, stored and sent). Do not enter other people's private information such as health, money, family or ID details in notes, facts or "why you connected" lines.
 
 ---
 
@@ -264,6 +285,9 @@ Your tests count as passing Outreach if:
 - **Accuracy:** 0 claims that can't be traced to facts, 0 placeholders, 100% of drafts within channel limits
 - **Extension:** Insertion works on real LinkedIn without unexpected failures
 - **Briefing:** At least 1 contact where briefs from public pages are accurate and useful
+- **Meetings (pending Aryan's confirmation of D-O4):** of testers who have at least one booked meeting, at least 80% answer its meeting card within 7 days. How many testers had a meeting is reported separately, with no target
+- **Due steps (pending D-O4):** at least 60% of the steps that fall due in weeks one and two are marked done, moved or dismissed by the tester within 7 days
+- Both targets count only what testers did themselves; steps the rules suggest do not count
 
 ---
 
@@ -293,7 +317,7 @@ No need to blame — just report the same details above, and Aryan will decide i
 
 ---
 
-**Last updated:** 2026-10-28 (draft)  
+**Last updated:** 2026-10-31 (draft)  
 **Effective:** When published after A5 approval
 
 ---

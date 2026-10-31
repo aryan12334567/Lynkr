@@ -1,36 +1,53 @@
 # Chrome Web Store Listing Draft - Lynkr Outreach Extension
 
-**Draft status:** Awaiting A5 approval. Do not publish.
+**Draft status:** Awaiting A5 approval. Do not publish (S1).
+
+Every statement below must match the shipped extension (`extension/manifest.json`) and the Privacy Policy draft (`app/privacy/page-uv2-privacy.tsx`). The table at the end maps each claim to a requirement.
 
 ---
 
-## One-line Description
+## Name and summary (max 132 characters)
 
-Write better LinkedIn messages. Lynkr drafts personalized outreach messages from your facts and sends them to LinkedIn.
+**Name:** Lynkr Draft Assistant
 
----
-
-## Overview
-
-Lynkr helps you reach people on LinkedIn with messages that are specific, truthful and tailored to the person. Select text from LinkedIn, pull in facts from public pages outside LinkedIn, or add recipients from your own connections. Lynkr writes complete drafts for you to review, and the Chrome extension lets you insert them into LinkedIn's message box with one click.
+**Summary:** Put a Lynkr draft into the LinkedIn box you clicked and track each contact. You review and send everything yourself.
 
 ---
 
-## What Lynkr Does
+## Single purpose
 
-- **Gather facts about the person**: See their background, recent activity, and what they're working on
-- **Build a tailored brief**: Get a one-screen summary of who they are and why they're relevant
-- **Write personalized drafts**: Choose goals like "find a job", "win clients", or "find a mentor", and Lynkr writes complete messages tailored to that goal
-- **Pick the best version**: View 2–3 different angles for each message, then choose the one that feels right
-- **Send from LinkedIn**: Insert drafts into LinkedIn's message box, or copy-paste them manually
+Lynkr Draft Assistant lets you review a message that Lynkr wrote for a contact and put it into the LinkedIn message or comment box you clicked, then record what happened with that contact. It never reads LinkedIn pages and never sends anything.
 
 ---
 
-## Key Features
+## Description
 
-### 1. Goal-Based Drafts
+Lynkr helps you write to people on LinkedIn with messages that are specific, truthful and complete. You choose a goal (a job, a referral, clients, a mentor and so on), add the person, and Lynkr writes two or three finished versions from facts you confirmed. This extension brings those drafts to where you write.
 
-Choose what you want to achieve:
+**What the extension does**
+
+- Shows your contacts and their ready drafts in a side panel.
+- Puts the draft you choose into the LinkedIn box you clicked. If that does not work, it copies the draft and tells you to paste it.
+- Adds "Write with Lynkr" to the right-click menu. Lynkr receives the text you selected, not the page.
+- Saves a LinkedIn profile address when you press "Save this profile link". Lynkr receives the address of the tab, nothing from the page.
+- Lets you tap what happened (invite sent, accepted, message sent, reply, meeting booked, meeting done, goal reached, close). Each tap adds a dated step to that person's timeline, and Lynkr suggests the next step with its reason.
+
+**What it never does**
+
+- It never reads LinkedIn pages or any page content, and never scrapes or crawls LinkedIn or social networks.
+- It never sends a message, comment or connection request. It never clicks anything on the page. You press insert, and you press send.
+- It never reads your LinkedIn messages, inbox or calendar.
+- It asks for no access to linkedin.com pages.
+
+**Requirements:** a Lynkr account and an active Lynkr subscription (Outreach is part of the paid plan). The extension checks your subscription on each request. Drafts are written by an AI model and can contain mistakes: read and edit them before you send.
+
+---
+
+## Key features
+
+### 1. Goal-based drafts
+
+Choose what you want:
 - Find a job
 - Get a referral
 - Learn and network
@@ -42,198 +59,152 @@ Choose what you want to achieve:
 - Find a partner
 - Reconnect with people you know
 
-Lynkr tailors each message to your goal and your relationship to the person.
+Lynkr tailors each message to your goal and how you know the person.
 
-### 2. Fact-Based Writing
+### 2. Facts you can trace
 
-Lynkr's drafts are grounded in facts:
-- Text you select on LinkedIn
-- Public pages you confirm (outside LinkedIn)
-- Your own notes and context in the Story Vault
+Every claim in a draft comes from a fact you confirmed or from the person's role and company. Facts about the person come only from:
+- public pages outside LinkedIn that you confirmed are about them
+- text you selected
+- what you typed
 
-No "no magic" placeholders. Every claim traces to an actual fact or is explicitly hypothetical.
+Each fact shows its source and date. If Lynkr finds no hook, it says so and writes from role and company only.
 
-### 3. Multiple Angles
+### 3. Two or three complete versions
 
-See 2–3 complete message versions with different openings and angles. Choose the one that fits your situation, or style of connection.
+Each version is a complete message that fits the channel (connection note, first message, DM, InMail, email). No blanks or placeholders.
 
-### 4. Chrome Extension
+### 4. A timeline for each contact
 
-The extension brings Lynkr's drafts into LinkedIn:
-- Select text on any page
-- Use "Write with Lynkr" to send it to Lynkr for drafting
-- Insert the chosen draft into a LinkedIn message box with one click
+Why you connected, invite, accepted, message, reply, meeting, how it went, and the next step. Lynkr suggests each next step from a fixed rule and shows the reason. Lynkr asks before it assumes (it never reads a missing record as "no reply"). Steps can be added to your own calendar as a Google Calendar link or an .ics file.
 
 ---
 
-## Permissions Justification
+## Permissions justification
 
 ### activeTab
-**Purpose:** Inserts a draft into the text box you clicked.
+**Purpose:** Puts a draft into the text box you clicked, and reads the tab address when you press "Save this profile link".
 
-Chrome grants `activeTab` only when you take an action (click a button, use the menu, or press the shortcut). The extension uses it to:
-- Type the selected draft into LinkedIn's message or comment box
-- Save the address of the page you're on when you press "Save this profile link"
-- Read only the current tab's URL, not its page content
+Chrome grants `activeTab` only when you act (click a button, use the menu or press the shortcut). The extension reads only the tab's address, not its content.
 
 ### contextMenus
 **Purpose:** Adds "Write with Lynkr" to the right-click menu.
 
-When you select text and right-click, Lynkr receives that selected text without ever reading the page. This lets you turn selected text into a draft source.
+When you select text and choose it, Lynkr receives that selected text, not the page.
 
 ### storage
-**Purpose:** Keeps your pairing token in the extension.
-
-When you connect the extension, Lynkr gives it a token so the extension can identify you. The token is stored locally in the browser and used with every request to Lynkr's servers.
+**Purpose:** Keeps your pairing token in the extension, so it stays paired.
 
 ### sidePanel
-**Purpose:** Opens the Lynkr panel beside LinkedIn.
-
-The panel shows your contacts, goals, and drafts so you can browse them and choose which draft to insert into LinkedIn.
+**Purpose:** Opens the Lynkr panel beside the page, with your contacts, drafts and the one-tap records.
 
 ### scripting
-**Purpose:** Runs the insert function in the active tab.
+**Purpose:** Runs the insert in the active tab.
 
-This executes the browser's insert-text command to type the draft text into the focused text box on LinkedIn. It runs only when you click Insert and requires no access to page content.
+It runs only when you press Insert, in the box you clicked. It does not read the page.
 
-### No host permissions for linkedin.com
+### Host access: lynkr.cloud (and localhost for development)
+**Purpose:** Lets the extension reach Lynkr's servers to fetch your contacts and drafts and to send your selections, saved addresses and records. The extension is also reachable from the Lynkr web app so you can pair it.
 
-The extension asks for no permission to access LinkedIn pages. It can only:
-- Insert text into boxes you clicked
-- Receive selected text through the context menu
-- Save the tab address when you press "Save this profile link"
-
-These are minimal bindings to LinkedIn's interface for manual insertion.
+### No host permission for linkedin.com
+The extension asks for no access to LinkedIn pages. It can only insert text into a box you clicked, receive text you selected, and read the tab address when you ask.
 
 ---
 
-## Data and Privacy
+## Data and privacy disclosures (for the Web Store privacy tab)
 
-### What Lynkr Stores About You
+### What is collected and stored in your Lynkr account
 
-When you use the extension:
-- Your contacts (name, company, role, profile URL, relationship, goal, etc.)
-- At most 3 facts per contact with their sources (public pages, your selections, notes)
-- Your drafts (organized by contact and channel: connection note, first message, DM, InMail, email)
-- Your extension pairing token (stored hashed)
+- Personally identifiable information: your name and email (account), and the names, companies, roles and profile addresses of the people you add as contacts.
+- User content you create: your drafts, goals and goal details, "why you connected" lines (up to 200 characters), up to 3 facts per contact with their sources and dates, and optional one-line meeting notes (up to 280 characters, shown only to you).
+- Activity you record: the dated steps of each contact's timeline.
+- Authentication information: your extension pairing token, stored hashed by Lynkr and kept by the extension in Chrome's local storage.
 
-All of this is stored in Lynkr's account database and only belongs to you.
+Not collected: page content, browsing history, LinkedIn messages, your LinkedIn password or cookies, and location.
 
-### Data Use
+### What is sent, and to whom
 
-- Text you select and send is used once for drafting, then discarded
-- Profile URLs you save are used to add contacts and briefs
-- Drafts are sent to OpenAI for drafting (your subscription covers this)
-- Public pages you search and confirm are fetched only for those results (domains are excluded like linkedin.com, x.com, etc.)
+- Text you select is sent once to Lynkr for drafting, and Lynkr does not save the raw selection.
+- To write a draft, Lynkr sends OpenAI your goal and goal details, your confirmed facts, up to 3 facts about the person with their sources, the "why you connected" line, and any text you selected. Meeting notes are not sent to OpenAI.
+- To find public pages about a person, Lynkr sends the search words (usually a name and company) to Exa, and fetches only the results you confirm. Searches leave out LinkedIn, Facebook, Instagram, X, Threads and Reddit.
+- Nothing is sold or shared for advertising. Nothing is used for creditworthiness or lending.
 
-OpenAI handles your text under its own terms. You're responsible for what you enter—no passwords, government IDs, or other people's private information.
+Only profile addresses you save and records you tap are written to your account from the extension.
 
-### What Lynkr Never Does
+### Retention, export and deletion
 
-- No scraping or automation of LinkedIn
-- No sending messages for you—you send everything
-- No reading LinkedIn pages or scraping profile data
-- No collecting your LinkedIn connections file
-- No selling or sharing your data with third parties
+Kept until you delete it, and removed automatically after 12 months without activity. "Download my data" includes contacts, timelines and notes. "Delete my data" and deleting a contact remove them, including their facts, drafts, timeline steps and notes. If your subscription lapses you can still read, download and delete them. Revoking the extension from My data stops its token at once. Calendar items you exported stay in your own calendar.
 
-### Search Exclusions
+### User guidance
 
-When Lynkr searches for a person on public pages outside LinkedIn, it excludes:
-- LinkedIn, Facebook, Instagram, X (formerly Twitter), Threads, Reddit
-
-Only pages you confirm are about this person are fetched.
-
-### Data Retention
-
-Your contacts and briefs are kept while you're a Lynkr user. You can download and delete all your data at any time through the app. Contacts are removed automatically after 12 months of inactivity.
+Do not enter other people's private information such as health, money, family or ID details. A short, factual meeting note is fine. You are responsible for what you enter and for every message you send.
 
 ---
 
 ## Limitations
 
-- **Paid subscription required:** The extension works only with an active Lynkr account and subscription
-- **LinkedIn’s interface:** If LinkedIn changes its text editors, the extension may need to copy to clipboard as fallback
-- **Search limits:** Daily search limits apply (20 searches per user per day, 2000 across all users by default)
-- **LinkedIn terms:** You must comply with LinkedIn's Terms of Service. Lynkr does not automate LinkedIn actions.
-- **AI drafts:** Drafts are generated by AI. You're responsible for accuracy and appropriateness.
+- **Paid subscription required.** The extension works only with an active Lynkr subscription.
+- **LinkedIn's editors change.** If inserting fails, the extension copies the draft to your clipboard and tells you to paste it.
+- **Search limits.** 20 public-page searches per user per day, and 2,000 a month across all users by default.
+- **LinkedIn's terms.** You must follow LinkedIn's Terms of Service. Lynkr does not automate LinkedIn actions.
+- **AI drafts.** Drafts are written by AI and can contain mistakes. Read and edit them.
+- **No promise of replies.** Lynkr does not promise replies, referrals or jobs.
 
 ---
 
-## Chrome Web Store Safety Guidelines Compliance
+## Who it is for
 
-The extension:
-- Is a single-purpose productivity tool for LinkedIn messaging
-- Is not a browser hijacker or security risk
-- Does not collect excessive permissions
-- Clearly explains in the Privacy Policy what it reads and stores
-- Does not display ads, track users without consent, or compromise privacy
+People who write to people on LinkedIn for a reason (a job, a referral, clients, hiring, funding, a mentor) and want each message to be specific, true, and sent by themselves.
 
 ---
 
-## Who Should Use Lynkr
+## Questions
 
-This extension is for professionals who:
-- Network on LinkedIn and want to write more thoughtful messages
-- Run out of ideas on what to say when reaching out
-- Want their outreach to be specific, not generic
-- Manage LinkedIn as a sales or hiring channel
+- Support and privacy requests: write to the contact address on the Lynkr Contact page (www.lynkr.cloud/contact).
+- Privacy policy: www.lynkr.cloud/privacy
 
 ---
 
-## Should You Use This?
+## Legacy note
 
-Ask yourself:
-- Do I send LinkedIn messages regularly?
-- Do I struggle to know what to write in a post-first message?
-- Do I want my outreach to be based on real facts about the person?
-- Am I willing to review and approve each message before sending?
-
-If you answer yes, Lynkr's extension can help you write better LinkedIn messages.
+Earlier versions of Lynkr kept the people you wrote to in the browser only. With Outreach v2 they are saved to your Lynkr account so you can use them on any device.
 
 ---
 
-## Questions?
-
-- Visit the forum at ask.lynkr.cloud
-- Email support at hello@lynkr.cloud
-- See the privacy policy at www.lynkr.cloud/privacy
-- See the full documentation at docs.lynkr.cloud
+**Last updated:** 2026-10-31 (draft)
+**Effective:** When published after A5 approval (S1)
 
 ---
 
-## Requirements
+### Mapping each claim to a requirement (for Aryan's review)
 
-- Google Chrome browser (applicable at the time of this listing)
-- An active Lynkr account with subscription
-- Assistant (AI provider) access: drafts are written by OpenAI, which requires an active subscription
+Requirement IDs are from `research/build-plan-outreach.md`. KD and KTD are the plan's key decisions.
 
----
-
-## Legacy Acknowledgment
-
-Lynkr earlier versions (v1) used a browser-only tracker. This extension stores contacts in your Lynkr account so you can use them on any device. If you're still using v1 contacts, they appear in your account after you first sign in.
-
----
-
-**Last updated:** 2026-10-28 (draft)  
-**Effective:** When published after A5 approval
-
----
-
-### Mapping to Requirements (for Aryan's review)
-
-| Claim in Listing | Requirement ID | Notes |
+| Claim in this listing | Requirement | Where it is true in the build |
 |---|---|---|
-| Only reads selected text, never LinkedIn pages | R21, R29, KD1 | Explicit on permission page and in-take |
-| No automation of LinkedIn actions | R29, KD8 | Listed in No Automation and Requirements |
-| Inserts text you approve before sending | R23, R24 | "Insert into LinkedIn's message box with one click" |
-| Recipient briefs from public pages outside LinkedIn | R11, KD6 | "Public pages you confirm (outside LinkedIn)" |
-| User is responsible for message content | Terms §Your Responsibility | Explicit statement |
-| Extension asks for no permission to read linkedin.com host | KTD8 manifest | No host_permissions for linkedin.com |
-| Caps: 20 searches/day, 2000/month | R32, KTD6, KTD13 | Listed in Limitations |
-| Contacts and briefs stored per user account | R30, KTD1 | "All of this is stored in Lynkr's account database" |
-| Delete my data and Download my data available | R30 | Implied by "You can download and delete... at any time" |
-| Extension drafts require paid subscription (checking) | KTD12 | Extension checks subscription on each request |
-| Search excludes linkedin.com and social networks | R31, KTD6 | "Excludes: LinkedIn, Facebook, Instagram, X, Threads, Reddit" |
-| Privacy page describes exactly what is read/stored | R33, KD1 | Separate privacy policy visibility |
-| No Facebook/Twitter/X scraping even if URLs contain them | KD6 | Exclusion list explicit |
+| Reads only selected text and the tab address on request | R21, R22, KD1 | Extension permissions and menu; Privacy "What is read" |
+| Never reads page content, clicks or sends | R21, R29, KD8 | No host permission for linkedin.com; insert only on user action |
+| Insert into the box you clicked, otherwise copy and paste | R20, R23 | Extension insert with clipboard fallback |
+| Everything also works in the web app | R24 | Copy draft and open profile in the web app |
+| Save this profile link reads only the address; only /in/ addresses | R8, R21 | Profile-link save |
+| Facts come only from confirmed public pages, selections or typed text, each with source and date | R10, R11, R16 | Brief builder |
+| "No hook found" is valid; role and company only | R12 | Brief and draft |
+| No sensitive details kept as facts | R13 | Brief rules (`lib/outreach/brief.ts`) |
+| Two or three complete versions, no placeholders | R15, R17, R19 | Draft engine and checker |
+| Ten goals | R2 | `lib/outreach/goals.ts` |
+| Search excludes LinkedIn and social networks; only confirmed results fetched | R7, R31, KD6 | `lib/outreach/search.ts` |
+| 20 searches a day per user, 2,000 a month | R32, KTD6, KTD13 | Search caps |
+| Contacts, facts, drafts, timeline and notes stored per account | R30, R38, R40, R41, R47 | Outreach tables |
+| Timeline steps and one-tap records; Lynkr asks before it assumes | R38, R40, R42, KD13 | Person card and `followup.ts` |
+| Lynkr suggests the next step from a fixed rule with its reason | R42, R43, KD12 | `lib/outreach/followup.ts` |
+| Calendar export (link or .ics); Lynkr cannot remove exported items; sends no invitation | R44 | `lib/ics.ts`, `lib/outreach/calendar.ts` |
+| Never reads LinkedIn messages, inbox or calendar | R27, KD13 | No such access exists |
+| Meeting notes shown only to the user, not sent to OpenAI | R41, KTD18, D-O3 B | Switch stays off |
+| What is sent to OpenAI and to Exa | R33, R11 | Draft and search routes |
+| Retention 12 months idle; download, delete contact, delete all | R30, R47 | `lib/cleanup.ts`, My data |
+| Lapsed subscribers can read, download and delete | R47, R34 | Reads need a session, writes need a subscription |
+| Outreach is part of the paid plan; checked on each request | R34, KTD12 | `extensionAuth` |
+| Pairing token stored hashed by Lynkr | R29, KTD8 | Extension pairing |
+| Host access only to lynkr.cloud and localhost | R29, KTD8 | `extension/manifest.json` |
+| Drafts can contain mistakes; user sends everything | R17, KD8, Terms | Terms draft v3 |
+| Privacy page describes exactly what is read, stored and sent | R33 | `app/privacy/page-uv2-privacy.tsx` |

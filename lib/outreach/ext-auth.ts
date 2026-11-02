@@ -1,6 +1,15 @@
-﻿import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { cloudReady, getDb, type Db } from "../db";
 import { paywallEnabled, subscriptionActive } from "../billing";
+import { sessionUser } from "../auth";
+
+/** The outside world the extension routes depend on. Tests replace these; production uses the defaults. */
+export const extDeps = {
+  db: (): Db => getDb(),
+  ready: (): Promise<boolean> => cloudReady(),
+  session: (req: Request) => sessionUser(req),
+  subscribed: (customerId: string | null): Promise<boolean> => subscriptionActive(customerId),
+};
 
 export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 export const newToken = () => randomBytes(32).toString("base64url");
@@ -38,13 +47,13 @@ export async function tokenOwner(db: Db, raw: string): Promise<{ userId: string;
 export async function extensionAuth(req: Request): Promise<{ db: Db; userId: string } | { error: Response }> {
   const origin = req.headers.get("origin");
   if (origin && !corsHeaders(req).has("Access-Control-Allow-Origin")) return { error: extJson(req, { error: "Origin not allowed." }, 403) };
-  if (!(await cloudReady())) return { error: extJson(req, { error: "Account storage is unavailable." }, 503) };
+  if (!(await extDeps.ready())) return { error: extJson(req, { error: "Account storage is unavailable." }, 503) };
   const raw = /^Bearer ([A-Za-z0-9_-]+)$/.exec(req.headers.get("authorization") ?? "")?.[1] ?? "";
-  const db = getDb();
+  const db = extDeps.db();
   try {
     const owner = await tokenOwner(db, raw);
     if (!owner) return { error: extJson(req, { error: "Invalid or expired token." }, 401) };
-    if (paywallEnabled() && !(await subscriptionActive(owner.customerId))) return { error: extJson(req, { error: "An active subscription is needed." }, 402) };
+    if (paywallEnabled() && !(await extDeps.subscribed(owner.customerId))) return { error: extJson(req, { error: "Your Lynkr subscription has lapsed. Upgrade to keep using the extension.", code: "subscription_required" }, 402) };
     return { db, userId: owner.userId };
   } catch { return { error: extJson(req, { error: "Extension access is unavailable." }, 503) }; }
 }

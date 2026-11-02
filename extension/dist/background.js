@@ -1,22 +1,42 @@
 import { insertDraft } from "./insert.js";
-let selectedText = "";
+/** The most selected text one drafting request carries. */
+export const SELECTION_LIMIT = 3000;
+let selection = { text: "", truncated: false };
 let selectedDraft = "";
+/** Runs in the clicked tab. It returns only what the user has selected, never anything else on the page. */
+function readSelection() {
+    return window.getSelection()?.toString() ?? "";
+}
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({ id: "write-with-lynkr", title: "Write with Lynkr", contexts: ["selection"] });
     void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 });
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId !== "write-with-lynkr" || !info.selectionText || !tab.windowId)
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId !== "write-with-lynkr" || !tab?.windowId)
         return;
-    selectedText = info.selectionText.slice(0, 3000);
+    // The click gives activeTab for this tab. Reading the selection keeps its line breaks; the menu's own copy is the fallback.
+    let text = "";
+    if (tab.id !== undefined) {
+        try {
+            text = (await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readSelection }))[0]?.result ?? "";
+        }
+        catch {
+            text = "";
+        }
+    }
+    text = text.trim() || (info.selectionText ?? "").trim();
+    if (!text)
+        return;
+    selection = { text: text.slice(0, SELECTION_LIMIT), truncated: text.length > SELECTION_LIMIT };
     void chrome.sidePanel.open({ windowId: tab.windowId });
     void chrome.runtime.sendMessage({ type: "SELECTION_AVAILABLE" }).catch(() => { });
 });
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    // The selection is held in memory until the panel takes it, once.
     if (message?.type === "TAKE_SELECTION") {
-        const text = selectedText;
-        selectedText = "";
-        sendResponse({ text });
+        const taken = selection;
+        selection = { text: "", truncated: false };
+        sendResponse(taken);
     }
     if (message?.type === "SET_DRAFT") {
         selectedDraft = typeof message.text === "string" ? message.text.slice(0, 10000) : "";

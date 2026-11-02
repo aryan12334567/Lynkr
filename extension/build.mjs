@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(fileURLToPath(import.meta.url));
 const out = join(root, "dist");
 mkdirSync(out, { recursive: true });
-for (const name of ["background", "sidepanel", "insert"]) {
+for (const name of ["background", "sidepanel", "insert", "api"]) {
   const source = readFileSync(join(root, "src", `${name}.ts`), "utf8");
   const result = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ES2020 }, reportDiagnostics: true });
   const errors = result.diagnostics?.filter(d => d.category === ts.DiagnosticCategory.Error) ?? [];

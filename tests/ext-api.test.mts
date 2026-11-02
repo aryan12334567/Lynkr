@@ -5,7 +5,7 @@ import { register } from "node:module";
 import { PGlite } from "@electric-sql/pglite";
 import { addContact, createExtensionToken, revokeExtensionToken } from "../lib/outreach/contacts-db";
 import { corsHeaders, extDeps, hashToken, newToken, tokenOwner, sameSiteRequest } from "../lib/outreach/ext-auth";
-import type { Db } from "../lib/db";
+import { pgliteDb, type Db } from "../lib/db";
 
 // The route files import "@/lib/...", as Next.js resolves it. Map it to the app root for node --test.
 register("data:text/javascript," + encodeURIComponent(`
@@ -70,7 +70,7 @@ async function world(run: (w: World) => Promise<void>, env: Record<string, strin
   await pg.exec(readFileSync(new URL("../scripts/migrations/001_vertical1.sql", import.meta.url), "utf8"));
   await pg.exec(readFileSync(new URL("../scripts/migrations/002_outreach.sql", import.meta.url), "utf8"));
   await pg.exec(readFileSync(new URL("../scripts/migrations/005_outreach_timeline.sql", import.meta.url), "utf8"));
-  const db: Db = { query: async (sql, params) => ({ rows: (await pg.query(sql, params)).rows as never[] }) };
+  const db: Db = pgliteDb(pg);
   const as: { user: string | null } = { user: null };
   const paid = new Set(["custA", "custB"]);
   Object.assign(process.env, { LYNKR_EXT_ID: EXT, LYNKR_PAYWALL: "1", LYNKR_MOCK: "1" }, env);
@@ -263,5 +263,179 @@ test("the profile route saves only LinkedIn profile addresses", async () => {
   const ok = await profile.POST(call("profile", raw, { body: { contactId: c.id, profileUrl: "https://www.linkedin.com/in/Alice-Rao?utm=1" } }));
   assert.equal(ok.status, 200); assert.equal(((await ok.json()) as { contact: { profileUrl: string } }).contact.profileUrl, "https://www.linkedin.com/in/alice-rao/");
   assert.equal((await profile.POST(call("profile", raw, { body: { contactId: c.id, profileUrl: "https://www.linkedin.com/feed/" } }))).status, 400);
+ });
+});
+
+// ---------------------------------------------------------------------------------------------
+// U19: outcome taps go through recordEvent (KTD15, KTD20), count-only metrics (KTD21)
+// ---------------------------------------------------------------------------------------------
+
+const network = { name: "Priya Nair", bridge: "public_work", goal: "network", intent: "work_question", tier: "tier_1", company: "Beta", role: "Lead" } as const;
+const tap = (raw: string, body: Record<string, unknown>) => call("outcome", raw, { body });
+const counts = async (pg: PGlite) => ({
+ events: Number((await pg.query<{ n: number }>("select count(*)::int as n from outreach_events")).rows[0].n),
+ metrics: Number((await pg.query<{ n: number }>("select count(*)::int as n from metric_counts where event like 'outreach_%'")).rows[0].n),
+});
+const errorOf = async (res: Response) => ((await res.json()) as { error: string }).error;
+
+test("U19: the outcome route writes only through recordEvent, never directly", () => {
+ const src = readFileSync(new URL("../app/api/ext/outcome/route.ts", import.meta.url), "utf8");
+ assert.match(src, /recordEvent\(/); assert.ok(!/updateContact|update contacts|insert into outreach_events/.test(src));
+});
+
+test("U19: a meeting_booked tap with a datetime creates the event, stored as IST, and the next step becomes the meeting", async () => {
+ await world(async ({ db, pg }) => {
+  const raw = newToken(); await createExtensionToken(db, "A", raw);
+  const c = await addContact(db, "A", person);
+  const { POST } = await route("outcome");
+  const res = await POST(tap(raw, { contactId: c.id, status: "meeting_booked", meetingAt: "2031-03-14T15:30" }));
+  assert.equal(res.status, 200);
+  const j = await res.json() as { contact: { status: string }; event: { kind: string } };
+  assert.equal(j.contact.status, "meeting"); assert.equal(j.event.kind, "meeting_booked");
+  const row = (await pg.query<{ meeting_at: Date; status: string }>("select meeting_at, status from outreach_events where kind = 'meeting_booked'")).rows;
+  assert.equal(row.length, 1); assert.equal(new Date(row[0].meeting_at).toISOString(), "2031-03-14T10:00:00.000Z"); assert.equal(row[0].status, "done");
+  const contact = (await pg.query<{ status: string; next_action_at: Date }>("select status, next_action_at from contacts where id = $1", [c.id])).rows[0];
+  assert.equal(contact.status, "meeting"); assert.equal(new Date(contact.next_action_at).toISOString(), "2031-03-14T10:00:00.000Z");
+  // An explicit offset is honoured and stored as the same instant.
+  const c2 = await addContact(db, "A", { ...person, name: "Second" });
+  assert.equal((await POST(tap(raw, { contactId: c2.id, status: "meeting_booked", meetingAt: "2031-03-14T10:00:00Z" }))).status, 200);
+  assert.equal(new Date((await pg.query<{ meeting_at: Date }>("select meeting_at from outreach_events where contact_id = $1", [c2.id])).rows[0].meeting_at).toISOString(), "2031-03-14T10:00:00.000Z");
+ });
+});
+
+test("U19: a lapsed token gets 402 with nothing written, for every new tap", async () => {
+ await world(async ({ db, pg, paid }) => {
+  const raw = newToken(); await createExtensionToken(db, "A", raw);
+  const c = await addContact(db, "A", network);
+  const { POST } = await route("outcome");
+  paid.delete("custA");
+  const before = await counts(pg);
+  for (const body of [{ status: "meeting_booked", meetingAt: "2031-03-14T15:30" }, { status: "meeting_done", happened: "yes" }, { status: "goal_reached" }, { status: "close" }, { status: "replied" }]) {
+   const res = await POST(tap(raw, { contactId: c.id, ...body }));
+   assert.equal(res.status, 402, body.status);
+   assert.match(await errorOf(res), /upgrade/i);
+  }
+  assert.deepEqual(await counts(pg), before);
+  assert.equal((await pg.query<{ status: string }>("select status from contacts where id = $1", [c.id])).rows[0].status, "to_contact");
+ });
+});
+
+test("U19: a bad datetime gets 400 with a message the panel can show, and writes nothing", async () => {
+ await world(async ({ db, pg }) => {
+  const raw = newToken(); await createExtensionToken(db, "A", raw);
+  const c = await addContact(db, "A", person);
+  const { POST } = await route("outcome");
+  const before = await counts(pg);
+  for (const meetingAt of ["tomorrow", "2031-13-40T10:00", "2031-02-30T10:00", "2031-03-14T25:00", "2031-03-14", ""]) {
+   const res = await POST(tap(raw, { contactId: c.id, status: "meeting_booked", meetingAt }));
+   assert.equal(res.status, 400, meetingAt);
+   assert.match(await errorOf(res), /date and time/i);
+  }
+  const missing = await POST(tap(raw, { contactId: c.id, status: "meeting_booked" }));
+  assert.equal(missing.status, 400); assert.match(await errorOf(missing), /date and time/i);
+  assert.deepEqual(await counts(pg), before);
+ });
+});
+
+test("U19: meeting_done needs the first answer; a rating and a next step are optional", async () => {
+ await world(async ({ db, pg }) => {
+  const raw = newToken(); await createExtensionToken(db, "A", raw);
+  const c = await addContact(db, "A", network);
+  const { POST } = await route("outcome");
+  await POST(tap(raw, { contactId: c.id, status: "meeting_booked", meetingAt: "2020-01-02T10:00" }));
+  const none = await POST(tap(raw, { contactId: c.id, status: "meeting_done" }));
+  assert.equal(none.status, 400); assert.match(await errorOf(none), /happen/i);
+  assert.equal((await POST(tap(raw, { contactId: c.id, status: "meeting_done", happened: "no_show", rating: "good" }))).status, 400);
+  assert.equal((await POST(tap(raw, { contactId: c.id, status: "meeting_done", happened: "yes", next: "reschedule" }))).status, 400);
+  assert.equal((await pg.query("select 1 from outreach_events where kind = 'meeting_done'")).rows.length, 0);
+
+  const ok = await POST(tap(raw, { contactId: c.id, status: "meeting_done", happened: "yes", rating: "good", note: "Talked about the SQL project" }));
+  assert.equal(ok.status, 200);
+  const j = await ok.json() as { goalReachedSuggested: boolean; event: { kind: string } };
+  assert.equal(j.event.kind, "meeting_done"); assert.equal(j.goalReachedSuggested, true);
+  assert.deepEqual((await pg.query<{ kind: string }>("select kind from outreach_events where status = 'due'")).rows.map(r => r.kind), ["thank_you"]);
+
+  // A different next step replaces the recommended one.
+  const c2 = await addContact(db, "A", { ...network, name: "Third" });
+  await POST(tap(raw, { contactId: c2.id, status: "meeting_booked", meetingAt: "2020-01-02T10:00" }));
+  assert.equal((await POST(tap(raw, { contactId: c2.id, status: "meeting_done", happened: "yes", rating: "good", next: "check_in" }))).status, 200);
+  assert.deepEqual((await pg.query<{ kind: string }>("select kind from outreach_events where contact_id = $1 and status = 'due'", [c2.id])).rows.map(r => r.kind), ["check_in"]);
+  const gone = await pg.query<{ kind: string; superseded_reason: string }>("select kind, superseded_reason from outreach_events where contact_id = $1 and status = 'superseded'", [c2.id]);
+  assert.deepEqual(gone.rows.map(r => `${r.kind}:${r.superseded_reason}`), ["thank_you:dismissed"]);
+
+  // "Moved" replaces the booked meeting and asks for the new time.
+  const c3 = await addContact(db, "A", { ...network, name: "Fourth" });
+  await POST(tap(raw, { contactId: c3.id, status: "meeting_booked", meetingAt: "2020-01-02T10:00" }));
+  const moved = await POST(tap(raw, { contactId: c3.id, status: "meeting_done", happened: "moved" }));
+  assert.equal(moved.status, 400); assert.match(await errorOf(moved), /date and time/i);
+  assert.equal((await POST(tap(raw, { contactId: c3.id, status: "meeting_done", happened: "moved", meetingAt: "2031-06-01T11:00" }))).status, 200);
+  const booked = await pg.query<{ status: string }>("select status from outreach_events where contact_id = $1 and kind = 'meeting_booked' order by created_at", [c3.id]);
+  assert.deepEqual(booked.rows.map(r => r.status), ["superseded", "done"]);
+  assert.equal((await pg.query("select 1 from outreach_events where contact_id = $1 and kind = 'meeting_done'", [c3.id])).rows.length, 0);
+  // A no-show suggests a reschedule message.
+  const c4 = await addContact(db, "A", { ...network, name: "Fifth" });
+  await POST(tap(raw, { contactId: c4.id, status: "meeting_booked", meetingAt: "2020-01-02T10:00" }));
+  assert.equal((await POST(tap(raw, { contactId: c4.id, status: "meeting_done", happened: "no_show" }))).status, 200);
+  assert.deepEqual((await pg.query<{ kind: string }>("select kind from outreach_events where contact_id = $1 and status = 'due'", [c4.id])).rows.map(r => r.kind), ["reschedule"]);
+ });
+});
+
+test("U19: goal_reached and close finish the contact and withdraw what was due; the earlier stage taps still work", async () => {
+ await world(async ({ db, pg }) => {
+  const raw = newToken(); await createExtensionToken(db, "A", raw);
+  const a = await addContact(db, "A", person), b = await addContact(db, "A", { ...person, name: "Closer" });
+  const { POST } = await route("outcome");
+  for (const [status, key] of [["invited", "invited_at"], ["accepted", "accepted_at"], ["messaged", "messaged_at"], ["replied", "replied_at"]] as const) {
+   const res = await POST(tap(raw, { contactId: a.id, status }));
+   assert.equal(res.status, 200, status);
+   assert.ok((await pg.query<{ d: Date | null }>(`select ${key} as d from contacts where id = $1`, [a.id])).rows[0].d, key);
+  }
+  const reached = await POST(tap(raw, { contactId: a.id, status: "goal_reached" }));
+  assert.equal(((await reached.json()) as { contact: { outcome: string } }).contact.outcome, "positive");
+  const row = (await pg.query<{ status: string; goal_reached_at: Date | null; next_action_at: Date | null }>("select status, goal_reached_at, next_action_at from contacts where id = $1", [a.id])).rows[0];
+  assert.equal(row.status, "outcome"); assert.ok(row.goal_reached_at); assert.equal(row.next_action_at, null);
+  assert.equal((await pg.query("select 1 from outreach_events where contact_id = $1 and status = 'due'", [a.id])).rows.length, 0);
+  await POST(tap(raw, { contactId: b.id, status: "messaged" }));
+  assert.ok((await pg.query("select 1 from outreach_events where contact_id = $1 and status = 'due'", [b.id])).rows.length > 0);
+  assert.equal((await POST(tap(raw, { contactId: b.id, status: "close" }))).status, 200);
+  const closed = (await pg.query<{ closed_at: Date | null; outcome: string; status: string }>("select closed_at, outcome, status from contacts where id = $1", [b.id])).rows[0];
+  assert.ok(closed.closed_at); assert.equal(closed.outcome, "no_response"); assert.equal(closed.status, "outcome");
+  // The earlier `outcome` value keeps working: positive is goal reached, anything else is closed.
+  const c = await addContact(db, "A", { ...person, name: "Legacy" });
+  assert.equal((await POST(tap(raw, { contactId: c.id, status: "outcome", outcome: "positive" }))).status, 200);
+  assert.equal((await POST(tap(raw, { contactId: (await addContact(db, "A", { ...person, name: "L2" })).id, status: "outcome" }))).status, 400);
+  assert.equal((await POST(tap(raw, { contactId: c.id, status: "nope" }))).status, 400);
+ });
+});
+
+test("U19: a retried tap with the same opId writes once; another user's contact is not found", async () => {
+ await world(async ({ db, pg }) => {
+  const a = newToken(); await createExtensionToken(db, "A", a);
+  const mine = await addContact(db, "A", person); const theirs = await addContact(db, "B", person);
+  const { POST } = await route("outcome");
+  const body = { contactId: mine.id, status: "meeting_booked", meetingAt: "2031-03-14T15:30", opId: "tap-op-0001" };
+  assert.equal((await POST(tap(a, body))).status, 200); assert.equal((await POST(tap(a, body))).status, 200);
+  assert.equal((await pg.query("select 1 from outreach_events where kind = 'meeting_booked'")).rows.length, 1);
+  assert.equal(Number((await pg.query<{ count: number }>("select count from metric_counts where event = 'outreach_meeting_booked'")).rows[0].count), 1);
+  assert.equal((await POST(tap(a, { contactId: theirs.id, status: "close" }))).status, 404);
+  assert.equal((await pg.query("select 1 from outreach_events where contact_id = $1", [theirs.id])).rows.length, 0);
+ });
+});
+
+test("U19: metrics are counts only: no names, dates or notes", async () => {
+ await world(async ({ db, pg }) => {
+  const raw = newToken(); await createExtensionToken(db, "A", raw);
+  const c = await addContact(db, "A", { ...network, name: "Zed Unique Person" });
+  const { POST } = await route("outcome");
+  await POST(tap(raw, { contactId: c.id, status: "meeting_booked", meetingAt: "2031-03-14T15:30" }));
+  await POST(tap(raw, { contactId: c.id, status: "meeting_done", happened: "yes", rating: "good", note: "private note text" }));
+  await POST(tap(raw, { contactId: c.id, status: "goal_reached" }));
+  const rows = (await pg.query<{ event: string; label: string; count: number }>("select event, label, count from metric_counts where event like 'outreach_%' order by event")).rows;
+  assert.deepEqual(rows.map(r => `${r.event}:${r.label}:${r.count}`), ["outreach_goal_reached:network:1", "outreach_meeting_booked::1", "outreach_meeting_done:good:1"]);
+  assert.ok(!/Zed|private|2031/.test(JSON.stringify((await pg.query("select * from metric_counts")).rows)));
+  const none = await addContact(db, "A", { ...network, name: "Unrated" });
+  await POST(tap(raw, { contactId: none.id, status: "meeting_booked", meetingAt: "2020-01-02T10:00" }));
+  await POST(tap(raw, { contactId: none.id, status: "meeting_done", happened: "yes" }));
+  assert.equal((await pg.query("select 1 from metric_counts where event = 'outreach_meeting_done' and label = 'none'")).rows.length, 1);
  });
 });

@@ -202,6 +202,25 @@ test("a lapsed session can read its timeline, calendar and to-do, but gets 402 o
   await pg.close();
 });
 
+test("R47: a lapsed session can still list its contacts, but cannot add, change or remove them", async () => {
+  const { pg, db } = await fresh();
+  const contacts = await import("../app/api/outreach/contacts/route");
+  const c = await addContact(db, "a", { ...people, name: "Priya" });
+  await withPaywall(async () => {
+    const list = await call(contacts.GET, "GET", "/api/outreach/contacts", "a");
+    assert.equal(list.status, 200);
+    assert.deepEqual(list.json.contacts.map((x: { id: string }) => x.id), [c.id]);
+    assert.equal((await call(contacts.GET, "GET", "/api/outreach/contacts", null)).status, 401);
+    const add = await call(contacts.POST, "POST", "/api/outreach/contacts", "a", { name: "Ravi", ...people });
+    assert.equal(add.status, 402);
+    assert.equal((await call(contacts.PATCH, "PATCH", "/api/outreach/contacts", "a", { id: c.id, name: "X" })).status, 402);
+    assert.equal((await call(contacts.DELETE, "DELETE", "/api/outreach/contacts", "a", { id: c.id })).status, 402);
+  });
+  const rows = await pg.query<{ n: number }>("select count(*)::int as n from contacts");
+  assert.equal(rows.rows[0].n, 1);
+  await pg.close();
+});
+
 test("without a session every route says to sign in", async () => {
   const { pg } = await fresh();
   const { timeline, calendar, todo } = await routes();

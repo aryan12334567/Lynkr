@@ -6,8 +6,9 @@ import { readJson } from "@/lib/http";
 import { addContactCapped, contactBody as body, contactPatch as patch, deleteContact, listContacts, normalizeProfileUrl, updateContact } from "@/lib/outreach/contacts-db";
 
 const status = z.enum(["to_contact", "invited", "accepted", "messaged", "replied", "meeting", "outcome"]);
-async function context(req:Request) {
-  const denied=await requireLicense(req); if(denied) return {error:denied};
+// Reads need only a signed-in account, so a lapsed subscriber can still see their people (R47); writes need a subscription.
+async function context(req:Request, write=true) {
+  if(write) { const denied=await requireLicense(req); if(denied) return {error:denied}; }
   const user=await sessionUser(req); if(!user) return {error:Response.json({error:"Please sign in first."},{status:401})};
   if(!await cloudReady()) return {error:Response.json({error:"Account storage is unavailable."},{status:409})};
   const db=getDb();
@@ -16,7 +17,7 @@ async function context(req:Request) {
   return {db,user};
 }
 export async function GET(req:Request) {
-  const c=await context(req); if(c.error) return c.error;
+  const c=await context(req,false); if(c.error) return c.error;
   const query=z.object({status:status.optional()}).strict().safeParse(Object.fromEntries(new URL(req.url).searchParams));
   if(!query.success) return Response.json({error:"Invalid query."},{status:400});
   const contacts=await listContacts(c.db!,c.user!.id);

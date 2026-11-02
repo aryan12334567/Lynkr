@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
-import { GOALS, GOAL_IDS, goalFor, preselectGoals, defaultIntent, unansweredGoalDetails, goalDetailFact, saveOutreachGoals, readOutreachGoals } from "../lib/outreach/goals";
+import { GOALS, GOAL_IDS, goalFor, preselectGoals, defaultIntent, unansweredGoalDetails, goalDetailFact } from "../lib/outreach/goals";
+import { saveOutreachGoals, readOutreachGoals } from "../lib/outreach/goals-db";
 import { PLAYBOOKS, playbookFor } from "../lib/outreach/playbooks";
 import { composeDrafts } from "../lib/outreach/draft";
 import { checkMessage, CHANNEL_RULES, type Relationship } from "../lib/checker";

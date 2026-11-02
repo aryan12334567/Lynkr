@@ -8,14 +8,13 @@
  *   preselectGoals(wants|labels)     interview wants (or their labels) to preselected outreach goals
  *   unansweredGoalDetails(goal, facts)  details not yet answered by a confirmed goal_detail fact
  *   goalDetailFact(goal, key, answer)   the goal_detail fact to save for an answer
- *   saveOutreachGoals(db, user, goals, details)  persist goals in context_brief.data.outreach + detail facts
- *   readOutreachGoals(db, user)      the saved goals
+ *   (saveOutreachGoals / readOutreachGoals live in ./goals-db: this file must stay free of database imports so
+ *    client components can import it without pulling pg into the browser bundle)
  * Playbooks (goal x relationship) live in ./playbooks and read GOALS.
  */
 import type { Want, Intent, StoryFact } from "../schemas";
 import { WANT_LABEL } from "../schemas";
 import type { Relationship } from "../checker";
-import { getBrief, saveBrief, saveFacts, type Db } from "../db";
 
 export const GOAL_IDS = ["job", "referral", "network", "mentor", "clients", "hiring", "funding", "buy_business", "partner", "reconnect"] as const;
 export type OutreachGoal = (typeof GOAL_IDS)[number];
@@ -135,30 +134,4 @@ export function unansweredGoalDetails(goal: OutreachGoal, facts: readonly StoryF
 // ---- saving ----
 
 export type GoalDetailAnswer = { goal: OutreachGoal; key: string; answer: string };
-const isGoal = (g: unknown): g is OutreachGoal => (GOAL_IDS as readonly unknown[]).includes(g);
-
-/** Saved goals; an empty list when none or when the stored value is not valid. */
-export async function readOutreachGoals(db: Db, userId: string): Promise<OutreachGoal[]> {
- const brief = await getBrief<{ outreach?: { goals?: unknown } }>(db, userId);
- const goals = brief?.data?.outreach?.goals;
- return Array.isArray(goals) ? goals.filter(isGoal) : [];
-}
-
-/**
- * Saves goals in context_brief.data.outreach (a new brief version only when the goals change; every other brief
- * field is kept as it was) and each answer as a confirmed goal_detail fact. Validates everything before writing.
- */
-export async function saveOutreachGoals(db: Db, userId: string, goals: readonly OutreachGoal[], details: readonly GoalDetailAnswer[] = []): Promise<{ goals: OutreachGoal[]; version: number; detailsSaved: number }> {
- if (!goals.every(isGoal)) throw new Error("Choose valid goals.");
- const unique = [...new Set(goals)];
- const facts = details.map(d => {
-  if (!isGoal(d.goal) || !unique.includes(d.goal)) throw new Error("Answer questions only for goals you chose.");
-  return goalDetailFact(d.goal, d.key, d.answer);
- });
- const brief = await getBrief(db, userId);
- const data = (brief?.data ?? {}) as Record<string, unknown>;
- const old = data.outreach && typeof data.outreach === "object" ? data.outreach : {};
- const version = await saveBrief(db, userId, { ...data, outreach: { ...old, goals: unique } });
- const saved = facts.length ? (await saveFacts(db, userId, facts)).saved : 0;
- return { goals: unique, version, detailsSaved: saved };
-}
+export const isGoal = (g: unknown): g is OutreachGoal => (GOAL_IDS as readonly unknown[]).includes(g);

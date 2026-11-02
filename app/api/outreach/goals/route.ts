@@ -3,7 +3,8 @@ import { requireLicense } from "@/lib/billing";
 import { accountContext } from "@/lib/account";
 import { getBrief, confirmedFacts } from "@/lib/db";
 import { readJson } from "@/lib/http";
-import { GOAL_IDS, readOutreachGoals, saveOutreachGoals, unansweredGoalDetails, type OutreachGoal } from "@/lib/outreach/goals";
+import { GOAL_IDS, unansweredGoalDetails, type OutreachGoal } from "@/lib/outreach/goals";
+import { readOutreachGoals, saveOutreachGoals } from "@/lib/outreach/goals-db";
 
 /** Saved goals, plus for each the questions not answered yet (a detail already confirmed as a fact is not asked again). */
 export async function GET(req: Request) {

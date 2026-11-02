@@ -31,8 +31,8 @@ import { OUTREACH_SYSTEM, outreachUser } from "../prompts";
 import { DraftModelReply, type Channel, type DraftRequest, type FactRef, type Intent } from "../schemas";
 import { cleanBriefText } from "./brief";
 import { getContact, listContacts, recordAISpend } from "./contacts-db";
-import { GOAL_IDS, goalDetailFact, goalFor, type OutreachGoal } from "./goals";
-import { playbookFor, type Playbook } from "./playbooks";
+import { GOAL_IDS, allowsReferralAsk, goalDetailFact, goalFor, type OutreachGoal } from "./goals";
+import { STEPS, isStepKind, playbookFor, stepLengths, type Playbook, type StepKind } from "./playbooks";
 
 // ---- types ----
 
@@ -54,6 +54,10 @@ export type ExtendedDraftInput = DraftInput & {
  extraEvidence?: readonly EvidenceItem[];
  /** Goal question keys that have a confirmed answer anywhere in the Vault. Derived from `facts` when absent. */
  answeredKeys?: readonly string[];
+ /** A timeline step (U18). It fixes the intent, the ask and the length; nothing in the evidence can change them. */
+ step?: StepKind;
+ /** True when a meeting with this contact is on the timeline, so "thank you for your time" is a true statement. */
+ meeting?: boolean;
 };
 export type EvidencePack = {
  recipient: { name: string; role: string; company: string };
@@ -75,6 +79,9 @@ export type DraftResult = {
  channel: Channel;
  notesLeft?: number;
  canWriteNote: boolean;
+ /** The intent the draft was written for: the step's, else the playbook's. */
+ intent: Intent;
+ step?: StepKind;
 };
 
 /** LYNKR_OUTREACH_NOTES_IN_DRAFTS: meeting notes may join the evidence pack only when this is exactly "on" (KTD18). */
@@ -185,16 +192,69 @@ export const ASKS: Partial<Record<Intent, (book: Playbook) => string>> = {
 };
 const askFor = (book: Playbook, intent: Intent | undefined) => (ASKS[intent ?? book.intent]?.(book) ?? book.ask);
 
+// ---- timeline steps (U18) ----
+
+type StepWording = { variants: { angle: string; lines: (company: string) => string[] }[]; ask: (book: Playbook) => string };
+/** Every line the step composer can write. The trace guard treats them as approved wording; none states a fact about the meeting. */
+const STEP_WORDING: Record<StepKind, StepWording> = {
+ thank_you: {
+  variants: [
+   { angle: "gratitude", lines: () => ["Thank you for making time to speak with me.", "I really appreciated it."] },
+   { angle: "keep_in_touch", lines: () => ["Thank you for speaking with me.", "It meant a lot that you gave me your time."] },
+  ],
+  ask: () => "Would it be alright if I let you know how things go?",
+ },
+ follow_up: {
+  variants: [
+   { angle: "gentle", lines: () => ["I'm following up on my earlier message in case it got buried."] },
+   { angle: "brief", lines: () => ["I wanted to follow up on my earlier note, and I understand if you are busy."] },
+  ],
+  // A first-message referral ask is not repeated: a referral playbook falls back to the learning ask.
+  ask: book => (book.intent === "referral" ? ASKS.referral!(book) : book.ask),
+ },
+ reschedule: {
+  variants: [
+   { angle: "short", lines: () => ["Sorry we couldn't connect at the time we planned."] },
+   { angle: "warm", lines: () => ["I'm sorry our call didn't happen as planned."] },
+  ],
+  ask: () => "Would you be open to finding another time that works for you?",
+ },
+ check_in: {
+  variants: [
+   { angle: "light", lines: () => ["I wanted to check in and see how things are going."] },
+   { angle: "company", lines: company => [company ? `I wanted to check in and hear how things are going at ${company}.` : "I wanted to say hello again and hear how you are doing."] },
+  ],
+  ask: () => "Would you be open to a quick catch-up when you have time?",
+ },
+ referral_ask: {
+  variants: [
+   { angle: "direct_ask", lines: () => ["Thank you again for speaking with me."] },
+   { angle: "after_thanks", lines: () => ["I'd value your help with one thing."] },
+  ],
+  ask: () => "If a role on your team fits my work, would you be comfortable referring me? I can send my resume and the job link.",
+ },
+};
+const stepAsk = (step: StepKind, book: Playbook) => STEP_WORDING[step].ask(book);
+const stepText = (step: StepKind): string[] => STEP_WORDING[step].variants.flatMap(v => [...v.lines(""), ...v.lines("x")]);
+/** The ask for a draft: the step's if there is one, else the intent's, else the playbook's. */
+const askOf = (input: Pick<ExtendedDraftInput, "step" | "intent">, book: Playbook) => (input.step ? stepAsk(input.step, book) : askFor(book, input.intent));
+/** The intent a draft is written for. It comes from the step or the playbook, never from the evidence. */
+export const intentOf = (input: Pick<ExtendedDraftInput, "step" | "intent">, book: Playbook): Intent => (input.step ? STEPS[input.step].intent : input.intent ?? book.intent);
+/** A step goes to someone the person has already been in touch with, so the checker reads it as a warm message about a real meeting. */
+const checkRelOf = (input: Pick<ExtendedDraftInput, "step" | "relationship">): Relationship => (input.step ? "knows_me" : input.relationship);
+const checkCtx = (input: ExtendedDraftInput, facts: string[]) => ({ channel: input.channel, noteMax: input.noteLimit === 300 ? (300 as const) : undefined, intent: "work_question" as const, facts, sharedHistory: input.step && input.meeting ? true : undefined });
+
 // ---- limits ----
 
 /** The most characters (connection note) or words (other channels) a draft may be. */
-export function limitFor(input: Pick<DraftInput, "channel" | "noteLimit">, book: Playbook): { limit: number; unit: "chars" | "words" } {
+export function limitFor(input: Pick<DraftInput, "channel" | "noteLimit"> & { step?: StepKind }, book: Playbook): { limit: number; unit: "chars" | "words" } {
  const rule = CHANNEL_RULES[input.channel];
+ const lengths = input.step ? stepLengths(book, input.step) : book.lengths;
  if (input.channel === "connection_note") {
-  const setting = input.noteLimit ?? 200, goalLimit = book.lengths.connection_note;
+  const setting = input.noteLimit ?? 200, goalLimit = lengths.connection_note;
   return { limit: goalLimit < CHANNEL_RULES.connection_note.max ? Math.min(setting, goalLimit) : setting, unit: "chars" };
  }
- return { limit: Math.min(rule.max, book.lengths[input.channel]), unit: rule.unit };
+ return { limit: Math.min(rule.max, lengths[input.channel]), unit: rule.unit };
 }
 const sizeOf = (body: string, unit: "chars" | "words") => (unit === "chars" ? body.length : body.trim().split(/\s+/).length);
 
@@ -226,6 +286,12 @@ const DID = /\b(?:i|we)(?:'ve| have)?\s+(?:also\s+|just\s+|recently\s+|once\s+)?
 /** A claim about the recipient's own doings, which only a confirmed brief fact may support. */
 const HOOK = /\b(?:i (?:saw|read|noticed|watched|loved|enjoyed|liked|heard|admire|followed|came across)|congrat\w*|your (?:recent|latest|new|post|article|talk|launch|podcast|newsletter|blog|paper|book|project|promotion|keynote|interview|thread|video)|you (?:recently|just|posted|wrote|shared|launched|joined|moved|started|published|spoke|announced))/i;
 
+/** A statement about what happened in a meeting: "you suggested ...", "we discussed ...", "thanks for your advice on ...". */
+const MEETING_CLAIM = /\b(?:you (?:mentioned|said|told me|suggested|recommended|shared|explained|walked me through|talked about|pointed out|advised)|we (?:discussed|talked about|spoke about|covered|agreed)|(?:our|the) (?:discussion|conversation|chat|call) (?:about|on)|your (?:advice|suggestion|tip|recommendation|feedback|insight)s? (?:on|about)|what you (?:said|shared|explained|told me)|(?:advice|tips?|suggestions?) (?:you gave|on|about))\b/i;
+/** The steps that never ask for anything about work. */
+const NO_JOB_ASK: readonly StepKind[] = ["thank_you", "reschedule", "check_in"];
+const JOB_ASK = /\b(?:(?:any|a|an|open|available|the) (?:jobs?|roles?|openings?|vacanc(?:y|ies)|positions?)|refer(?:ral|ring)?\b|refer me|hire me|ask(?:ing)? for)\b/i;
+
 const ratio = (s: string, known: Set<string>) => {
  const ws = content(s);
  return ws.length ? ws.filter(w => known.has(stem(w))).length / ws.length : 1;
@@ -246,7 +312,7 @@ export function draftProblem(input: ExtendedDraftInput, candidate: Pick<Candidat
  if (sizeOf(body, unit) > limit) return "length";
  const pack = buildEvidencePack(input);
  if (candidate.factRefs.some(id => !pack.facts.some(f => f.id === id)) || candidate.briefRefs.some(id => !pack.briefFacts.some(f => f.id === id))) return "reference";
- const approved = [...templateText(input.goal), book.ask, askFor(book, input.intent)];
+ const approved = [...templateText(input.goal), book.ask, askOf(input, book), ...(input.step ? stepText(input.step) : [])];
  const sources = [...sourcesOf(pack), ...approved];
  const evidence = tokenSet(sources.join(" "));
  for (const number of body.match(/\b\d+(?:[.,]\d+)*\b/g) ?? []) if (!evidence.has(number.toLowerCase())) return "number";
@@ -262,15 +328,20 @@ export function draftProblem(input: ExtendedDraftInput, candidate: Pick<Candidat
  const known = new Set(content(sources.join(" ")).map(stem));
  const knownAll = new Set((sources.join(" ").toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).map(stem));
  const recipient = new Set(content([pack.recipient.name, pack.recipient.role, pack.recipient.company, ...pack.briefFacts.map(f => f.text), ...pack.extras.map(e => e.text)].join(" ")).map(stem));
+ // What was said or agreed in a meeting is known only from the person's own note (KTD18). Anything else is invented.
+ const noteWords = new Set(content(pack.extras.filter(e => e.label === "note").map(e => e.text).join(" ")).map(stem));
  for (const s of split(body)) {
+  if (MEETING_CLAIM.test(s) && (!noteWords.size || ratio(s.replace(MEETING_CLAIM, " "), noteWords) < 0.5)) return "meeting_detail";
   if (DID.test(s) && claimRatio(s, knownAll) < 0.5) return "grounding";
   if (HOOK.test(s) && ratio(s, recipient) < 0.5) return "recipient_claim";
  }
  if (unsupportedSentences(body, sources).length) return "grounding";
- const check = checkMessage(body, input.relationship, { channel: input.channel, noteMax: input.noteLimit === 300 ? 300 : undefined, intent: "work_question", facts: pack.facts.map(f => f.text) });
+ // A thank-you, a reschedule or a check-in never asks for a job, an opening or a referral, whatever the evidence says.
+ if (input.step && NO_JOB_ASK.includes(input.step) && JOB_ASK.test(body)) return "off_intent";
+ const check = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text)));
  if (check.verdict === "Do not send yet") return "checker";
- // A referral ask is for someone who already knows the person's work, and only on the referral playbook.
- if (check.isReferralAsk && book.intent !== "referral") return "referral";
+ // A referral ask is for someone who already knows the person's work, and only on the referral playbook or the referral step.
+ if (check.isReferralAsk && book.intent !== "referral" && input.step !== "referral_ask") return "referral";
  return null;
 }
 
@@ -339,6 +410,7 @@ const REALIZER_FOR: Record<string, string> = { traction: "insight", idea: "insig
 
 /** Offline composer: complete sentences from the playbook and the evidence. It does not infer a relationship or invent a recipient hook. */
 export function composeDrafts(input: ExtendedDraftInput): DraftResult {
+ if (input.step) return composeStep(input, input.step);
  const advice = adviceFor(input);
  const eff = { ...input, channel: advice.draftChannel };
  const book = playbookFor(eff.goal, eff.relationship);
@@ -369,7 +441,33 @@ export function composeDrafts(input: ExtendedDraftInput): DraftResult {
   versions.push(toVersion(eff, { angle, body, factRefs: detail, briefRefs: [] }, pack));
  }
  const stronger = strongerFor(eff.goal, input.facts, input.answeredKeys);
- return { versions, strongerQuestion: stronger.question, strongerKey: stronger.key, strongerOptions: stronger.options, recommendation: advice.recommendation, advice: advice.advice, channel: advice.draftChannel, notesLeft: input.notesLeft, canWriteNote: advice.canWriteNote };
+ return { versions, strongerQuestion: stronger.question, strongerKey: stronger.key, strongerOptions: stronger.options, recommendation: advice.recommendation, advice: advice.advice, channel: advice.draftChannel, notesLeft: input.notesLeft, canWriteNote: advice.canWriteNote, intent: intentOf(input, book) };
+}
+
+/** A timeline step is written to someone already in touch, so there is no note-or-blank advice and no goal question. */
+function stepAdvice(channel: Channel): Advice {
+ return { advice: "message", draftChannel: channel, recommendation: "Review the message before sending it yourself.", canWriteNote: false };
+}
+const adviceOf = (input: ExtendedDraftInput): Advice => (input.step ? stepAdvice(input.channel) : adviceFor(input));
+
+/** Offline composer for a step: complete wording from the step's own lines and the recipient's name and company, nothing about the meeting. */
+function composeStep(input: ExtendedDraftInput, step: StepKind): DraftResult {
+ const book = playbookFor(input.goal, input.relationship);
+ const pack = buildEvidencePack(input);
+ const { limit, unit } = limitFor(input, book);
+ const first = pack.recipient.name.split(" ")[0] ?? "";
+ const greeting = first ? `Hi ${first},` : "Hello,";
+ const ask = stepAsk(step, book);
+ const versions: DraftVersion[] = [];
+ for (const variant of STEP_WORDING[step].variants) {
+  const lines = variant.lines(pack.recipient.company);
+  const text = () => [greeting, ...lines, ask].join(" ");
+  while (sizeOf(text(), unit) > limit && lines.length) lines.pop();
+  const body = sizeOf(text(), unit) > limit ? ask : text();
+  if (versions.some(v => v.body === body)) continue;
+  versions.push(toVersion(input, { angle: variant.angle, body, factRefs: [], briefRefs: [] }, pack));
+ }
+ return { versions, strongerQuestion: "", strongerKey: "", strongerOptions: [], recommendation: stepAdvice(input.channel).recommendation, advice: "message", channel: input.channel, canWriteNote: false, intent: STEPS[step].intent, step };
 }
 
 /** A candidate as a shown version: references added for any evidence it quotes, and the checker's verdict. */
@@ -378,7 +476,7 @@ function toVersion(input: ExtendedDraftInput, c: Candidate, pack: EvidencePack):
  const quotes = (text: string) => { const n = norm(text); return n.length >= 12 && flat.includes(n.slice(0, Math.min(n.length, 40))); };
  const factRefs = [...new Set([...c.factRefs, ...pack.facts.filter(f => quotes(f.text)).map(f => f.id)])];
  const briefRefs = [...new Set([...c.briefRefs, ...pack.briefFacts.filter(f => quotes(f.text)).map(f => f.id)])];
- const verdict = checkMessage(body, input.relationship, { channel: input.channel, noteMax: input.noteLimit === 300 ? 300 : undefined, intent: "work_question", facts: pack.facts.map(f => f.text) }).verdict;
+ const verdict = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text))).verdict;
  return { angle: c.angle, body, factRefs, briefRefs, verdict };
 }
 
@@ -394,7 +492,8 @@ export type GenerateOptions = {
 
 const defaultModel: ModelFn = async (_attempt, pack, { input, book, problems, afterAccept }) => {
  const { limit, unit } = limitFor(input, book);
- return (await callStructured({ system: OUTREACH_SYSTEM, user: outreachUser(pack, book, { channel: input.channel, limit, unit, problems, afterAccept }), schema: DraftModelReply, effort: "low", maxTokens: 2000 })).versions;
+ const step = input.step ? { kind: input.step, intent: STEPS[input.step].intent, ask: stepAsk(input.step, book), guidance: STEPS[input.step].guidance } : undefined;
+ return (await callStructured({ system: OUTREACH_SYSTEM, user: outreachUser(pack, book, { channel: input.channel, limit, unit, problems, afterAccept, step }), schema: DraftModelReply, effort: "low", maxTokens: 2000 })).versions;
 };
 
 /** Keeps a model's angle when the playbook has it; otherwise the first playbook angle not used yet. */
@@ -413,7 +512,7 @@ function angleOf(c: Candidate, book: Playbook, used: Set<string>): string | null
 export async function generateOutreach(input: ExtendedDraftInput, opts: GenerateOptions = {}): Promise<DraftResult> {
  const fallback = composeDrafts(input);
  if (opts.mock ?? isMock()) return fallback;
- const advice = adviceFor(input);
+ const advice = adviceOf(input);
  const eff: ExtendedDraftInput = { ...input, channel: advice.draftChannel };
  const book = playbookFor(eff.goal, eff.relationship);
  const pack = buildEvidencePack(eff);
@@ -447,6 +546,44 @@ export type DraftOutcome = { status: number; body: Record<string, unknown> };
 const reply = (status: number, body: Record<string, unknown>): DraftOutcome => ({ status, body });
 const BriefFacts = z.array(z.object({ text: z.string().max(240) }).passthrough()).max(3);
 
+// ---- evidence from the timeline (U18, KTD18) ----
+
+/** Text addressed to an AI, on top of the brief cleaner's: "ignore instructions", or a planted request for a job or referral. */
+const PLANTED = /\b(?:ignore|disregard|forget|override)\b[^.!?\n]*\b(?:instructions?|prompts?|rules?)\b|\b(?:ask|asking|request|tell)\b[^.!?\n]*\bfor (?:an? |any |the )?(?:jobs?|referrals?|openings?|roles?)\b/i;
+/** Free text from a note or a "why you connected" line, cleaned the way the brief is, minus planted instructions. Returns "" when nothing is left. */
+export function cleanEvidenceText(text: string | null | undefined, max = 280): string {
+ const lines = cleanBriefText(text ?? "").split("\n").flatMap(l => l.split(/(?<=[.!?])\s+/)).filter(l => l.trim() && !PLANTED.test(l));
+ return safe(lines.join(" "), max);
+}
+
+const NOTES_WINDOW_MONTHS = 6;
+const MAX_NOTES = 3;
+
+/**
+ * Evidence this contact's own timeline adds to a draft. "Why you connected" always joins. Meeting notes from the last
+ * 6 months join only when LYNKR_OUTREACH_NOTES_IN_DRAFTS is exactly "on"; the notes column is not read otherwise.
+ * This is the only code that reads outreach_events notes, and only for the one contact.
+ */
+async function timelineEvidence(db: Db, userId: string, contact: { id: string; whyText: string | null }, now: Date): Promise<{ extras: EvidenceItem[]; meeting: boolean }> {
+ const extras: EvidenceItem[] = [];
+ const why = cleanEvidenceText(contact.whyText, 200);
+ if (why) extras.push({ id: "W1", label: "why_connected", text: why });
+ const met = await db.query("select 1 from outreach_events where user_id = $1 and contact_id = $2 and kind in ('meeting_booked','meeting_done') and status <> 'superseded' limit 1", [userId, contact.id]);
+ if (notesInDraftsOn()) {
+  const since = new Date(now);
+  since.setMonth(since.getMonth() - NOTES_WINDOW_MONTHS);
+  const rows = await db.query(
+   "select note from outreach_events where user_id = $1 and contact_id = $2 and note is not null and status <> 'superseded' and coalesce(done_at, due_at, created_at) >= $3 order by coalesce(done_at, due_at, created_at) desc, id limit $4",
+   [userId, contact.id, since, MAX_NOTES * 2],
+  );
+  for (const r of rows.rows) {
+   const text = cleanEvidenceText(r.note as string);
+   if (text && extras.filter(e => e.label === "note").length < MAX_NOTES) extras.push({ id: `N${extras.filter(e => e.label === "note").length + 1}`, label: "note", text });
+  }
+ }
+ return { extras, meeting: met.rows.length > 0 };
+}
+
 /**
  * One draft request for one contact, scoped to the user. An answer to the goal question is saved as a confirmed
  * goal_detail fact first, so the draft that follows is rewritten with it and the next contact does not ask again.
@@ -460,6 +597,16 @@ export async function runDraft(db: Db, userId: string, req: DraftRequest, deps: 
  if (req.answer) {
   if (!goalFor(goal).details.some(d => d.key === req.answer!.key)) return reply(400, { error: "That question is not part of this goal." });
   try { await saveFacts(db, userId, [goalDetailFact(goal, req.answer.key, req.answer.text)]); } catch (e) { return reply(400, { error: e instanceof Error ? e.message : "Add an answer." }); }
+ }
+
+ let step: StepKind | undefined;
+ if (req.eventId) {
+  const ev = await db.query("select kind from outreach_events where user_id = $1 and contact_id = $2 and id = $3 and status <> 'superseded'", [userId, contact.id, req.eventId]);
+  if (!ev.rows[0]) return reply(404, { error: "Step not found." });
+  if (!isStepKind(ev.rows[0].kind)) return reply(400, { error: "There is no message to write for that step." });
+  step = ev.rows[0].kind;
+  if (req.channel === "connection_note") return reply(400, { error: "A connection note can't carry this step. Pick a message or an email." });
+  if (step === "referral_ask" && !allowsReferralAsk(goal)) return reply(400, { error: "A referral ask is only for the job and referral goals." });
  }
 
  const book = playbookFor(goal, relationship);
@@ -476,10 +623,11 @@ export async function runDraft(db: Db, userId: string, req: DraftRequest, deps: 
   notesLeft = notesLeftFor({ ...DEFAULT_CONNECT, monthlyNotes: req.monthlyNotes ?? DEFAULT_CONNECT.monthlyNotes, people }, deps.now);
  }
 
+ const timeline = await timelineEvidence(db, userId, contact, deps.now ?? new Date());
  const mock = deps.mock ?? isMock();
  try {
   const result = await generateOutreach(
-   { goal, relationship, channel: req.channel, name: contact.name, role: contact.role, company: contact.company, facts, briefFacts, noteLimit: req.noteLimit, tier: contact.tier, notesLeft, forceNote: req.forceNote, answeredKeys },
+   { goal, relationship, channel: req.channel, name: contact.name, role: contact.role, company: contact.company, facts, briefFacts, noteLimit: req.noteLimit, tier: contact.tier, notesLeft, forceNote: req.forceNote, answeredKeys, step, meeting: timeline.meeting, extraEvidence: timeline.extras },
    { mock, model: deps.model, spend: deps.spend ?? (() => recordAISpend(db, userId)) },
   );
   return reply(200, result);

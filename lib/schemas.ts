@@ -438,6 +438,8 @@ export const DraftRequest = z
     /** "Write a note anyway" after the advice was a blank invite. */
     forceNote: z.boolean().optional(),
     answer: DraftAnswer.optional(),
+    /** A timeline step (thank-you, follow-up, reschedule, check-in, referral ask) to write the message for. */
+    eventId: z.string().uuid().optional(),
   })
   .strict();
 export type DraftRequest = z.infer<typeof DraftRequest>;
@@ -465,6 +467,10 @@ export const DraftReply = z.object({
   channel: z.enum(CHANNELS).optional(),
   notesLeft: z.number().int().optional(),
   canWriteNote: z.boolean().optional(),
+  /** The intent the draft was written for. It comes from the step or the playbook, never from the evidence. */
+  intent: z.enum(INTENTS).optional(),
+  /** The timeline step the draft is for, when the request named one. */
+  step: z.string().optional(),
 });
 export type DraftReply = z.infer<typeof DraftReply>;
 

@@ -226,6 +226,54 @@ function build(goal: OutreachGoal, relationship: Relationship): Playbook {
  };
 }
 
+// ---- timeline steps (build plan U18, KTD18, R43) ----
+
+/** The timeline steps a draft can be written for. Each is an event kind of the contact's timeline (lib/outreach/timeline.ts). */
+export const STEP_KINDS = ["thank_you", "follow_up", "reschedule", "check_in", "referral_ask"] as const;
+export type StepKind = (typeof STEP_KINDS)[number];
+export const isStepKind = (kind: unknown): kind is StepKind => (STEP_KINDS as readonly unknown[]).includes(kind);
+
+export type StepPlay = {
+ intent: Intent;
+ /** Most words per channel for this step. A step is shorter than a first message; the playbook's own length still applies. */
+ lengths: Partial<Record<Channel, number>>;
+ /** What the model is told this message is for. */
+ guidance: string;
+};
+
+const NO_DETAIL = "Say nothing about what was discussed, suggested or agreed in the conversation unless the person's own note in the evidence says so, and then use only what the note says.";
+
+/** Thank-you is `thank_you`; follow-up, reschedule and check-in are `follow_up`; the referral-ask step is `referral`. */
+export const STEPS: Record<StepKind, StepPlay> = {
+ thank_you: {
+  intent: "thank_you", lengths: { linkedin_message: 60, inmail: 80, email: 100 },
+  guidance: `A short thank-you after a conversation that happened. Thank them for their time. ${NO_DETAIL} Do not ask about jobs, roles, openings or referrals.`,
+ },
+ follow_up: {
+  intent: "follow_up", lengths: { linkedin_message: 50, inmail: 70, email: 90 },
+  guidance: "A brief second message after no reply. Do not repeat the first message or sound impatient. Ask once, with the one ask.",
+ },
+ reschedule: {
+  intent: "follow_up", lengths: { linkedin_message: 40, inmail: 60, email: 80 },
+  guidance: "A very short message after a call that did not happen. Blame no one. Say only that the call did not happen as planned and offer to find another time. Do not mention a date or time. Do not ask about jobs, roles, openings or referrals.",
+ },
+ check_in: {
+  intent: "follow_up", lengths: { linkedin_message: 50, inmail: 70, email: 90 },
+  guidance: `A light check-in with someone the person spoke to earlier. ${NO_DETAIL} Do not ask about jobs, roles, openings or referrals.`,
+ },
+ referral_ask: {
+  intent: "referral", lengths: { linkedin_message: 70, inmail: 90, email: 120 },
+  guidance: `The person has already spoken with this contact and now asks for a referral. Thank them, say a role on their team may fit, offer to send the resume and the job link, and ask once. Do not name a role or company the evidence does not name. ${NO_DETAIL}`,
+ },
+};
+
+/** Each channel's length for a step: the shorter of the playbook's and the step's. */
+export function stepLengths(book: Playbook, kind: StepKind): Record<Channel, number> {
+ const out = { ...book.lengths };
+ for (const channel of Object.keys(out) as Channel[]) out[channel] = Math.min(out[channel], STEPS[kind].lengths[channel] ?? Infinity);
+ return out;
+}
+
 export const PLAYBOOKS: readonly Playbook[] = GOAL_IDS.flatMap(goal => RELATIONSHIPS.map(relationship => build(goal, relationship)));
 export function playbookFor(goal: OutreachGoal, relationship: Relationship): Playbook {
  return PLAYBOOKS.find(p => p.goal === goal && p.relationship === relationship)!;

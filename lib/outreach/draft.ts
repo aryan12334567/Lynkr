@@ -37,7 +37,7 @@ import { STEPS, isStepKind, playbookFor, stepLengths, type Playbook, type StepKi
 // ---- types ----
 
 export type BriefFact = { id: string; text: string };
-export type EvidenceItem = { id: string; label: "user_words" | "why_connected" | "note"; text: string };
+export type EvidenceItem = { id: string; label: "user_words" | "why_connected" | "note" | "selected_reply" | "selected_contact"; text: string };
 export type DraftInput = {
  goal: OutreachGoal; relationship: Relationship; channel: Channel; name: string; role?: string | null; company?: string | null;
  facts: readonly FactRef[]; noteLimit?: 200 | 300;
@@ -168,6 +168,9 @@ const WHY: Record<OutreachGoal, string> = {
  reconnect: "I'd like to hear what you are working on now.",
 };
 const THANKS = "Thanks for connecting.";
+/** Two wordings each, so the versions do not collapse into one when a short note leaves room for little else. */
+const REPLY_LEADS = ["Replying to your point", "On your point"];
+const NOTICED_LEADS = ["I noticed this about your work", "This stood out in your work"];
 const SHARED = "I went to the same college as you.";
 const PRIVATE = "I would keep anything you share private.";
 /** Recipient-facing opener built on role and company only. `who` is "your work as an analyst at Example Co". */
@@ -182,7 +185,7 @@ function contextLine(goal: OutreachGoal, relationship: Relationship, who: string
 /** Every line the composer can write for a goal. The trace guard treats them as approved wording. */
 function templateText(goal: OutreachGoal): string[] {
  const lead = LEAD[goal];
- return [WHY[goal], THANKS, SHARED, PRIVATE, ...Object.values(lead.options), lead.free("x"), contextLine(goal, "alumni", "your work", ""), contextLine(goal, "stranger", "your work", "x"), "Everything stays private."];
+ return [WHY[goal], THANKS, SHARED, PRIVATE, ...Object.values(lead.options), lead.free("x"), contextLine(goal, "alumni", "your work", ""), contextLine(goal, "stranger", "your work", "x"), "Everything stays private.", ...REPLY_LEADS.map(l => `${l}.`), ...NOTICED_LEADS.map(l => `${l}.`)];
 }
 
 /** Asks by intent. A later unit registers the ask for a new intent here; anything missing uses the playbook's. */
@@ -269,6 +272,8 @@ export function buildEvidencePack(input: ExtendedDraftInput): EvidencePack {
   extras: (input.extraEvidence ?? []).map(({ id, label, text }) => ({ id, label, text })),
  };
 }
+/** Text the person selected on LinkedIn: the recipient's public words, never the person's own claims. */
+const isSelected = (e: EvidenceItem) => e.label === "selected_reply" || e.label === "selected_contact";
 const sourcesOf = (pack: EvidencePack) => [pack.recipient.name, pack.recipient.role, pack.recipient.company, ...pack.facts.map(f => f.text), ...pack.briefFacts.map(f => f.text), ...pack.extras.map(e => e.text)];
 
 // ---- the trace guard (KTD5) ----
@@ -326,7 +331,9 @@ export function draftProblem(input: ExtendedDraftInput, candidate: Pick<Candidat
  }
  for (const quote of body.matchAll(/[“"]([^”"]+)[”"]/g)) if (!sources.join(" ").toLowerCase().includes(quote[1].toLowerCase())) return "quote";
  const known = new Set(content(sources.join(" ")).map(stem));
- const knownAll = new Set((sources.join(" ").toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).map(stem));
+ // What the person says they did can rest on their own facts and approved wording, never on the recipient's selected words.
+ const ownSources = sources.filter(x => !pack.extras.some(e => isSelected(e) && e.text === x));
+ const knownAll = new Set((ownSources.join(" ").toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).map(stem));
  const recipient = new Set(content([pack.recipient.name, pack.recipient.role, pack.recipient.company, ...pack.briefFacts.map(f => f.text), ...pack.extras.map(e => e.text)].join(" ")).map(stem));
  // What was said or agreed in a meeting is known only from the person's own note (KTD18). Anything else is invented.
  const noteWords = new Set(content(pack.extras.filter(e => e.label === "note").map(e => e.text).join(" ")).map(stem));
@@ -369,6 +376,16 @@ export function adviceFor(input: Pick<ExtendedDraftInput, "channel" | "tier" | "
 }
 
 // ---- the composer ----
+
+/** The selected words as one quoted line for the composer: a short first sentence, quoted exactly as selected. */
+function selectedLine(item: EvidenceItem | undefined, variant: number): Piece | null {
+ if (!item) return null;
+ const first = split(item.text)[0] ?? "";
+ const cut = first.length <= 100 ? first : first.slice(0, 100).replace(/\s+\S*$/, "");
+ const quote = stripEnd(cut.replace(/["“”]/g, "'")).trim();
+ if (quote.length < 3) return null;
+ return item.label === "selected_reply" ? { text: `${REPLY_LEADS[variant % 2]}: "${quote}".`, keep: 7 } : { text: `${NOTICED_LEADS[variant % 2]}: "${quote}".`, keep: 5 };
+}
 
 type Piece = { text: string; keep: number };
 type Ctx = {
@@ -426,6 +443,7 @@ export function composeDrafts(input: ExtendedDraftInput): DraftResult {
   briefLine: brief ? `I noticed this about your work: "${brief.text.trim()}"${/[.!?]$/.test(brief.text.trim()) ? "" : "."}` : "",
   afterAccept: advice.draftChannel !== input.channel, ask: askFor(book, eff.intent), unit, limit,
  };
+ const selectedItem = pack.extras.find(isSelected);
  const versions: DraftVersion[] = [];
  for (const id of [...book.angles.map(a => a.id), "context", "direct"]) {
   if (versions.length === 2) break;
@@ -435,7 +453,8 @@ export function composeDrafts(input: ExtendedDraftInput): DraftResult {
   const angle = REALIZERS[id] || REALIZER_FOR[id] ? id : "direct";
   if (versions.some(v => v.angle === angle)) continue;
   const lead = ctx.afterAccept ? [{ text: THANKS, keep: 2 }] : [];
-  const body = build(ctx, [...lead, ...parts]);
+  const selected = selectedLine(selectedItem, versions.length);
+  const body = build(ctx, [...lead, ...(selected ? [selected] : []), ...parts]);
   if (versions.some(v => v.body === body)) continue;
   const detail = ctx.lead && body.includes(ctx.lead) ? pack.facts.filter(f => f.kind === "goal_detail" && f.text.startsWith(leadDef(eff.goal).question)).map(f => f.id) : [];
   versions.push(toVersion(eff, { angle, body, factRefs: detail, briefRefs: [] }, pack));
@@ -556,6 +575,16 @@ export function cleanEvidenceText(text: string | null | undefined, max = 280): s
  return safe(lines.join(" "), max);
 }
 
+/**
+ * Text the person selected on LinkedIn, as one labelled evidence item for this request only. It is cleaned like a note:
+ * instructions, planted requests, contact details and sensitive lines are removed. Returns [] when nothing is left.
+ * It is never saved, logged, searched or counted.
+ */
+export function selectionEvidence(selection: string | null | undefined, use: "contact" | "reply" | undefined): EvidenceItem[] {
+ const text = cleanEvidenceText(selection, 1500);
+ return text ? [{ id: "S1", label: use === "reply" ? "selected_reply" : "selected_contact", text }] : [];
+}
+
 const NOTES_WINDOW_MONTHS = 6;
 const MAX_NOTES = 3;
 
@@ -627,7 +656,7 @@ export async function runDraft(db: Db, userId: string, req: DraftRequest, deps: 
  const mock = deps.mock ?? isMock();
  try {
   const result = await generateOutreach(
-   { goal, relationship, channel: req.channel, name: contact.name, role: contact.role, company: contact.company, facts, briefFacts, noteLimit: req.noteLimit, tier: contact.tier, notesLeft, forceNote: req.forceNote, answeredKeys, step, meeting: timeline.meeting, extraEvidence: timeline.extras },
+   { goal, relationship, channel: req.channel, name: contact.name, role: contact.role, company: contact.company, facts, briefFacts, noteLimit: req.noteLimit, tier: contact.tier, notesLeft, forceNote: req.forceNote, answeredKeys, step, meeting: timeline.meeting, extraEvidence: [...timeline.extras, ...selectionEvidence(req.selection, req.selectionUse)] },
    { mock, model: deps.model, spend: deps.spend ?? (() => recordAISpend(db, userId)) },
   );
   return reply(200, result);

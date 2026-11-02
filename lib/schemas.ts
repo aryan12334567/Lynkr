@@ -440,6 +440,10 @@ export const DraftRequest = z
     answer: DraftAnswer.optional(),
     /** A timeline step (thank-you, follow-up, reschedule, check-in, referral ask) to write the message for. */
     eventId: z.string().uuid().optional(),
+    /** Text the person selected on LinkedIn (extension). Used once for this draft and never stored. */
+    selection: z.string().max(3000).optional(),
+    /** "reply": write a reply to the selected text. "contact": the text is context about the contact. Defaults to "contact". */
+    selectionUse: z.enum(["contact", "reply"]).optional(),
   })
   .strict();
 export type DraftRequest = z.infer<typeof DraftRequest>;

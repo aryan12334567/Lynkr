@@ -17,7 +17,7 @@ const Body = DraftRequest.extend({ channel: DraftRequest.shape.channel.default("
 export async function POST(req: Request) {
   const auth = await extensionAuth(req);
   if ("error" in auth) return auth.error;
-  const read = await readJson(req, 4096);
+  const read = await readJson(req, 16384);
   if ("error" in read) return extJson(req, { error: "Invalid request." }, read.error.status);
   const body = Body.safeParse(read.body);
   if (!body.success) return extJson(req, { error: "Invalid request." }, 400);

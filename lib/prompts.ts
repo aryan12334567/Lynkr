@@ -284,6 +284,8 @@ const EVIDENCE_SOURCE: Record<string, string> = {
   note: "the person's own note about a meeting (their words)",
   user_words: "the person's own words",
   why_connected: "why the person connected with this contact (background only; may be copied from elsewhere)",
+  selected_reply: "Selected by you on LinkedIn: the recipient's public words, which the message replies to",
+  selected_contact: "Selected by you on LinkedIn: the recipient's public words, context about them",
 };
 
 /** A timeline step the message is for. `ask` replaces the playbook's ask; `intent` is fixed by the step. */
@@ -300,6 +302,8 @@ export function outreachUser(pack: EvidencePack, book: Playbook, spec: { channel
   return [
     `Goal: ${book.goal}. Relationship to the recipient: ${book.relationship}. Intent: ${spec.step?.intent ?? book.intent}.`,
     spec.step ? `Step: ${spec.step.kind}. The person has already been in touch with this contact. ${spec.step.guidance}` : "",
+    pack.extras.some(e => e.label === "selected_reply") ? "The person selected some of the recipient's public words on LinkedIn (otherEvidence, source \"Selected by you on LinkedIn\"). Reply to what those words say, naturally and briefly, using only what they state. The ask stays the one above." : "",
+    pack.extras.some(e => e.label === "selected_contact") ? "The person selected some of the recipient's public words on LinkedIn (otherEvidence, source \"Selected by you on LinkedIn\"). Treat them as context about the recipient and use only what they state." : "",
     spec.afterAccept ? "This is the first message after the recipient accepted the person's blank connection request. Start by thanking them for connecting." : "",
     `Channel: ${CHANNEL_RULES[spec.channel].label}. Limit: ${spec.limit} ${unitWord(spec.unit)}, counting every character or word of the message.`,
     `Angles to use, best first (each version takes a different one):

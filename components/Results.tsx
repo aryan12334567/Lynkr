@@ -7,6 +7,7 @@ import type { Draft, Packet } from "@/lib/schemas";
 import type { Relationship } from "@/lib/checker";
 import { newPlan } from "@/lib/plan";
 import { EMPTY_PACKET } from "@/lib/packet";
+import { TAB_LABEL, tabIds } from "@/lib/outreach/ui-tabs";
 import { DOMAIN_LABEL, STAGE_LABEL } from "@/lib/roles";
 import type { DraftEdit, Saved } from "@/lib/store";
 import { WeekPlan } from "./WeekPlan";
@@ -23,13 +24,13 @@ import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } fr
 import { Button, Card, ErrorNote, Label, SectionHead } from "./ui";
 
 const TABS = [
-  { id: "today", label: "Today", icon: House, sub: "What to do next, from what's already in your Story Vault." },
-  { id: "vault", label: "Story Vault", icon: Library, sub: "The facts every draft is built from." },
-  { id: "outreach", label: "Outreach", icon: Send, sub: "First messages that match how well they know you." },
-  { id: "posts", label: "Posts & comments", icon: PenLine, sub: "From your own work, and for posts you found." },
-  { id: "plan", label: "This week", icon: CalendarDays, sub: "A small, steady plan. Nothing is posted for you." },
-  { id: "connect", label: "Connect", icon: Users, sub: "Who to look for, and one person at a time." },
-  { id: "check", label: "Check a message", icon: BadgeCheck, sub: "The person and the reason first, then the wording." },
+  { id: "today", label: TAB_LABEL.today, icon: House, sub: "What to do next, from what's already in your Story Vault." },
+  { id: "vault", label: TAB_LABEL.vault, icon: Library, sub: "The facts every draft is built from." },
+  { id: "outreach", label: TAB_LABEL.outreach, icon: Send, sub: "First messages that match how well they know you." },
+  { id: "posts", label: TAB_LABEL.posts, icon: PenLine, sub: "From your own work, and for posts you found." },
+  { id: "plan", label: TAB_LABEL.plan, icon: CalendarDays, sub: "A small, steady plan. Nothing is posted for you." },
+  { id: "connect", label: TAB_LABEL.connect, icon: Users, sub: "Who to look for, and one person at a time." },
+  { id: "check", label: TAB_LABEL.check, icon: BadgeCheck, sub: "The person and the reason first, then the wording." },
 ] as const;
 export type Tab = (typeof TABS)[number]["id"];
 export const TAB_IDS: Tab[] = TABS.map((t) => t.id);
@@ -141,7 +142,7 @@ export function Results({
           role="tablist"
           aria-label="Your drafts and tools"
         >
-          {TABS.filter(t => !outreachV2 || t.id !== "connect").map((t) => {
+          {TABS.filter((t) => tabIds(outreachV2).includes(t.id)).map((t) => {
             const I = t.icon;
             const on = tab === t.id;
             return (
@@ -214,7 +215,7 @@ export function Results({
                 />
               )}
 
-              {outreachV2 && (tab === "outreach" || tab === "connect") && <OutreachWorkspace profile={profile} />}
+              {outreachV2 && (tab === "outreach" || tab === "connect") && <OutreachWorkspace profile={profile} facts={s.facts} mock={mock} />}
 
               {!outreachV2 && tab === "outreach" && (
                 <div className="space-y-4">
@@ -278,6 +279,7 @@ export function Results({
                   plan={s.plan}
                   onPlan={(plan) => setS((prev) => ({ ...prev, plan }))}
                   result={result}
+                  outreachV2={outreachV2}
                   fills={s.fills}
                   onOpenDraft={(draftId) => go(draftId.startsWith("out:") ? "outreach" : "posts")}
                 />

@@ -20,6 +20,7 @@ import {
 } from "@/lib/plan";
 import { downloadIcs, googleCalendarUrl, type CalEvent } from "@/lib/ics";
 import { postJson } from "@/lib/store";
+import { offerPlanFollowUp } from "@/lib/outreach/ui-today";
 import { Button, Card, ErrorNote, inputCls } from "./ui";
 
 const TAG_CLS: Record<Tag, string> = {
@@ -54,6 +55,7 @@ export function WeekPlan({
   result,
   fills,
   onOpenDraft,
+  outreachV2 = false,
 }: {
   plan: Plan;
   onPlan: (p: Plan) => void;
@@ -61,6 +63,8 @@ export function WeekPlan({
   fills: Record<string, string[]>;
   /** Jump to the tab where this item's draft lives. */
   onOpenDraft?: (draftId: string) => void;
+  /** Under outreach v2 the timeline owns follow-ups (CO-2), so a sent message gets no plan follow-up here. */
+  outreachV2?: boolean;
 }) {
   const [view, setView] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0);
@@ -236,7 +240,7 @@ export function WeekPlan({
             Got a reply
           </label>
         )}
-        {due && !hasFollowUp(plan, it.id) && (
+        {offerPlanFollowUp(outreachV2, due, hasFollowUp(plan, it.id)) && (
           <button className="mt-2 rounded bg-bad/10 px-2 py-1 text-xs font-medium text-bad" onClick={() => onPlan(addFollowUp(plan, it.id, today))}>
             Follow-up due: add it to today
           </button>

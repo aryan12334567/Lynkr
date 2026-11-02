@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { loadLicense } from "@/lib/store";
-import { nextAction } from "@/lib/outreach/followup";
-import type { Contact } from "@/lib/outreach/contacts-db";
+import { useState } from "react";
+import { DueToday, MondayTodo } from "./outreach/MondayTodo";
+import { isMonday } from "@/lib/outreach/ui-today";
 import { ArrowRight, CalendarDays, Library, PenLine, Send, Users } from "lucide-react";
 import type { Saved } from "@/lib/store";
 import { openSlots } from "@/lib/slots";
@@ -19,13 +18,6 @@ type Tab = "vault" | "outreach" | "posts" | "plan" | "connect" | "check";
  */
 export function Today({ s, go, outreachV2 = false }: { s: Saved; go: (t: Tab) => void; outreachV2?: boolean }) {
   const [outreachDue, setOutreachDue] = useState(0);
-  useEffect(() => {
-    if (!outreachV2) return;
-    const license = loadLicense();
-    fetch("/api/outreach/contacts", {headers: license ? {"x-lynkr-license":license.key,"x-lynkr-instance":license.instanceId} : {}}).then(r => r.ok ? r.json() : null).then(data => {
-      if (data?.contacts) setOutreachDue((data.contacts as Contact[]).filter(c => nextAction({...c, secondPersonSuggested:c.brief?.secondPersonSuggested === true, followUpSent:c.brief?.followUpSent === true})).length);
-    }).catch(() => {});
-  }, [outreachV2]);
   const r = s.result!;
   const drafts: [string, string, Tab][] = [
     ...r.posts.map((p, i) => [`post:${i}`, p.body, "posts"] as [string, string, Tab]),
@@ -54,6 +46,7 @@ export function Today({ s, go, outreachV2 = false }: { s: Saved; go: (t: Tab) =>
 
   return (
     <div className="space-y-8">
+      {outreachV2 && (isMonday() ? <MondayTodo onCount={setOutreachDue} /> : <DueToday onCount={setOutreachDue} />)}
       <section className="relative overflow-hidden rounded-2xl border border-line bg-surface p-6 shadow-sm sm:p-8">
 
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">

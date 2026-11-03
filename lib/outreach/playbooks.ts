@@ -110,7 +110,7 @@ const PLAY: Record<OutreachGoal, GoalPlay> = {
  mentor: {
   angles: ["context", "insight", "shared", "direct"],
   asks: {
-   stranger: "What is one thing you would suggest someone at my stage focus on?",
+   stranger: "What is one thing you would suggest I focus on first?",
    alumni: "Would you be open to one 15-minute conversation about your experience?",
    knows_me: "Would you be willing to give me your view on my next step now and then?",
   },
@@ -121,9 +121,9 @@ const PLAY: Record<OutreachGoal, GoalPlay> = {
  clients: {
   angles: ["teardown", "insight", "context", "shared", "direct"],
   asks: {
-   stranger: "Would it be useful if I sent a short teardown of one part of your work?",
-   alumni: "Would you be open to a short conversation about how your team handles this today?",
-   knows_me: "Would you like to talk through whether this could help your team?",
+   stranger: "Would it be useful if I sent a short teardown of your website or product?",
+   alumni: "Would you be open to a short conversation about whether my work could help your team?",
+   knows_me: "Would you like to talk through whether my work could help your team?",
   },
   proof: ["offer", "evidence", "project", "contribution"],
   followUp: `Follow up once with a second, different observation about their work. Do not resend the first message. ${ONE_FOLLOW_UP}`,
@@ -136,15 +136,15 @@ const PLAY: Record<OutreachGoal, GoalPlay> = {
    alumni: "Would you be open to a short chat about the kind of work you want to do next?",
    knows_me: "Would you be interested in hearing about a role on my team?",
   },
-  proof: ["offer", "project", "evidence"],
+  proof: ["offer", "project"],
   followUp: `Follow up once with one concrete detail about the work. ${ONE_FOLLOW_UP}`,
   forbidden: ["naming a salary", "promising a role or terms you cannot offer"],
  },
  funding: {
   angles: ["traction", "insight", "shared", "context", "direct"],
   asks: {
-   stranger: "Would you be open to a short conversation about whether this fits your investment interests?",
-   alumni: "Would you be open to a 15-minute conversation about whether this fits what you invest in?",
+   stranger: "Would you be open to a short conversation about whether what I'm building fits your investment interests?",
+   alumni: "Would you be open to a 15-minute conversation about whether what I'm building fits what you invest in?",
    knows_me: "Would you give me your honest feedback on how I describe the progress so far?",
   },
   proof: ["evidence", "project", "contribution", "offer"],
@@ -168,7 +168,7 @@ const PLAY: Record<OutreachGoal, GoalPlay> = {
   asks: {
    stranger: "Would you be open to exploring whether our work could fit together?",
    alumni: "Would you be open to a short call to explore whether our work could fit together?",
-   knows_me: "Would you be up for talking through a possible collaboration?",
+   knows_me: "Would you be up for talking through how we might work together?",
   },
   proof: ["offer", "project", "evidence", "contribution"],
   followUp: `Follow up once with a sharper version of the idea. ${ONE_FOLLOW_UP}`,

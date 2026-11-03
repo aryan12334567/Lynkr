@@ -29,7 +29,7 @@ import { confirmedFacts, saveFacts, type Db } from "../db";
 import { factsFor } from "../facts";
 import { OUTREACH_SYSTEM, outreachUser } from "../prompts";
 import { DraftModelReply, type Channel, type DraftRequest, type FactRef, type Intent } from "../schemas";
-import { cleanBriefText } from "./brief";
+import { briefSentences, cleanBriefText, isSensitive, looksPlanted } from "./brief";
 import { getContact, listContacts, recordAISpend } from "./contacts-db";
 import { GOAL_IDS, allowsReferralAsk, goalDetailFact, goalFor, type OutreachGoal } from "./goals";
 import { STEPS, isStepKind, playbookFor, stepLengths, type Playbook, type StepKind } from "./playbooks";
@@ -123,10 +123,10 @@ const LEAD: Record<OutreachGoal, LeadDetail> = {
  referral: { key: "company", options: {}, free: a => `I'm interested in roles at ${a}.` },
  network: { key: "topic", options: { "Their work": "I'd like to hear about your work.", "Their field": "I'd like to learn more about your field.", "How they got started": "I'd like to hear how you got started." }, free: a => `I'd like to learn about ${a}.` },
  mentor: { key: "topic", options: { "Career direction": "I'm looking for guidance on my career direction.", Skills: "I'm looking for guidance on building my skills.", "Starting out": "I'm looking for guidance on starting out." }, free: a => `I'm looking for guidance on ${a}.` },
- clients: { key: "buyer", options: { Teams: "My work is aimed at teams.", Businesses: "My work is aimed at businesses.", Individuals: "My work is aimed at individuals." }, free: a => `My work is aimed at ${a}.` },
+ clients: { key: "buyer", options: { Teams: "I'm looking to work with teams.", Businesses: "I'm looking to work with businesses.", Individuals: "I'm looking to work with individuals." }, free: a => `I'm looking to work with ${a}.` },
  hiring: { key: "role", options: { "Full time": "I'm hiring for a full-time role.", Contract: "I'm hiring for a contract role.", Internship: "I'm hiring for an internship." }, free: a => `I'm hiring for ${an(a)} ${a} role.` },
  funding: { key: "stage", options: { "Pre-seed": "I'm raising a pre-seed round.", Seed: "I'm raising a seed round." }, free: a => `I'm raising a ${a} round.` },
- buy_business: { key: "kind", options: { Software: "I'm looking at software businesses.", Services: "I'm looking at service businesses." }, free: a => `I'm looking at ${a} businesses.` },
+ buy_business: { key: "kind", options: { Software: "I'm interested in software businesses.", Services: "I'm interested in service businesses." }, free: a => `I'm interested in ${a} businesses.` },
  partner: { key: "kind", options: { Distribution: "I'm looking for a distribution partnership.", Product: "I'm looking for a product partnership.", Community: "I'm looking for a community partnership." }, free: a => `I'm looking for a ${a} partnership.` },
  reconnect: { key: "reason", options: { Work: "I'd like to reconnect about work.", Advice: "I'd like to ask for your advice." }, free: a => `I'd like to reconnect about ${a}.`, warmOnly: true },
 };
@@ -157,35 +157,54 @@ export function strongerFor(goal: OutreachGoal, facts: readonly FactRef[], answe
 
 const WHY: Record<OutreachGoal, string> = {
  job: "I'm learning how this kind of work is done day to day.",
- referral: "I'm trying to understand what it takes to do this kind of work well.",
+ referral: "I'm learning what it takes to do this kind of work well.",
  network: "I'm learning about this field and keen to hear from people working in it.",
- mentor: "I'm early in my career and looking for guidance from people further along.",
+ mentor: "I'm early in my career, so I'm learning from people further along.",
  clients: "I think my work could be useful to teams like yours.",
  hiring: "I'm building a team and looking for good people.",
  funding: "I'm building a company and raising money for it.",
- buy_business: "I'm looking to buy and run a business.",
+ buy_business: "I'm working toward buying and running a business of my own.",
  partner: "I'm building something and looking for the right people to work with.",
- reconnect: "I'd like to hear what you are working on now.",
+ reconnect: "I'm getting in touch because I'd like to hear what you are working on now.",
+};
+/** A second first-person line per goal, so a short note can still say what the sender is doing in more than one wording. */
+const WHY_ALT: Record<OutreachGoal, string> = {
+ ...WHY,
+ job: "I'm writing because I'm trying to understand how people get into this field.",
+ referral: "I'm writing because I'd like to know what teams in this field look for.",
+ network: "I'm writing because I'm keen to learn from people working in this field.",
+ mentor: "I'm writing because I'd value the view of someone further along.",
+ reconnect: "I'm writing because I'd like to hear what you are up to now.",
+ clients: "I think my work could help teams like yours.",
+ hiring: "I'm building a team and I'm looking for good people to join it.",
+ funding: "I'm building a company and I'm raising money for it.",
+ buy_business: "I'm working on buying a business that I can run myself.",
+ partner: "I'm building something and I'm looking for people to work with.",
 };
 const THANKS = "Thanks for connecting.";
-/** Two wordings each, so the versions do not collapse into one when a short note leaves room for little else. */
-const REPLY_LEADS = ["Replying to your point", "On your point"];
-const NOTICED_LEADS = ["I noticed this about your work", "This stood out in your work"];
+/** Two wordings each, so the versions do not collapse into one when a short note leaves room for little else. `q` is a short plain span of the recipient's own words. */
+const REPLY_LEADS: readonly ((q: string) => string)[] = [q => `I'm replying to your line "${q}".`, q => `Your line "${q}" is why I'm writing.`];
+const NOTICED_LEADS: readonly ((q: string) => string)[] = [q => `"${q}" stood out to me.`, q => `This stood out in your work: "${q}".`];
 const SHARED = "I went to the same college as you.";
 const PRIVATE = "I would keep anything you share private.";
-/** Recipient-facing opener built on role and company only. `who` is "your work as an analyst at Example Co". */
 const LEARNERS: readonly OutreachGoal[] = ["job", "network", "mentor"];
-function contextLine(goal: OutreachGoal, relationship: Relationship, who: string, company: string): string {
+/**
+ * Recipient-facing opener built on role and company only. It states nothing about the recipient beyond the role and
+ * company they list, and returns "" when there is neither (an empty "because of your work" says nothing).
+ */
+function contextLine(goal: OutreachGoal, relationship: Relationship, role: string, company: string): string {
  if (goal === "referral") return `I'd like to understand what ${company ? `${company} looks` : "your team looks"} for in people.`;
- if (goal === "reconnect" && relationship !== "stranger") return company ? `I'd like to hear how things are going at ${company}.` : "I'd like to hear how things are going for you.";
- if (LEARNERS.includes(goal) || goal === "reconnect") return `I'd like to learn more about ${who}.`;
- return `I'm writing because of ${who}.`;
+ if (goal === "reconnect" && relationship !== "stranger") return company ? `I wanted to see how things are going at ${company}.` : "I wanted to see how things are going for you.";
+ const place = role && company ? `${an(role)} ${role} at ${company}` : role ? `${an(role)} ${role}` : "";
+ if (LEARNERS.includes(goal) || goal === "reconnect") return place ? `As ${place}, you do the kind of work I'd like to understand better.` : company ? `At ${company}, you do work I'd like to understand better.` : "";
+ return place ? `I'm reaching out because you work as ${place}.` : company ? `I'm reaching out because you work at ${company}.` : "";
 }
 
 /** Every line the composer can write for a goal. The trace guard treats them as approved wording. */
 function templateText(goal: OutreachGoal): string[] {
  const lead = LEAD[goal];
- return [WHY[goal], THANKS, SHARED, PRIVATE, ...Object.values(lead.options), lead.free("x"), contextLine(goal, "alumni", "your work", ""), contextLine(goal, "stranger", "your work", "x"), "Everything stays private.", ...REPLY_LEADS.map(l => `${l}.`), ...NOTICED_LEADS.map(l => `${l}.`)];
+ const contexts = (["stranger", "alumni"] as const).flatMap(rel => [["", ""], ["x", ""], ["", "x"], ["x", "x"]].map(([role, company]) => contextLine(goal, rel, role, company)));
+ return [WHY[goal], WHY_ALT[goal], THANKS, SHARED, PRIVATE, ...Object.values(lead.options), lead.free("x"), ...contexts, "Everything stays private.", ...REPLY_LEADS.map(l => l("x")), ...NOTICED_LEADS.map(l => l("x"))];
 }
 
 /** Asks by intent. A later unit registers the ask for a new intent here; anything missing uses the playbook's. */
@@ -245,7 +264,12 @@ const askOf = (input: Pick<ExtendedDraftInput, "step" | "intent">, book: Playboo
 export const intentOf = (input: Pick<ExtendedDraftInput, "step" | "intent">, book: Playbook): Intent => (input.step ? STEPS[input.step].intent : input.intent ?? book.intent);
 /** A step goes to someone the person has already been in touch with, so the checker reads it as a warm message about a real meeting. */
 const checkRelOf = (input: Pick<ExtendedDraftInput, "step" | "relationship">): Relationship => (input.step ? "knows_me" : input.relationship);
-const checkCtx = (input: ExtendedDraftInput, facts: string[]) => ({ channel: input.channel, noteMax: input.noteLimit === 300 ? (300 as const) : undefined, intent: "work_question" as const, facts, sharedHistory: input.step && input.meeting ? true : undefined });
+const checkCtx = (input: ExtendedDraftInput, facts: string[], quoted: string[] = []) => ({ channel: input.channel, noteMax: input.noteLimit === 300 ? (300 as const) : undefined, intent: "work_question" as const, facts: [...facts, ...quoted], sharedHistory: input.step && input.meeting ? true : undefined });
+/** The words a draft quotes from the recipient's own text. The checker reads their numbers as theirs, not as the person's unconfirmed claims. */
+const quotedFrom = (body: string, pack: EvidencePack): string[] => {
+ const recipientText = [...pack.briefFacts.map(f => f.text), ...pack.extras.map(e => e.text)].join(" ").toLowerCase();
+ return [...body.matchAll(/[“"]([^”"]+)[”"]/g)].map(m => m[1]).filter(q => recipientText.includes(q.toLowerCase()));
+};
 
 // ---- limits ----
 
@@ -285,7 +309,12 @@ const SKIP_CAPS = /^(Hi|Hello|I|No|Would|Could|Can|What|Thank|Thanks|If|The|My|Y
 const STOP = new Set(("about after again also because been before being both could does doing done during each every from have having here into just make made more most much need only other over same should some such than that their them then there these they this those through very want were what when where which while with would your yours youre mine work working role roles team teams people someone anyone thing things time first next last week year years used using took take learned learn noticed something really still well like good great better lot lots part parts kind kinds show shows know think would like hear learn more").split(" "));
 const content = (s: string) => (s.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? []).filter(w => !STOP.has(w));
 const stem = (w: string) => w.replace(/(ings|ing|ed|es|s)$/, "");
-const split = (text: string) => text.split(/(?<=[.?!])\s+|\n+/).map(s => s.trim()).filter(Boolean);
+/** Sentences of a draft. A closing quote stays with the sentence it ends, so `...: "a fact." Next sentence` is two sentences. */
+const split = (text: string) => text.split(/(?<=[.?!]["”’]?)\s+|\n+/).map(s => s.trim()).filter(Boolean);
+/** A sentence without the spans it quotes: the quoted words are the recipient's, not the person's own claim. */
+const unquoted = (s: string) => s.replace(/[“"][^”"]*[”"]/g, " ");
+/** True after a greeting or a sentence end, where a capital letter is just the start of a sentence. */
+const SENTENCE_START = /(?:^|[.!?]["”’]?\s*|^(?:hi|hello|dear)\s+[\p{L}'-]+,\s*|^hello,\s*)$/iu;
 /** "I built ...", "we ran ...": something the person says they did. */
 const DID = /\b(?:i|we)(?:'ve| have)?\s+(?:also\s+|just\s+|recently\s+|once\s+)?(?:built|made|led|ran|shipped|wrote|designed|launched|grew|managed|founded|won|created|developed|reduced|increased|improved|delivered|helped|worked|interned|cleaned|analy[sz]ed|taught|studied|completed|achieved|earned|scored|presented|organi[sz]ed|started|sold|raised|saved|cut|trained|mentored|published|automated|tested|researched|translated|coded|joined)\b/i;
 /** A claim about the recipient's own doings, which only a confirmed brief fact may support. */
@@ -326,7 +355,7 @@ export function draftProblem(input: ExtendedDraftInput, candidate: Pick<Candidat
  for (const m of body.matchAll(/\b[A-Z][\p{L}\p{N}'-]*\b/gu)) {
   const word = m[0], before = body.slice(0, m.index);
   if (SKIP_CAPS.test(word.split("'")[0])) continue;
-  if (/(?:^|[.!?]\s*)$/.test(before) && /^[A-Z][a-z]+$/.test(word)) continue;
+  if (SENTENCE_START.test(before) && /^[A-Z][a-z]+$/.test(word)) continue;
   if (!evidence.has(word.toLowerCase())) return "name";
  }
  for (const quote of body.matchAll(/[“"]([^”"]+)[”"]/g)) if (!sources.join(" ").toLowerCase().includes(quote[1].toLowerCase())) return "quote";
@@ -338,14 +367,15 @@ export function draftProblem(input: ExtendedDraftInput, candidate: Pick<Candidat
  // What was said or agreed in a meeting is known only from the person's own note (KTD18). Anything else is invented.
  const noteWords = new Set(content(pack.extras.filter(e => e.label === "note").map(e => e.text).join(" ")).map(stem));
  for (const s of split(body)) {
-  if (MEETING_CLAIM.test(s) && (!noteWords.size || ratio(s.replace(MEETING_CLAIM, " "), noteWords) < 0.5)) return "meeting_detail";
-  if (DID.test(s) && claimRatio(s, knownAll) < 0.5) return "grounding";
+  const own = unquoted(s);
+  if (MEETING_CLAIM.test(own) && (!noteWords.size || ratio(own.replace(MEETING_CLAIM, " "), noteWords) < 0.5)) return "meeting_detail";
+  if (DID.test(own) && claimRatio(own, knownAll) < 0.5) return "grounding";
   if (HOOK.test(s) && ratio(s, recipient) < 0.5) return "recipient_claim";
  }
  if (unsupportedSentences(body, sources).length) return "grounding";
  // A thank-you, a reschedule or a check-in never asks for a job, an opening or a referral, whatever the evidence says.
  if (input.step && NO_JOB_ASK.includes(input.step) && JOB_ASK.test(body)) return "off_intent";
- const check = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text)));
+ const check = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text), quotedFrom(body, pack)));
  if (check.verdict === "Do not send yet") return "checker";
  // A referral ask is for someone who already knows the person's work, and only on the referral playbook or the referral step.
  if (check.isReferralAsk && book.intent !== "referral" && input.step !== "referral_ask") return "referral";
@@ -377,28 +407,87 @@ export function adviceFor(input: Pick<ExtendedDraftInput, "channel" | "tier" | "
 
 // ---- the composer ----
 
-/** The selected words as one quoted line for the composer: a short first sentence, quoted exactly as selected. */
-function selectedLine(item: EvidenceItem | undefined, variant: number): Piece | null {
- if (!item) return null;
- const first = split(item.text)[0] ?? "";
- const cut = first.length <= 100 ? first : first.slice(0, 100).replace(/\s+\S*$/, "");
- const quote = stripEnd(cut.replace(/["“”]/g, "'")).trim();
- if (quote.length < 3) return null;
- return item.label === "selected_reply" ? { text: `${REPLY_LEADS[variant % 2]}: "${quote}".`, keep: 7 } : { text: `${NOTICED_LEADS[variant % 2]}: "${quote}".`, keep: 5 };
+/**
+ * A short, plain span of someone else's words that the composer may quote: one sentence of 12 to 90 characters, 3 to 16
+ * words, letters, digits and light punctuation only, nothing addressed to "you", nothing that reads as an instruction
+ * or a sensitive detail. Returns "" when no sentence qualifies, so a planted or odd line is never echoed into a draft.
+ */
+export function plainQuote(text: string): string {
+ for (const sentenceText of split(text).slice(0, 3)) {
+  const q = stripEnd(sentenceText).trim();
+  const words = q.split(/\s+/).length;
+  if (q.length < 12 || q.length > 90 || words < 3 || words > 16) continue;
+  if (!/^[\p{L}\p{N}][\p{L}\p{N} ,'’%&()/.-]*$/u.test(q)) continue;
+  if (/\b(?:you|your|yours|yourself)\b/i.test(q) || looksPlanted(q) || isSensitive(q)) continue;
+  return q;
+ }
+ return "";
 }
 
-type Piece = { text: string; keep: number };
+/** The selected words as one quoted line for the composer: a short plain span, quoted exactly as selected, or nothing. */
+function selectedLine(item: EvidenceItem | undefined, variant: number): Piece | null {
+ if (!item) return null;
+ const quote = plainQuote(item.text);
+ if (!quote) return null;
+ return item.label === "selected_reply" ? { text: REPLY_LEADS[variant % 2](quote), keep: 7, pin: true } : { text: NOTICED_LEADS[variant % 2](quote), keep: 5, pin: true };
+}
+
+/** `pin`: a line the version exists to carry (the recipient's selected words). It stays whenever there is room for it. */
+type Piece = { text: string; keep: number; pin?: boolean };
 type Ctx = {
- goal: OutreachGoal; relationship: Relationship; first: string; who: string; company: string; facts: Piece[]; lead: string;
+ goal: OutreachGoal; relationship: Relationship; first: string; role: string; company: string; facts: Piece[]; lead: string;
  briefLine: string; afterAccept: boolean; ask: string; unit: "chars" | "words"; limit: number;
 };
 
-function build(c: Ctx, parts: Piece[]): string {
+/** Words a sentence can start with that read oddly after "Hi Riya," in capitals. Proper nouns are never in this list. */
+const SOFT_START = /^(?:for|in|at|on|during|after|when|while|as|over|through|with|last|this|the|a|an|we|our|it|they|their|these|those|since|before|once|by|from|using|recently|currently|most|each|every|one|two|three|several|some|many|my)\b/;
+const softStart = (text: string) => (SOFT_START.test(text.charAt(0).toLowerCase() + text.slice(1)) && /^[A-Z][a-z]/.test(text) ? lowerFirst(text) : text);
+/** Does the checker accept this text as saying who the sender is or what they did? */
+const saysWho = (text: string) => checkMessage(text, "stranger", { channel: "linkedin_message" }).checks.find(c => c.label.startsWith("Says who"))?.ok ?? false;
+
+/**
+ * The text for one version. Lowest-priority pieces are dropped until it fits. If that leaves no line saying who is
+ * writing, the best such line is protected and others are dropped instead. `avoid` holds bodies already written, so a
+ * short note that has room for one sentence still gets a different sentence in the second version. `rescue` lines are
+ * added only when nothing in the version says who is writing (the goal's own first-person line, which states no fact).
+ */
+function build(c: Ctx, parts: Piece[], avoid: readonly string[] = [], rescue: readonly Piece[] = []): string {
  const greeting = c.first ? `Hi ${c.first},` : "Hello,";
  const list = parts.filter(p => p.text);
- const text = () => [greeting, ...list.map(p => p.text), c.ask].join(" ");
- while (sizeOf(text(), c.unit) > c.limit && list.length) list.splice(list.indexOf(list.reduce((low, p) => (p.keep < low.keep ? p : low))), 1);
- return sizeOf(text(), c.unit) > c.limit ? c.ask : text();
+ const assemble = (items: Piece[]) => [greeting, ...items.map((p, i) => (i === 0 ? softStart(p.text) : p.text)), c.ask].join(" ");
+ /** Drops the lowest-priority piece (never one of `keepPieces`) until the text fits. Returns null when it cannot fit. */
+ const fit = (...keepPieces: Piece[]): Piece[] | null => {
+  const items = [...list, ...keepPieces.filter(k => !list.includes(k))];
+  while (sizeOf(assemble(items), c.unit) > c.limit) {
+   const drop = items.filter(p => !keepPieces.includes(p));
+   if (!drop.length) return null;
+   items.splice(items.indexOf(drop.reduce((low, p) => (p.keep < low.keep ? p : low))), 1);
+  }
+  return items;
+ };
+ const plain = fit();
+ // With every optional line dropped, the greeting and the ask still go together; the bare ask is the last resort.
+ const plainText = plain ? assemble(plain) : c.ask;
+ const candidates = saysWho(plainText) ? [plainText] : [];
+ const pinned = list.filter(p => p.pin);
+ const withSayer = (sayer: Piece) => {
+  // The pinned line and the line saying who is writing are kept together when both fit; otherwise the sayer alone.
+  for (const keepPieces of pinned.length ? [[...pinned, sayer], [sayer]] : [[sayer]]) {
+   const items = fit(...keepPieces);
+   if (items && items.includes(sayer)) return assemble(items);
+  }
+  return null;
+ };
+ for (const sayer of list.filter(p => saysWho(p.text)).sort((x, y) => y.keep - x.keep)) {
+  const t = withSayer(sayer);
+  if (t) candidates.push(t);
+ }
+ if (!candidates.length) for (const sayer of rescue) {
+  const t = withSayer(sayer);
+  if (t) candidates.push(t);
+ }
+ candidates.push(plainText);
+ return candidates.find(t => !avoid.includes(t)) ?? candidates[0];
 }
 
 /** The first-person facts a message can open with: proof kinds first, no stand-alone fragments. */
@@ -417,11 +506,13 @@ function factPieces(book: Playbook, facts: readonly FactRef[]): Piece[] {
 }
 
 const REALIZERS: Record<string, (c: Ctx) => Piece[] | null> = {
- context: c => [{ text: contextLine(c.goal, c.relationship, c.who, c.company), keep: 6 }, { text: c.briefLine, keep: 5 }, ...c.facts, { text: c.lead, keep: 4 }],
+ // Without a proof line the version still says what the sender is doing, from the goal's own wording.
+ context: c => [{ text: contextLine(c.goal, c.relationship, c.role, c.company), keep: 6 }, { text: c.briefLine, keep: 5 }, ...c.facts, ...(c.facts.length ? [] : [{ text: WHY_ALT[c.goal], keep: 3 }]), { text: c.lead, keep: 4 }],
  direct: c => [{ text: WHY[c.goal], keep: 3 }, ...c.facts, { text: c.lead, keep: 4 }],
- insight: c => (c.facts.length ? [...c.facts, { text: contextLine(c.goal, c.relationship, c.who, c.company), keep: 3 }, { text: c.lead, keep: 4 }] : null),
+ insight: c => (c.facts.length ? [...c.facts, { text: contextLine(c.goal, c.relationship, c.role, c.company), keep: 3 }, { text: c.lead, keep: 4 }] : null),
  shared: c => (c.relationship === "alumni" ? [{ text: SHARED, keep: 6 }, ...c.facts, { text: c.lead, keep: 4 }] : null),
- confidential: c => [{ text: WHY[c.goal], keep: 6 }, { text: PRIVATE, keep: 5 }, { text: c.lead, keep: 4 }],
+ // Confidential and brief, but still a person: the sender's own proof line goes in when there is room.
+ confidential: c => [{ text: WHY[c.goal], keep: 6 }, ...c.facts, { text: PRIVATE, keep: 3 }, { text: c.lead, keep: 4 }],
 };
 const REALIZER_FOR: Record<string, string> = { traction: "insight", idea: "insight", teardown: "insight", update: "insight", invite: "insight", role: "direct" };
 
@@ -434,31 +525,35 @@ export function composeDrafts(input: ExtendedDraftInput): DraftResult {
  const pack = buildEvidencePack(eff);
  const { limit, unit } = limitFor(eff, book);
  const { name, role, company } = pack.recipient;
- const who = role && company ? `your work as ${an(role)} ${role} at ${company}` : role ? `your work as ${an(role)} ${role}` : company ? `your work at ${company}` : "your work";
- const brief = pack.briefFacts.find(f => f.text.length <= 140 && !/["“”]/.test(f.text) && !hasPlaceholder(f.text));
+ const brief = pack.briefFacts.map(f => plainQuote(f.text)).find(Boolean);
  const facts = factPieces(book, pack.facts);
  const ctx: Ctx = {
-  goal: eff.goal, relationship: eff.relationship, first: name.split(" ")[0] ?? "", who, company, facts,
+  goal: eff.goal, relationship: eff.relationship, first: name.split(" ")[0] ?? "", role, company, facts,
   lead: leadSentence(eff.goal, eff.relationship, pack.facts),
-  briefLine: brief ? `I noticed this about your work: "${brief.text.trim()}"${/[.!?]$/.test(brief.text.trim()) ? "" : "."}` : "",
+  briefLine: brief ? `I noticed this about your work: "${brief}".` : "",
   afterAccept: advice.draftChannel !== input.channel, ask: askFor(book, eff.intent), unit, limit,
  };
  const selectedItem = pack.extras.find(isSelected);
- const versions: DraftVersion[] = [];
+ // Every distinct version the playbook's angles can write, best angle first. The two shown are the first two that the
+ // checker finds ready; a short note that cannot fit a line saying who is writing is shown only when nothing better exists.
+ const all: DraftVersion[] = [];
+ const tried = new Set<string>();
  for (const id of [...book.angles.map(a => a.id), "context", "direct"]) {
-  if (versions.length === 2) break;
   const realize = REALIZERS[id] ?? REALIZERS[REALIZER_FOR[id] ?? "direct"];
   const parts = realize?.(ctx);
   if (!parts) continue;
   const angle = REALIZERS[id] || REALIZER_FOR[id] ? id : "direct";
-  if (versions.some(v => v.angle === angle)) continue;
+  if (tried.has(angle)) continue;
+  tried.add(angle);
   const lead = ctx.afterAccept ? [{ text: THANKS, keep: 2 }] : [];
-  const selected = selectedLine(selectedItem, versions.length);
-  const body = build(ctx, [...lead, ...(selected ? [selected] : []), ...parts]);
-  if (versions.some(v => v.body === body)) continue;
+  const selected = selectedLine(selectedItem, all.length);
+  const body = build(ctx, [...lead, ...(selected ? [selected] : []), ...parts], all.map(v => v.body), [{ text: WHY[eff.goal], keep: 1 }, { text: WHY_ALT[eff.goal], keep: 1 }]);
+  if (all.some(v => v.body === body)) continue;
   const detail = ctx.lead && body.includes(ctx.lead) ? pack.facts.filter(f => f.kind === "goal_detail" && f.text.startsWith(leadDef(eff.goal).question)).map(f => f.id) : [];
-  versions.push(toVersion(eff, { angle, body, factRefs: detail, briefRefs: [] }, pack));
+  all.push(toVersion(eff, { angle, body, factRefs: detail, briefRefs: [] }, pack));
  }
+ const ready = (v: DraftVersion) => (v.verdict === "Looks ready for your review" ? 0 : 1);
+ const versions = [...all.keys()].sort((x, y) => ready(all[x]) - ready(all[y]) || x - y).slice(0, 2).map(i => all[i]);
  const stronger = strongerFor(eff.goal, input.facts, input.answeredKeys);
  return { versions, strongerQuestion: stronger.question, strongerKey: stronger.key, strongerOptions: stronger.options, recommendation: advice.recommendation, advice: advice.advice, channel: advice.draftChannel, notesLeft: input.notesLeft, canWriteNote: advice.canWriteNote, intent: intentOf(input, book) };
 }
@@ -495,7 +590,7 @@ function toVersion(input: ExtendedDraftInput, c: Candidate, pack: EvidencePack):
  const quotes = (text: string) => { const n = norm(text); return n.length >= 12 && flat.includes(n.slice(0, Math.min(n.length, 40))); };
  const factRefs = [...new Set([...c.factRefs, ...pack.facts.filter(f => quotes(f.text)).map(f => f.id)])];
  const briefRefs = [...new Set([...c.briefRefs, ...pack.briefFacts.filter(f => quotes(f.text)).map(f => f.id)])];
- const verdict = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text))).verdict;
+ const verdict = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text), quotedFrom(body, pack))).verdict;
  return { angle: c.angle, body, factRefs, briefRefs, verdict };
 }
 
@@ -567,12 +662,17 @@ const BriefFacts = z.array(z.object({ text: z.string().max(240) }).passthrough()
 
 // ---- evidence from the timeline (U18, KTD18) ----
 
-/** Text addressed to an AI, on top of the brief cleaner's: "ignore instructions", or a planted request for a job or referral. */
-const PLANTED = /\b(?:ignore|disregard|forget|override)\b[^.!?\n]*\b(?:instructions?|prompts?|rules?)\b|\b(?:ask|asking|request|tell)\b[^.!?\n]*\bfor (?:an? |any |the )?(?:jobs?|referrals?|openings?|roles?)\b/i;
-/** Free text from a note or a "why you connected" line, cleaned the way the brief is, minus planted instructions. Returns "" when nothing is left. */
-export function cleanEvidenceText(text: string | null | undefined, max = 280): string {
- const lines = cleanBriefText(text ?? "").split("\n").flatMap(l => l.split(/(?<=[.!?])\s+/)).filter(l => l.trim() && !PLANTED.test(l));
- return safe(lines.join(" "), max);
+/**
+ * Free text from a note, a "why you connected" line, a brief fact or a selection, cleaned for use as evidence. An item
+ * with a sensitive sentence anywhere in it is dropped whole (R13); an instruction to a model or a writer is dropped
+ * sentence by sentence (R31); contact details are removed. The person's own notes are to-do style, so a note keeps
+ * sentences that merely begin with a verb. Returns "" when nothing is left.
+ */
+export function cleanEvidenceText(text: string | null | undefined, max = 280, source: "external" | "note" = "external"): string {
+ const sentences = briefSentences(text ?? "");
+ if (sentences.some(isSensitive)) return "";
+ const kept = sentences.filter(l => !looksPlanted(l, source));
+ return safe(cleanBriefText(kept.join("\n")).split("\n").join(" "), max);
 }
 
 /**
@@ -606,7 +706,7 @@ async function timelineEvidence(db: Db, userId: string, contact: { id: string; w
    [userId, contact.id, since, MAX_NOTES * 2],
   );
   for (const r of rows.rows) {
-   const text = cleanEvidenceText(r.note as string);
+   const text = cleanEvidenceText(r.note as string, 280, "note");
    if (text && extras.filter(e => e.label === "note").length < MAX_NOTES) extras.push({ id: `N${extras.filter(e => e.label === "note").length + 1}`, label: "note", text });
   }
  }
@@ -642,8 +742,8 @@ export async function runDraft(db: Db, userId: string, req: DraftRequest, deps: 
  const vault = await confirmedFacts(db, userId);
  const facts = factsFor("outreach", vault, { goal, proof: book.proof, detail: LEAD[goal].key });
  const rawBrief = BriefFacts.safeParse((contact.brief as { facts?: unknown } | null)?.facts);
- // The brief is stored on the contact, so it is cleaned again here: instructions and sensitive lines never reach a draft.
- const briefFacts = (rawBrief.success ? rawBrief.data : []).map(f => cleanBriefText(f.text).trim()).filter(Boolean).slice(0, 3).map((text, i) => ({ id: `B${i + 1}`, text }));
+ // The brief is stored on the contact, so it is cleaned again here, like any other evidence: instructions and sensitive lines never reach a draft.
+ const briefFacts = (rawBrief.success ? rawBrief.data : []).map(f => cleanEvidenceText(f.text, 240)).filter(Boolean).slice(0, 3).map((text, i) => ({ id: `B${i + 1}`, text }));
  const answeredKeys = goalFor(goal).details.filter(d => vault.some(f => f.kind === "goal_detail" && f.text.startsWith(d.question))).map(d => d.key);
 
  let notesLeft: number | undefined;

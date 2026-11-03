@@ -4,6 +4,15 @@ Written 2026-10-30 by the Claude Code session that started this work. Read this 
 
 ## 1. Where things stand
 
+**Current (2026-11-03 11:09 UTC, Step 1a Outreach U12):**
+- Branch: `feat/outreach-v2`
+- Status: **U12 committed.** Outreach U0–U12 and U14–U20 are done; U13 (release) is next.
+- U12 evidence: `npm run eval:outreach` 0 failures in 9,996 demo drafts; evaluation tests 28/28; `npm test` 464/464; `npx tsc --noEmit` clean. The report is `research/eval-vertical3.md`; its release note says the live-model run (needs `OPENAI_API_KEY`, A2) comes before testers see drafts.
+- Build sessions: start with `claude-omni` from `C:\OS\lynkr\app` and check `/status` shows `lynkr-build` (if it shows `omni-main`, type `/model lynkr-build`). The session prompt is `research/build-session-prompt.md` (the bible).
+- Gotchas: auto mode's command check can time out through OmniRoute; switch the session to "accept edits" (Shift+Tab) when it does. On Windows the full `npm test` run can crash Node ("jit_page") in `outreach-followup.test.mts`; re-run that file alone.
+- Left out of U12 on purpose (unrelated, uncommitted): `prod/lynkr-outreach-intelligence-plan.md`, `research/lynkr-distribution-strategy.md`.
+- Next: U13 per `research/build-plan-outreach.md` U13 and its Verification Contract, on Render instead of Vercel; then the PR with the A1–A7 go-live list. Do not merge.
+
 **Done (saved in `research/`):**
 - `context-brief.md`: the Phase 0 brief, with the free/paid answer added.
 - `build-plan-interview.md` (A1): updated in place, reviewed by all 7 `ce-doc-review` personas, fixes applied. Decisions D-I1 to D-I10 are at the end.

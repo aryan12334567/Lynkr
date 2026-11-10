@@ -99,7 +99,12 @@ export function OutreachWorkspace({ profile, facts = [], mock = null }: { profil
   async function saveGoals() {
     setSavingGoals(true); setError(null);
     try { await api("PUT", "/api/outreach/goals", { goals }); setConfirmed(true); setEditingGoals(false); }
-    catch (e) { if (e instanceof ApiError && e.status === 402) setLapsed(true); setError((e as Error).message); }
+    catch (e) {
+      if (e instanceof ApiError && e.status === 402) setLapsed(true);
+      // No account or no storage (R37): nothing can be saved, but the example person has to be reachable. The goals stand for this visit only.
+      if (e instanceof ApiError && [401, 409, 503].includes(e.status)) { setConfirmed(true); setEditingGoals(false); setStorageDown(true); return; }
+      setError((e as Error).message);
+    }
     finally { setSavingGoals(false); }
   }
 

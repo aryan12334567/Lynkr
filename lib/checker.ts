@@ -48,7 +48,34 @@ export type CheckContext = {
   facts?: string[];
   /** True when the user confirmed a real shared history (worked together, met, introduced, knows them). */
   sharedHistory?: boolean;
+  /** Connection-note limit: 200 on a free LinkedIn account (the default), 300 on Premium. Other channels ignore it. */
+  noteMax?: 200 | 300;
 };
+
+/** Anything that looks like a blank to fill in. Drafts are complete messages, so one of these is never ready to send. */
+const PLACEHOLDER = /[[\]{}<>]|\b(?:TODO|TBD)\b/;
+export const hasPlaceholder = (text: string): boolean => PLACEHOLDER.test(text);
+
+/** The phrases `BAD_PHRASES` flags, in plain words, for a model prompt. Keep in step with the list below. */
+export const BANNED_PHRASES: readonly string[] = [
+  "hope this message finds you well",
+  "I admire your profile / journey / work",
+  "impressive profile",
+  "inspiring journey",
+  "I came across your profile",
+  "thrilled",
+  "passionate",
+  "game changer",
+  "journey",
+  "sir / ma'am",
+  "kindly revert",
+  "please do the needful",
+  "any job / any opening",
+  "just following up",
+  "bumping this",
+  "gentle reminder",
+  "urgent / ASAP",
+];
 
 const BAD_PHRASES: { re: RegExp; phrase: string; tip: string; severity: Severity; replacement?: string }[] = [
   // The whole "kindly revert ..." clause goes, so the fix never leaves "would you be open to it? on any opening?".
@@ -103,7 +130,9 @@ export function checkMessage(text: string, rel: Relationship, ctx: CheckContext 
   const words = t ? t.split(/\s+/).length : 0;
   const chars = t.length;
   const channel = ctx.channel ?? "linkedin_message";
-  const rule = CHANNEL_RULES[channel];
+  const rule = channel === "connection_note" && ctx.noteMax === 300
+    ? { ...CHANNEL_RULES.connection_note, max: 300, label: "Connection note (Premium)", note: "A Premium invitation note can be up to 300 characters." }
+    : CHANNEL_RULES[channel];
   const isReferralAsk = REFERRAL_ASK.test(t) || ctx.intent === "referral";
   const g = greeting(t);
   // Count sentences that ask something, so "Would you ...?" is one ask, not two.
@@ -148,6 +177,16 @@ export function checkMessage(text: string, rel: Relationship, ctx: CheckContext 
   for (const b of BAD_PHRASES) {
     const m = b.re.exec(t);
     if (m) flags.push({ phrase: b.phrase, tip: b.tip, severity: b.severity, match: m[0], index: m.index, replacement: b.replacement });
+  }
+  const blank = PLACEHOLDER.exec(t);
+  if (blank) {
+    flags.push({
+      phrase: "placeholder",
+      tip: "A blank, bracket or TODO is left in the message. Replace it with the real words, or remove the sentence, before you send.",
+      severity: "block",
+      match: blank[0],
+      index: blank.index,
+    });
   }
   if (g.bareHi) flags.push({ phrase: "\"Hi\" on its own", tip: "Never send a bare greeting and wait. Put the whole message in one go.", severity: "block" });
   if (isReferralAsk && rel === "stranger") {

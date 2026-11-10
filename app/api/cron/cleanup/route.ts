@@ -2,7 +2,7 @@ import { cleanup, cronAuthorized } from "@/lib/cleanup";
 import { cloudReady, getDb } from "@/lib/db";
 
 /**
- * Daily (vercel.json): removes Lynkr data for accounts inactive for 12 months.
+ * Daily (cron-job.org calls this): removes Lynkr data for accounts inactive for 12 months.
  * Needs "Authorization: Bearer $CRON_SECRET". Add ?dryRun=1 to count without deleting.
  */
 export async function GET(req: Request) {

@@ -11,14 +11,80 @@ import type { Answer } from "./interview/engine";
  */
 
 /** Anything that runs a parameterised query: a pg Pool in the app, an in-process Postgres in tests. */
-export type Db = { query: <R = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<{ rows: R[] }> };
+export type Db = {
+  query: <R = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<{ rows: R[] }>;
+  /** Present on handles that can open a transaction (see `transaction`). */
+  transaction?: <T>(fn: (tx: Db) => Promise<T>) => Promise<T>;
+};
+
+/** The part of a pg Pool that `poolDb` uses (also what a test double provides). */
+export type PoolLike = {
+  query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
+  connect: () => Promise<{ query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>; release: () => void }>;
+};
+
+/** A handle already inside a transaction: nested `transaction` calls join it. */
+function joined(query: Db["query"]): Db {
+  const tx: Db = { query, transaction: (fn) => fn(tx) };
+  return tx;
+}
+
+/** Wraps a pg Pool. `transaction` takes one client and runs BEGIN / COMMIT / ROLLBACK on it. */
+export function poolDb(p: PoolLike): Db {
+  return {
+    query: (text, params) => p.query(text, params) as Promise<{ rows: never[] }>,
+    transaction: async (fn) => {
+      const client = await p.connect();
+      try {
+        await client.query("BEGIN");
+        const result = await fn(joined((text, params) => client.query(text, params) as Promise<{ rows: never[] }>));
+        await client.query("COMMIT");
+        return result;
+      } catch (err) {
+        try {
+          await client.query("ROLLBACK");
+        } catch {
+          // The original error is the one worth reporting.
+        }
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  };
+}
+
+/** Wraps an in-process PGlite (used by the tests). `transaction` is PGlite's own. */
+export type PgliteLike = {
+  query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
+  transaction: <T>(fn: (tx: { query: PgliteLike["query"] }) => Promise<T>) => Promise<T>;
+};
+export function pgliteDb(pg: PgliteLike): Db {
+  return {
+    query: (text, params) => pg.query(text, params) as Promise<{ rows: never[] }>,
+    transaction: (fn) => pg.transaction((tx) => fn(joined((text, params) => tx.query(text, params) as Promise<{ rows: never[] }>))),
+  };
+}
+
+/**
+ * Runs `fn` in one database transaction: it commits when `fn` returns and rolls back when it throws.
+ * Inside `fn`, use only the `tx` it receives. Called on a handle that is already in a transaction, it joins that one.
+ */
+export function transaction<T>(db: Db, fn: (tx: Db) => Promise<T>): Promise<T> {
+  if (!db.transaction) throw new Error("This database handle cannot open a transaction.");
+  return db.transaction(fn);
+}
 
 let pool: Pool | null = null;
+let pooled: Db | null = null;
 
 /** The app's pooled connection (see lib/dbUrl.ts). Created on first use. */
 export function getDb(): Db {
-  if (!pool) pool = new Pool({ connectionString: databaseUrl(), max: 3 });
-  return pool as unknown as Db;
+  if (!pool) {
+    pool = new Pool({ connectionString: databaseUrl(), max: 3 });
+    pooled = poolDb(pool as unknown as PoolLike);
+  }
+  return pooled!;
 }
 
 const LATEST = "001_vertical1.sql";
@@ -276,19 +342,27 @@ export async function takeDaily(db: Db, userId: string, kind: string, max: numbe
 
 // ---- export and delete ----
 
-const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user"] as const;
+const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"] as const;
+/** Tables from later migrations: skipped on a database that hasn't run them yet. */
+const OPTIONAL = ["outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"];
 
 /** Everything Lynkr holds for this user, as plain JSON ("Download my data"). */
 export async function exportAll(db: Db, userId: string): Promise<Record<string, unknown>> {
   const out: Record<string, unknown> = { exportedAt: new Date().toISOString() };
-  for (const t of TABLES) out[t] = (await db.query(`select * from ${t} where user_id = $1`, [userId])).rows.map(({ user_id, ...rest }) => (void user_id, rest));
+  for (const t of TABLES) {
+    if (OPTIONAL.includes(t) && !(await db.query<{ t: string | null }>("select to_regclass($1)::text as t", [`public.${t}`])).rows[0]?.t) continue;
+    out[t] = (await db.query(`select * from ${t} where user_id = $1`, [userId])).rows.map(({ user_id, token_hash, ...rest }) => (void user_id, void token_hash, rest));
+  }
   return out;
 }
 
 /** "Delete my data": every Lynkr row for this user, in every table. The sign-in account itself stays. */
 export async function deleteAll(db: Db, userId: string): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
-  for (const t of TABLES) counts[t] = (await db.query(`delete from ${t} where user_id = $1 returning 1`, [userId])).rows.length;
+  for (const t of TABLES) {
+    if (OPTIONAL.includes(t) && !(await db.query<{ t: string | null }>("select to_regclass($1)::text as t", [`public.${t}`])).rows[0]?.t) continue;
+    counts[t] = (await db.query(`delete from ${t} where user_id = $1 returning 1`, [userId])).rows.length;
+  }
   return counts;
 }
 

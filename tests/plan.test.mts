@@ -117,3 +117,73 @@ test("P9 Google Calendar link", () => {
   assert.equal(url.searchParams.get("dates"), "20261019T033000Z/20261019T034500Z");
   assert.equal(url.searchParams.get("text"), "Send outreach");
 });
+
+// ---- U20: Today, the Monday to-do and the weekly plan under outreach v2 ----
+import { calendarItems, mondayTodo, type CalendarRow } from "../lib/outreach/calendar";
+import { ALL_CAUGHT_UP, answersFor, bodyFor, dueNow, isMonday, offerPlanFollowUp, opId, withoutAnswered } from "../lib/outreach/ui-today";
+import type { PlanItem } from "../lib/plan";
+
+const MON = new Date("2026-11-02T05:00:00Z"); // Monday 10:30 IST
+const TUE = new Date("2026-11-03T05:00:00Z");
+const row = (o: Partial<CalendarRow> & Pick<CalendarRow, "id" | "kind">): CalendarRow => ({
+  contactId: "c1", person: "Priya", goal: "job", status: "due", dueAt: null, doneAt: null, meetingAt: null, rule: null, ...o,
+});
+// AE11: a Thursday meeting with no answer, and an invite 22 days old with no record.
+const meeting = row({ id: "m1", kind: "meeting_booked", status: "done", doneAt: new Date("2026-10-27T05:00:00Z"), meetingAt: new Date("2026-10-29T12:30:00Z") });
+const withdraw = row({ id: "w1", contactId: "c2", person: "Arjun", kind: "withdraw", dueAt: new Date("2026-11-01T05:00:00Z"), rule: "Accepted? If not, withdraw the invite." });
+
+test("U20 v2 off: WeekPlan offers the follow-up; v2 on: it does not (CO-2)", () => {
+  const sent: PlanItem = { id: "message-0", kind: "message", tag: "outreach", draftId: "out:referral", day: "2026-10-19", time: "10:30", status: "done", doneAt: "2026-10-19T05:00:00Z" };
+  const due = followUpDue(sent, new Date("2026-10-27T05:00:00Z"));
+  assert.equal(due, true);
+  assert.equal(offerPlanFollowUp(false, due, false), true);
+  assert.equal(offerPlanFollowUp(undefined, due, false), true);
+  assert.equal(offerPlanFollowUp(true, due, false), false);
+  assert.equal(offerPlanFollowUp(false, due, true), false); // already added: unchanged v1 rule
+});
+
+test("U20 Monday with two open items: the to-do lists the meeting first", () => {
+  assert.equal(isMonday(MON), true);
+  assert.equal(isMonday(TUE), false);
+  const todo = mondayTodo([meeting, withdraw], MON);
+  assert.deepEqual(todo.items.map((i) => i.id), ["m1", "w1"]);
+  assert.deepEqual(todo.items.map((i) => i.group), ["meeting", "question"]);
+});
+
+test("U20 Tuesday: an overdue item still shows in the Today list, a future one does not", () => {
+  const later = row({ id: "t1", kind: "thank_you", dueAt: new Date("2026-11-06T05:00:00Z") });
+  const list = dueNow(calendarItems([withdraw, later]), TUE);
+  assert.deepEqual(list.map((i) => i.id), ["w1"]);
+});
+
+test("U20 a meeting later today stays out; one an hour past is owed", () => {
+  const soon = row({ id: "m2", kind: "meeting_booked", status: "done", doneAt: new Date("2026-11-01T05:00:00Z"), meetingAt: new Date("2026-11-03T12:30:00Z") });
+  assert.deepEqual(dueNow(calendarItems([soon]), TUE), []);
+  assert.deepEqual(dueNow(calendarItems([meeting]), TUE).map((i) => i.id), ["m1"]);
+});
+
+test("U20 an answered item disappears without a reload; an empty list says so", () => {
+  const items = mondayTodo([meeting, withdraw], MON).items;
+  const left = withoutAnswered(items, new Set(["m1"]));
+  assert.deepEqual(left.map((i) => i.id), ["w1"]);
+  assert.equal(withoutAnswered(left, new Set(["m1", "w1"])).length, 0);
+  assert.equal(mondayTodo([], MON).message, "All caught up this week");
+  assert.equal(ALL_CAUGHT_UP, "All caught up this week");
+});
+
+test("U20 answers record through the timeline with a stable op_id, so a retry never duplicates", () => {
+  const w = { id: "w1", kind: "withdraw" as const, contactId: "c2" };
+  const yes = bodyFor(w, "yes");
+  assert.deepEqual(yes, { type: "insert", op_id: "today:w1:yes", contactId: "c2", kind: "accepted" });
+  assert.deepEqual(bodyFor(w, "yes"), yes); // same tap, same op_id
+  assert.equal(opId("w1", "yes"), opId("w1", "yes"));
+  assert.equal(bodyFor(w, "no"), null); // "Not yet" only reveals the step
+  assert.deepEqual(answersFor(w).map((a) => a.id), ["yes", "no"]);
+  assert.deepEqual(answersFor(w, true).map((a) => a.id), ["done", "not_now"]);
+  assert.equal((bodyFor({ id: "f1", kind: "follow_up", contactId: "c1" }, "yes") as { kind?: string } | null)?.kind, "reply");
+  assert.equal((bodyFor({ id: "f1", kind: "follow_up", contactId: "c1" }, "done") as { kind?: string } | null)?.kind, "follow_up");
+  assert.deepEqual(bodyFor({ id: "t1", kind: "thank_you", contactId: "c1" }, "not_now"), { type: "supersede", eventId: "t1", reason: "dismissed" });
+  assert.deepEqual(bodyFor({ id: "m1", kind: "meeting", contactId: "c1" }, "met_good"),
+    { type: "insert", op_id: "today:m1:met_good", contactId: "c1", kind: "meeting_done", triggerId: "m1", happened: "yes", rating: "good" });
+  assert.equal((bodyFor({ id: "m1", kind: "meeting", contactId: "c1" }, "no_show") as { kind?: string } | null)?.kind, "meeting_done");
+});

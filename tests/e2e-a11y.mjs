@@ -8,7 +8,7 @@ const check = (id, ok, detail = "") => {
   results.push({ id, ok });
   console.log(`${ok ? "PASS" : "FAIL"} ${id}${detail ? ` - ${detail}` : ""}`);
 };
-const TABS = ["Today", "Story Vault", "Profile fix", "Outreach", "Posts & comments", "This week", "Connect", "Check a message"];
+const TABS = ["Today", "Story Vault", "Outreach", "Posts & comments", "This week", "Connect", "Check a message"];
 
 const browser = await chromium.launch({ channel: process.env.LYNKR_BROWSER || "chrome", headless: true });
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 }, timezoneId: "Asia/Kolkata" })).newPage();

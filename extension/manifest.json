@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Lynkr Draft Assistant",
+  "version": "0.1.0",
+  "description": "Review and insert Lynkr drafts yourself.",
+  "permissions": ["sidePanel", "contextMenus", "activeTab", "scripting", "storage"],
+  "host_permissions": ["https://www.lynkr.cloud/*", "https://lynkr.cloud/*", "http://localhost/*", "http://127.0.0.1/*"],
+  "action": { "default_title": "Open Lynkr" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "commands": { "insert-draft": { "suggested_key": { "default": "Ctrl+Shift+Y" }, "description": "Insert selected draft" } },
+  "externally_connectable": { "matches": ["https://www.lynkr.cloud/*", "https://lynkr.cloud/*", "http://localhost/*", "http://127.0.0.1/*"] }
+}

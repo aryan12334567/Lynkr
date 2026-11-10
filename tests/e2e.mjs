@@ -1,9 +1,8 @@
 // End-to-end checks in demo mode: review-before-drafting, ask ladder, Connect Coach v2,
-// checker v2, comment helper, profile import, draft editing, weekly plan.
+// checker v2, comment helper, draft editing, weekly plan.
 // Needs the dev server in demo mode on :3000 and Google Chrome installed. Run: node tests/e2e.mjs
 import { chromium } from "playwright-core";
 import { readFileSync } from "node:fs";
-import { deflateRawSync } from "node:zlib";
 
 const BASE = process.env.LYNKR_URL || "http://localhost:3000";
 const results = [];
@@ -23,38 +22,6 @@ function answerFor(q) {
   if (/^Optional: what have you personally noticed/.test(q)) return "Fresher dashboards often skip data cleaning; I saw it in our analytics club.";
   if (/Who do you most want to reach/.test(q)) return "Analytics firms in Pune such as Fractal.";
   return "Not sure.";
-}
-
-function zip(files) {
-  const parts = [];
-  const central = [];
-  let offset = 0;
-  for (const [name, text] of Object.entries(files)) {
-    const data = deflateRawSync(Buffer.from(text));
-    const n = Buffer.from(name);
-    const local = Buffer.alloc(30);
-    local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(8, 8);
-    local.writeUInt32LE(data.length, 18);
-    local.writeUInt16LE(n.length, 26);
-    parts.push(local, n, data);
-    const c = Buffer.alloc(46);
-    c.writeUInt32LE(0x02014b50, 0);
-    c.writeUInt16LE(8, 10);
-    c.writeUInt32LE(data.length, 20);
-    c.writeUInt16LE(n.length, 28);
-    c.writeUInt32LE(offset, 42);
-    central.push(c, n);
-    offset += 30 + n.length + data.length;
-  }
-  const cd = Buffer.concat(central);
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(Object.keys(files).length, 8);
-  end.writeUInt16LE(Object.keys(files).length, 10);
-  end.writeUInt32LE(cd.length, 12);
-  end.writeUInt32LE(offset, 16);
-  return Buffer.concat([...parts, cd, end]);
 }
 
 const browser = await chromium.launch({ channel: process.env.LYNKR_BROWSER || "chrome", headless: true });
@@ -168,56 +135,7 @@ try {
   const raw = await page.evaluate(() => localStorage.getItem("lynkr:v1"));
   check("CM1", /Skip this one/.test(skip) && draft.includes("metric definitions") && !raw.includes("before building anything") && raw.includes("sponsor count definition"), "skip without a point; draft quotes the line; excerpt not stored; kept comment stored");
 
-  // PF1: import an export ZIP; messages are skipped; findings update.
-  await page.getByRole("tab", { name: "Profile fix" }).click();
-  const zipBuf = zip({
-    "Profile.csv": "First Name,Headline,Summary,Geo Location\nAsha,Commerce student,I am passionate.,Pune\n",
-    "Skills.csv": "Name\nExcel\n",
-    "Positions.csv": "Company Name,Title,Description\nAcme,Intern,Responsible for reports.\n",
-    "messages.csv": "FROM,CONTENT\nx,private\n",
-  });
-  await page.getByLabel("Choose your LinkedIn export ZIP or CSV files").setInputFiles({ name: "export.zip", mimeType: "application/zip", buffer: zipBuf });
-  await page.locator("[data-import-preview]").waitFor();
-  const preview = await page.locator("[data-import-preview]").innerText();
-  await page.getByRole("button", { name: "Use these" }).click();
-  await page.locator("[data-imported]").waitFor();
-  const top = await page.locator("ol [data-finding]").allInnerTexts();
-  const rawAfter = await page.evaluate(() => localStorage.getItem("lynkr:v1"));
-  check(
-    "PF1",
-    /1 other files not opened/.test(preview) && top.length >= 1 && top.length <= 3 && top.some((t) => /Headline/.test(t)) && !rawAfter.includes("Responsible for reports"),
-    `${top.length} fix-first items; imported data not saved`,
-  );
-  await page.screenshot({ path: "docs/profile-fix.png", fullPage: false });
-
-  // EN1–EN4: import a job page (Apify plan). Demo mode uses a fixture: no network call.
-  const linkBox = page.getByLabel(/Import a job posting link/);
-  await linkBox.fill("https://www.linkedin.com/jobs/view/12345");
-  await page.getByRole("button", { name: "Import" }).click();
-  await page.getByText(/never reads LinkedIn/).waitFor();
-  const pasteStillThere = await page.getByLabel(/A job description you're targeting/).isEnabled();
-  check("EN1", pasteStillThere, "LinkedIn refused before any fetch; paste box still works");
-  await linkBox.fill("https://jobs.lever.co/example/baf9b35a-1ac6-45f8-9a95-de02c8b532bd");
-  await page.getByRole("button", { name: "Import" }).click();
-  const review = page.locator('[data-requirements="review"]');
-  await review.waitFor();
-  const reviewText = await review.innerText();
-  const gatedBefore = (await page.locator("[data-finding]").allInnerTexts()).join(" ").includes("job page you imported");
-  check(
-    "EN2",
-    /Demo sample/.test(reviewText) && /Source: https:\/\/jobs\.lever\.co/.test(reviewText) && !/priya|@example|98765|linkedin|ignore previous/i.test(reviewText) && !gatedBefore,
-    "review shows source and time, no contact data, not used before approval",
-  );
-  const beforeRequirements = await review.locator("li").count();
-  await review.getByRole("button", { name: /^Remove: / }).first().click();
-  const afterRequirements = await review.locator("li").count();
-  await page.getByRole("button", { name: "Use these requirements" }).click();
-  await page.locator('[data-requirements="approved"]').waitFor();
-  const findings = (await page.locator("[data-finding]").allInnerTexts()).join(" ");
-  check("EN3", afterRequirements === beforeRequirements - 1 && /job page you imported/.test(findings), `items ${beforeRequirements} -> ${afterRequirements}; findings cite the imported page`);
-  const storedRequirements = await page.evaluate(() => localStorage.getItem("lynkr:v1") || "");
-  check("EN4", !storedRequirements.includes("Example Analytics") && !storedRequirements.includes("jobs.lever.co"), "imported page is never saved in the browser");
-  await page.getByRole("button", { name: "Stop using it" }).click();
+  check("PF1", await page.getByRole("tab", { name: "Profile fix" }).count() === 0, "profile fix is unavailable");
 
   // C7: who-to-look-for cards with LinkedIn people-search links, known people first.
   await page.getByRole("tab", { name: "Connect" }).click();

@@ -2,21 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { BadgeCheck, CalendarDays, House, IdCard, Library, PenLine, Send, Users } from "lucide-react";
-import type { Draft, ExternalContextPacket, Packet } from "@/lib/schemas";
-import type { ImportMode } from "./ExternalContext";
+import { BadgeCheck, CalendarDays, House, Library, PenLine, Send, Users } from "lucide-react";
+import type { Draft, Packet } from "@/lib/schemas";
 import type { Relationship } from "@/lib/checker";
 import { newPlan } from "@/lib/plan";
 import { EMPTY_PACKET } from "@/lib/packet";
-import type { ImportedProfile } from "@/lib/linkedinExport";
+import { TAB_LABEL, tabIds } from "@/lib/outreach/ui-tabs";
 import { DOMAIN_LABEL, STAGE_LABEL } from "@/lib/roles";
 import type { DraftEdit, Saved } from "@/lib/store";
 import { WeekPlan } from "./WeekPlan";
 import { ConnectCoach } from "./ConnectCoach";
+import { OutreachWorkspace } from "./outreach/OutreachWorkspace";
 import { DraftCard } from "./DraftCard";
 import { Checker, RelationshipPicker } from "./Checker";
 import { VaultReview } from "./VaultReview";
-import { ProfileFix } from "./ProfileFix";
 import { CommentHelper } from "./CommentHelper";
 import { Today } from "./Today";
 import { AccountMenu } from "./AccountMenu";
@@ -25,14 +24,13 @@ import { ConfirmReset, DemoPill, LegalLinks, SavedHint, TrustNote, Wordmark } fr
 import { Button, Card, ErrorNote, Label, SectionHead } from "./ui";
 
 const TABS = [
-  { id: "today", label: "Today", icon: House, sub: "What to do next, from what's already in your Story Vault." },
-  { id: "vault", label: "Story Vault", icon: Library, sub: "The facts every draft is built from." },
-  { id: "profile", label: "Profile fix", icon: IdCard, sub: "Section by section, against the role you want." },
-  { id: "outreach", label: "Outreach", icon: Send, sub: "First messages that match how well they know you." },
-  { id: "posts", label: "Posts & comments", icon: PenLine, sub: "From your own work, and for posts you found." },
-  { id: "plan", label: "This week", icon: CalendarDays, sub: "A small, steady plan. Nothing is posted for you." },
-  { id: "connect", label: "Connect", icon: Users, sub: "Who to look for, and one person at a time." },
-  { id: "check", label: "Check a message", icon: BadgeCheck, sub: "The person and the reason first, then the wording." },
+  { id: "today", label: TAB_LABEL.today, icon: House, sub: "What to do next, from what's already in your Story Vault." },
+  { id: "vault", label: TAB_LABEL.vault, icon: Library, sub: "The facts every draft is built from." },
+  { id: "outreach", label: TAB_LABEL.outreach, icon: Send, sub: "First messages that match how well they know you." },
+  { id: "posts", label: TAB_LABEL.posts, icon: PenLine, sub: "From your own work, and for posts you found." },
+  { id: "plan", label: TAB_LABEL.plan, icon: CalendarDays, sub: "A small, steady plan. Nothing is posted for you." },
+  { id: "connect", label: TAB_LABEL.connect, icon: Users, sub: "Who to look for, and one person at a time." },
+  { id: "check", label: TAB_LABEL.check, icon: BadgeCheck, sub: "The person and the reason first, then the wording." },
 ] as const;
 export type Tab = (typeof TABS)[number]["id"];
 export const TAB_IDS: Tab[] = TABS.map((t) => t.id);
@@ -54,13 +52,6 @@ export function Results({
   onRewrite,
   onMoreQuestions,
   onReset,
-  imported,
-  setImported,
-  jobDescription,
-  setJobDescription,
-  requirements,
-  setRequirements,
-  importMode,
   account = null,
 }: {
   s: Saved;
@@ -73,16 +64,11 @@ export function Results({
   onRewrite: () => void;
   onMoreQuestions: () => void;
   onReset: () => void;
-  imported: ImportedProfile | null;
-  setImported: (p: ImportedProfile | null) => void;
-  jobDescription: string;
-  setJobDescription: (v: string) => void;
-  requirements: ExternalContextPacket | null;
-  setRequirements: (p: ExternalContextPacket | null) => void;
-  importMode: ImportMode;
   /** The signed-in account, if any: shown with billing and sign-out. */
   account?: Account | null;
 }) {
+  const [outreachV2, setOutreachV2] = useState(false);
+  useEffect(() => { fetch("/api/status").then(r => r.json()).then(d => setOutreachV2(d.outreach === "v2")).catch(() => {}); }, []);
   const [rel, setRel] = useState<Relationship>("stranger");
   // The person described in Connect: in memory only, shared with the checker.
   const [packet, setPacket] = useState<Packet>(EMPTY_PACKET);
@@ -124,7 +110,7 @@ export function Results({
   function go(t: Tab) {
     // The plan is built the first time it's needed.
     if ((t === "plan" || t === "today") && !s.plan) setS((prev) => ({ ...prev, plan: prev.plan ?? newPlan() }));
-    onTab(t);
+    onTab(outreachV2 && t === "connect" ? "outreach" : t);
   }
 
   const summary = [profile.domain && profile.domain !== "not_sure" ? DOMAIN_LABEL[profile.domain] : "", profile.stage && profile.stage !== "other" ? STAGE_LABEL[profile.stage] : ""].filter(Boolean);
@@ -156,7 +142,7 @@ export function Results({
           role="tablist"
           aria-label="Your drafts and tools"
         >
-          {TABS.map((t) => {
+          {TABS.filter((t) => tabIds(outreachV2).includes(t.id)).map((t) => {
             const I = t.icon;
             const on = tab === t.id;
             return (
@@ -212,7 +198,7 @@ export function Results({
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-4"
             >
-              {tab === "today" && <Today s={s} go={go} />}
+              {tab === "today" && <Today s={s} go={go} outreachV2={outreachV2} />}
 
               {tab === "vault" && (
                 <VaultReview
@@ -229,30 +215,9 @@ export function Results({
                 />
               )}
 
-              {tab === "profile" && (
-                <ProfileFix
-                  profile={profile}
-                  facts={s.facts}
-                  result={result}
-                  fills={s.fills}
-                  onFill={onFill}
-                  edits={s.edits}
-                  onEdit={onEdit}
-                  imported={imported}
-                  setImported={setImported}
-                  jobDescription={jobDescription}
-                  setJobDescription={setJobDescription}
-                  done={s.profileDone}
-                  onDone={(id, v) => setS((prev) => ({ ...prev, profileDone: { ...prev.profileDone, [id]: v } }))}
-                  onRewrite={onRewrite}
-                  mock={mock}
-                  requirements={requirements}
-                  setRequirements={setRequirements}
-                  importMode={importMode}
-                />
-              )}
+              {outreachV2 && (tab === "outreach" || tab === "connect") && <OutreachWorkspace profile={profile} facts={s.facts} mock={mock} />}
 
-              {tab === "outreach" && (
+              {!outreachV2 && tab === "outreach" && (
                 <div className="space-y-4">
                   <Card>
                     <Label>Who are you messaging?</Label>
@@ -314,12 +279,13 @@ export function Results({
                   plan={s.plan}
                   onPlan={(plan) => setS((prev) => ({ ...prev, plan }))}
                   result={result}
+                  outreachV2={outreachV2}
                   fills={s.fills}
                   onOpenDraft={(draftId) => go(draftId.startsWith("out:") ? "outreach" : "posts")}
                 />
               )}
 
-              {tab === "connect" && (
+              {!outreachV2 && tab === "connect" && (
                 <ConnectCoach
                   profile={profile}
                   facts={s.facts}

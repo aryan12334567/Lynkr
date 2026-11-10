@@ -26,7 +26,7 @@ export default function Terms() {
         <p>
           Lynkr costs {SITE.price} per {SITE.period}, including applicable taxes (GST).{" "}
           {v2
-            ? "With a free Lynkr account you can do the interview, keep your Story Vault and get a first draft (a headline and one referral message) without paying. Free use has daily limits. Everything else, including full profile fixes, outreach and follow-up messages, posts, comments, Connect Coach and the weekly plan, needs an active subscription. There is no free trial of the paid features."
+            ? "With a free Lynkr account you can do the interview, keep your Story Vault and get a first draft (a headline and one referral message) without paying. Free use has daily limits. Everything else, including outreach and follow-up messages, posts, comments, Connect Coach and the weekly plan, needs an active subscription. There is no free trial of the paid features."
             : "You pay first, then use Lynkr: there is no free tier and no free trial."}{" "}
           Payments are processed by Dodo Payments,
           which acts as the Merchant of Record for Lynkr purchases. We never receive your card details.

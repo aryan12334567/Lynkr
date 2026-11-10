@@ -253,3 +253,56 @@ export function expectedFound(p: Persona, facts: { kind: FactKind; text: string 
   const missing = p.expectFacts.filter((e) => !facts.some((f) => f.kind === e.kind && norm(f.text).includes(norm(e.includes)))).map((e) => `${e.kind}:${e.includes}`);
   return { found: p.expectFacts.length - missing.length, missing };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Outreach evaluation personas (build plan U12): the five above plus two for goals the interview
+// does not cover. They hold only what the draft engine reads: confirmed Story Vault facts.
+// ---------------------------------------------------------------------------------------------
+
+export type OutreachPersona = {
+  id: string;
+  name: string;
+  summary: string;
+  /** Confirmed Vault facts, best first. The first is a first-person project, as the composer expects. */
+  facts: { id: string; kind: FactKind; text: string }[];
+};
+
+const first = (v: string | string[] | undefined): string | undefined => (Array.isArray(v) ? v[0] : v);
+const usable = (v: string | undefined): v is string => !!v && ![PARK, SKIP, LATER].includes(v);
+
+/** The interview personas as outreach personas: C1 is the project, C3 or C4 the proof when answered. */
+function fromInterview(p: Persona): OutreachPersona {
+  const short = p.id.split("-").map((w) => w[0]).join("");
+  const project = first(p.answers.C1)!;
+  const proof = [first(p.answers.C3), first(p.answers.C4), first(p.answers.C6)].find(usable);
+  return {
+    id: p.id,
+    name: p.name,
+    summary: p.summary,
+    facts: [{ id: `${short}1`, kind: "project", text: project }, ...(proof ? [{ id: `${short}2`, kind: "evidence" as FactKind, text: proof }] : [])],
+  };
+}
+
+export const EXTRA_OUTREACH_PERSONAS: OutreachPersona[] = [
+  {
+    id: "freelancer-web",
+    name: "Nikhil (made up)",
+    summary: "Freelance web developer in Kochi who sells website and booking-system builds to small businesses.",
+    facts: [
+      { id: "fw1", kind: "project", text: "I built a booking website for a photography studio in Kochi, and the studio now takes 40 bookings a month through it." },
+      { id: "fw2", kind: "offer", text: "I fix slow or broken small-business websites and send a written list of what I changed." },
+    ],
+  },
+  {
+    id: "buyer-small-business",
+    name: "Prakash (made up)",
+    summary: "Operator in Coimbatore who wants to buy and run a small profitable business.",
+    facts: [
+      { id: "bsb1", kind: "contribution", text: "I ran operations for a family packaging firm in Coimbatore for six years." },
+      { id: "bsb2", kind: "evidence", text: "I cut stock write-offs from 9 percent to 4 percent by counting inventory every week." },
+    ],
+  },
+];
+
+/** The seven personas the outreach evaluation runs: the five interview personas, then the two above. */
+export const OUTREACH_PERSONAS: OutreachPersona[] = [...PERSONAS.map(fromInterview), ...EXTRA_OUTREACH_PERSONAS];

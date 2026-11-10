@@ -8,7 +8,7 @@ import { ErrorNote } from "./ui";
 import { SITE } from "@/lib/site";
 import { authClient, startCheckout, type Account } from "@/lib/auth-client";
 
-const INCLUDED = ["Profile, messages and posts drafted from your own facts", "A message checker and a weekly plan", "Your Story Vault, saved to your account"];
+const INCLUDED = ["Messages and posts drafted from your own facts", "A message checker and a weekly plan", "Your Story Vault, saved to your account"];
 
 const PRIMARY =
   "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-[1rem] font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50";

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ChevronDown, Download, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Plug, Trash2 } from "lucide-react";
 import { clear } from "@/lib/store";
 
 type Settings = { consentAt: string | null; saveAnswers: boolean };
+type ExtToken = { id: string; expiresAt: string; revokedAt: string | null; lastUsedAt: string | null };
 
 /**
  * "My data" in the account menu: what's stored and why, the "save my answers" switch,
@@ -15,9 +16,10 @@ export function MyData() {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [cloud, setCloud] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState<"save" | "export" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"save" | "export" | "delete" | "revoke" | null>(null);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<ExtToken[]>([]);
   const panel = useId();
 
   useEffect(() => {
@@ -27,6 +29,11 @@ export function MyData() {
       .then((me) => {
         setCloud(me.cloud);
         if (me.cloud && me.settings) setSettings(me.settings);
+        if (me.cloud)
+          fetch("/api/ext/revoke", { cache: "no-store" })
+            .then((r) => (r.ok ? (r.json() as Promise<{ tokens: ExtToken[] }>) : { tokens: [] as ExtToken[] }))
+            .then((t) => setTokens(t.tokens.filter((x) => !x.revokedAt)))
+            .catch(() => {});
       })
       .catch(() => setCloud(false));
   }, [open, cloud]);
@@ -68,6 +75,19 @@ export function MyData() {
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
+    } catch {
+      setError("Couldn't reach Lynkr. Please try again.");
+    }
+    setBusy(null);
+  }
+
+  async function revokeExt(id: string) {
+    setBusy("revoke");
+    setError(null);
+    try {
+      const r = await fetch("/api/ext/revoke", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      if (r.ok) setTokens((t) => t.filter((x) => x.id !== id));
+      else failed(r.status, "Couldn't revoke the extension. Please try again.");
     } catch {
       setError("Couldn't reach Lynkr. Please try again.");
     }
@@ -129,6 +149,14 @@ export function MyData() {
                   </button>
                 )}
               </div>
+              {tokens.map((t) => (
+                <div key={t.id} className="flex flex-wrap items-center gap-2">
+                  <span className="text-soft">Chrome extension paired, access ends {new Date(t.expiresAt).toLocaleDateString("en-IN")}</span>
+                  <button onClick={() => revokeExt(t.id)} disabled={busy !== null} className={item}>
+                    <Plug size={14} aria-hidden /> {busy === "revoke" ? "Revoking..." : "Revoke"}
+                  </button>
+                </div>
+              ))}
               {asking && (
                 <div role="group" aria-label="Confirm delete" className="rounded-lg border border-bad/30 bg-bad/5 p-2.5">
                   <p className="font-medium text-bad">Delete your brief, Story Vault, answers, drafts and plan from your account and this browser?</p>

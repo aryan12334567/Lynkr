@@ -3,6 +3,8 @@
  * (prod/lynkr-profile-fix-intelligence-plan.md §4, upload rules). Only files on
  * the allowlist below are ever decompressed. Messages, connections, contacts,
  * account history, ads and inferred-data files are listed by name and skipped.
+ * Connections.csv is opened only when the caller passes useConnections (the user ticked
+ * "Use my connections"); its email column is dropped while parsing.
  * Nothing here is uploaded or saved; the caller keeps the result in memory.
  */
 
@@ -259,17 +261,70 @@ export async function readZipEntry(buf: ArrayBuffer, e: ZipEntry): Promise<strin
   return await new Response(stream).text();
 }
 
-export type ImportResult = { profile: ImportedProfile; read: { file: string; section: Section }[]; skipped: string[] };
+// ---- Connections.csv (opt-in only) ----
 
-/** Read a LinkedIn export ZIP, or one or more of its CSV files. */
-export async function readExport(files: { name: string; buffer: ArrayBuffer }[]): Promise<ImportResult> {
+/** Kept on this device; LinkedIn's email column is deliberately discarded. */
+export type Connection = { name: string; company: string; role: string; profileUrl: string; connectedOn: string };
+
+export const CONNECTIONS_NOT_FOUND = "Connections file not found in this archive";
+
+export const isConnectionsFile = (path: string) => /(^|[\\/])connections\.csv$/i.test(path);
+
+export function normalizeProfileUrl(value: string): string {
+  try {
+    const u = new URL(value);
+    const match = /^\/in\/([a-z0-9-]+)\/?$/i.exec(u.pathname);
+    if (u.protocol !== "https:" || !["www.linkedin.com", "linkedin.com"].includes(u.hostname.toLowerCase()) || !match || u.username || u.password || u.port) return "";
+    return `https://www.linkedin.com/in/${match[1]}/`;
+  } catch { return ""; }
+}
+
+/**
+ * Matches headers by name (any column order) and skips the notes lines LinkedIn puts above them.
+ * The Email Address column is blanked in the parsed rows and never copied into the result.
+ */
+export function parseConnectionsCsv(text: string): Connection[] {
+  const rows = parseCsv(text);
+  const headerAt = rows.findIndex((row) => row.some((x) => x.trim().toLowerCase() === "first name") && row.some((x) => x.trim().toLowerCase() === "last name"));
+  if (headerAt < 0) throw new Error("That Connections file has no First Name and Last Name columns.");
+  const headers = rows[headerAt].map((x) => x.trim().toLowerCase());
+  const col = (name: string) => headers.indexOf(name);
+  const email = col("email address");
+  const get = (row: string[], name: string) => (row[col(name)] ?? "").trim();
+  return rows.slice(headerAt + 1).map((row) => {
+    const c: Connection = {
+      name: [get(row, "first name"), get(row, "last name")].filter(Boolean).join(" "),
+      company: get(row, "company"), role: get(row, "position"),
+      profileUrl: normalizeProfileUrl(get(row, "url")), connectedOn: get(row, "connected on"),
+    };
+    if (email >= 0) row[email] = "";
+    return c;
+  }).filter((c) => !!c.name);
+}
+
+export type ImportResult = {
+  profile: ImportedProfile; read: { file: string; section: Section }[]; skipped: string[];
+  /** Only set when the caller passed useConnections. false means the archive had no Connections.csv. */
+  connections?: Connection[] | false;
+};
+
+/**
+ * Read a LinkedIn export ZIP, or one or more of its CSV files.
+ * Connections.csv is opened only when useConnections is true (the "Use my connections" tick).
+ */
+export async function readExport(files: { name: string; buffer: ArrayBuffer }[], opts: { useConnections?: boolean } = {}): Promise<ImportResult> {
   let profile: ImportedProfile = { ...EMPTY_IMPORT };
   const read: ImportResult["read"] = [];
   const skipped: string[] = [];
+  let connections: Connection[] | false | undefined = opts.useConnections ? false : undefined;
   for (const f of files) {
     if (/\.zip$/i.test(f.name)) {
       for (const e of listZip(f.buffer)) {
         if (e.name.endsWith("/")) continue;
+        if (opts.useConnections && isConnectionsFile(e.name)) {
+          connections = parseConnectionsCsv(await readZipEntry(f.buffer, e));
+          continue;
+        }
         const section = sectionOf(e.name);
         if (!section) {
           skipped.push(e.name);
@@ -279,6 +334,10 @@ export async function readExport(files: { name: string; buffer: ArrayBuffer }[])
         read.push({ file: e.name, section });
       }
     } else {
+      if (opts.useConnections && isConnectionsFile(f.name)) {
+        connections = parseConnectionsCsv(new TextDecoder().decode(f.buffer));
+        continue;
+      }
       const section = sectionOf(f.name);
       if (!section) {
         skipped.push(f.name);
@@ -288,5 +347,5 @@ export async function readExport(files: { name: string; buffer: ArrayBuffer }[])
       read.push({ file: f.name, section });
     }
   }
-  return { profile, read, skipped };
+  return connections === undefined ? { profile, read, skipped } : { profile, read, skipped, connections };
 }

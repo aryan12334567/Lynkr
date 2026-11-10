@@ -2,10 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import type { ExternalContextPacket, GenerateReply, ProfileInput, StoryFact, Turn, VaultReply } from "@/lib/schemas";
-import type { ImportMode } from "./ExternalContext";
+import type { GenerateReply, ProfileInput, StoryFact, Turn, VaultReply } from "@/lib/schemas";
 import { clear, draftFacts, EMPTY, load, loadLicense, LOCKED_EVENT, postJson, save, type License, type Saved } from "@/lib/store";
-import { importedText, type ImportedProfile } from "@/lib/linkedinExport";
 import { Setup } from "./Setup";
 import { Interview } from "./Interview";
 import { VaultReview } from "./VaultReview";
@@ -65,12 +63,6 @@ export function LynkrApp() {
   const [mock, setMock] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
-  // In memory only, never saved: the user's own export fields and a pasted job description.
-  const [imported, setImported] = useState<ImportedProfile | null>(null);
-  const [jobDescription, setJobDescription] = useState("");
-  // An imported job page: memory only, never saved, separate from the Story Vault.
-  const [requirements, setRequirements] = useState<ExternalContextPacket | null>(null);
-  const [importMode, setImportMode] = useState<ImportMode>(null);
   // Paid access. `paywall` stays null until the server answers, and the app never opens before that.
   const [paywall, setPaywall] = useState<boolean | null>(null);
   const [checkout, setCheckout] = useState(false);
@@ -91,9 +83,8 @@ export function LynkrApp() {
   useEffect(() => {
     fetch("/api/status")
       .then((r) => r.json())
-      .then((d: { mock: boolean; importFromLink?: ImportMode; paywall?: boolean; checkout?: boolean; interview?: "v1" | "v2" }) => {
+      .then((d: { mock: boolean; paywall?: boolean; checkout?: boolean; interview?: "v1" | "v2" }) => {
         setMock(d.mock);
-        setImportMode(d.importFromLink ?? null);
         setPaywall(d.paywall === true);
         setCheckout(d.checkout === true);
         setInterview(d.interview === "v2" ? "v2" : "v1");
@@ -196,9 +187,6 @@ export function LynkrApp() {
         profile: s.profile,
         turns: s.turns.length ? s.turns : [{ q: "Background", a: s.profile.background }],
         facts,
-        jobDescription: jobDescription.trim().slice(0, 6000),
-        imported: imported ? importedText(imported) : "",
-        requirements: requirements?.reviewStatus === "approved" ? requirements : undefined,
       });
       // Fills and edits are kept: a rewritten draft never silently replaces your own edit.
       update({ stage: "results", result });
@@ -212,9 +200,6 @@ export function LynkrApp() {
   function reset() {
     skipNextSave.current = true;
     clear();
-    setImported(null);
-    setJobDescription("");
-    setRequirements(null);
     setS(EMPTY);
     go({ name: "home" });
   }
@@ -326,13 +311,6 @@ export function LynkrApp() {
         onRewrite={generate}
         onMoreQuestions={moreQuestions}
         onReset={reset}
-        imported={imported}
-        setImported={setImported}
-        jobDescription={jobDescription}
-        setJobDescription={setJobDescription}
-        requirements={requirements}
-        setRequirements={setRequirements}
-        importMode={importMode}
         account={account}
       />
     );
@@ -400,7 +378,7 @@ export function LynkrApp() {
 
           {generating && (
             <Card>
-              <p className="animate-pulse font-medium">Writing your profile fixes, messages and posts…</p>
+              <p className="animate-pulse font-medium">Writing your messages and posts…</p>
               <p className="mt-1 text-[0.95rem] text-soft">
                 Usually 20 to 40 seconds. Only from the facts you confirmed; anything Lynkr doesn&apos;t know becomes a blank for you.
               </p>

@@ -1,0 +1,19 @@
+{
+  "match": "priya sharma",
+  "candidates": [
+    { "title": "Priya Sharma - Payments Engineer - LinkedIn", "url": "https://www.linkedin.com/in/priya-sharma-payments/", "date": "", "snippet": "Payments engineer at Acme Pay." },
+    { "title": "Priya Sharma (@priya_pay) / X", "url": "https://x.com/priya_pay", "date": "", "snippet": "Payments, retries and idempotency." },
+    { "title": "Idempotent payment retries, a Hasgeek talk by Priya Sharma", "url": "https://hasgeek.example.org/talks/idempotent-retries", "date": "2025-09-14", "snippet": "Priya Sharma of Acme Pay on retrying payments safely." },
+    { "title": "Dr Priya Sharma opens a new dental clinic in Leeds", "url": "https://leedsnews.example.org/clinic-opening", "date": "2026-03-02", "snippet": "A paediatric dentist opens her second clinic." }
+  ],
+  "pages": {
+    "https://hasgeek.example.org/talks/idempotent-retries": {
+      "date": "2025-09-14",
+      "text": "Priya Sharma is a payments engineer at Acme Pay.\nShe built the UPI settlement service at Acme Pay for a team of six engineers.\nShe studied at IIT Madras.\nPriya is a devout Hindu and fasts every Monday.\nShe spoke at Hasgeek on idempotent payment retries."
+    },
+    "https://leedsnews.example.org/clinic-opening": {
+      "date": "2026-03-02",
+      "text": "Dr Priya Sharma, a paediatric dentist in Leeds, opened her second clinic this spring. The clinic offers evening appointments for school children."
+    }
+  }
+}

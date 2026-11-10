@@ -4,14 +4,27 @@ Written 2026-10-30 by the Claude Code session that started this work. Read this 
 
 ## 1. Where things stand
 
-**Current (2026-11-03 11:09 UTC, Step 1a Outreach U12):**
-- Branch: `feat/outreach-v2`
-- Status: **U12 committed.** Outreach U0–U12 and U14–U20 are done; U13 (release) is next.
-- U12 evidence: `npm run eval:outreach` 0 failures in 9,996 demo drafts; evaluation tests 28/28; `npm test` 464/464; `npx tsc --noEmit` clean. The report is `research/eval-vertical3.md`; its release note says the live-model run (needs `OPENAI_API_KEY`, A2) comes before testers see drafts.
-- Build sessions: start with `claude-omni` from `C:\OS\lynkr\app` and check `/status` shows `lynkr-build` (if it shows `omni-main`, type `/model lynkr-build`). The session prompt is `research/build-session-prompt.md` (the bible).
-- Gotchas: auto mode's command check can time out through OmniRoute; switch the session to "accept edits" (Shift+Tab) when it does. On Windows the full `npm test` run can crash Node ("jit_page") in `outreach-followup.test.mts`; re-run that file alone.
-- Left out of U12 on purpose (unrelated, uncommitted): `prod/lynkr-outreach-intelligence-plan.md`, `research/lynkr-distribution-strategy.md`.
-- Next: U13 per `research/build-plan-outreach.md` U13 and its Verification Contract, on Render instead of Vercel; then the PR with the A1–A7 go-live list. Do not merge.
+**Current (2026-11-05, Outreach run line 1a):**
+- Branch `feat/outreach-v2`. **Outreach is built: U0-U20 committed and verified in demo mode.** PR open, not merged. Production untouched. Detail per unit: `research/progress-vertical3.md`.
+- Verified: `npm test` 464/464; `npx tsc --noEmit` clean; `npm run build` ok; `npm run eval:outreach` 0 failures in 9,996 demo drafts; Outreach browser e2e 20/20 and a11y 24/24 (1280 and 375 px); interview v2 e2e 36/36 and 9/9; v1 regression 27/27 and 5/5; extension tests 16/16.
+- Not verified, needs a database or keys: adding a real contact and recording steps in a browser (covered by PGlite route tests only); the live-model run; the real Exa search; real LinkedIn insertion (A6).
+- Build sessions: `claude-omni` from `C:\OS\lynkr\app`, `/status` must show `lynkr-build`. OmniRoute's free Claude models run out and break long tool sessions ("tool use concurrency", 400); use a normal `claude` session for long work. Auto mode's command check can time out through OmniRoute: Shift+Tab to "accept edits". Never resume the old session.
+- Gotchas: `.env.local` DATABASE_URL is probably production: start test servers with the database switched off (`VERCEL_ENV=preview DATABASE_URL= ...`). The Node "jit_page" crash can hit `outreach-followup.test.mts` in a full run; it passes alone. The v1 e2e run rewrites screenshots in `docs/`; do not commit them. In-memory rate limits make a test server refuse after many interview runs: restart it.
+- Left out of commits on purpose: `prod/lynkr-outreach-intelligence-plan.md`, `research/lynkr-distribution-strategy.md` (unrelated), `docs/*.png` (test side effects), `research/build-plan-outreach.md` (line endings only).
+
+**Aryan's go-live list (Render, Chrome Web Store deferred):**
+1. **A1** Exa key: paste as `EXA_API_KEY` in the Render **lynkr-preview** environment (key is also in `.env.local` for local runs).
+2. **A2** OpenAI key: paste as `OPENAI_API_KEY` in lynkr-preview (reuse the key from `.env.local`); check the OpenAI project has a monthly budget.
+3. **Create the preview in Render:** New + Blueprint from this repo on branch `feat/outreach-v2`. Set `LYNKR_DATABASE_URL` to a NEW Neon branch (never the production one), `BETTER_AUTH_SECRET` to a new random value, `CRON_SECRET`, and Dodo test keys. Then run migrations 001, 002 and 005 on that branch with `LYNKR_DATABASE_URL` set in your terminal (`npm run db:migrate`).
+4. **Check `/api/status` on the preview:** `outreach: "v2"`, `interview: "v2"`, providers named (no values).
+5. **Live-model run:** with `OPENAI_API_KEY` set, run the evaluation once and read a few drafts before testers do (`research/eval-vertical3.md` explains what it did not cover).
+6. **A3** Name 5 testers on Chrome desktop. Build their zip: `LYNKR_EXT_EXTRA_ORIGINS="https://<preview>.onrender.com" npm run ext:build && npm run ext:zip`; send `extension/lynkr-extension-tester.zip` with `research/tester-brief-v3.md`. Set `LYNKR_EXT_ID` on the preview to the ID Chrome shows for the loaded extension.
+7. **A5** Read and approve the Privacy, Terms and listing drafts: `research/terms-draft-v3.md`, `extension/store/listing.md`, the privacy changes. Nothing is published until you approve.
+8. **A6** Real-LinkedIn check, 5 minutes: pair the extension; Save this profile link on a profile; insert a draft into a message box; select a post line and use Write with Lynkr; confirm nothing was sent; revoke from My data. Plus: book a meeting, answer the meeting card, change a step date.
+9. **Before charging anyone (production):** production `render.yaml` still has `DODO_ENVIRONMENT=test_mode` and `LYNKR_ALLOW_TEST_PAYMENTS=1`. Move Dodo to live mode only after the tester round. Then: merge the PR, run migrations 002 and 005 on the production database, set `LYNKR_OUTREACH=v2` and `EXA_API_KEY` in Render production, redeploy (variables reach new builds only).
+10. **A4** Chrome Web Store account ($5): deferred. Needed only when paying users must install from the store; then submit as Unlisted.
+
+**Next session:** after testers: act on their ratings (wording, `research/eval-vertical3.md`), then the next part (Posts is blocked on LinkedIn's API answer; Commenter, Calendar Stage 2, Billing B2-B8 are not started).
 
 **Done (saved in `research/`):**
 - `context-brief.md`: the Phase 0 brief, with the free/paid answer added.

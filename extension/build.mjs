@@ -14,4 +14,20 @@ for (const name of ["background", "sidepanel", "insert", "api"]) {
   writeFileSync(join(out, `${name}.js`), result.outputText);
 }
 for (const name of ["manifest.json", "sidepanel.html"]) copyFileSync(join(root, name), join(out, name));
+// Tester builds: LYNKR_EXT_EXTRA_ORIGINS="https://lynkr-preview.onrender.com" lets the extension talk to, and be paired from, a preview.
+// Only https origins are accepted. The committed manifest stays as it is, so a store build never carries a preview address.
+const extra = (process.env.LYNKR_EXT_EXTRA_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean).map((s) => {
+  let u;
+  try { u = new URL(s); } catch { throw new Error("LYNKR_EXT_EXTRA_ORIGINS: not a URL: " + s); }
+  if (u.protocol !== "https:" || u.pathname !== "/" || u.search || u.hash) throw new Error("LYNKR_EXT_EXTRA_ORIGINS: use a bare https origin, got " + s);
+  return u.origin + "/*";
+});
+if (extra.length) {
+  const path = join(out, "manifest.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8"));
+  manifest.host_permissions = [...new Set([...manifest.host_permissions, ...extra])];
+  manifest.externally_connectable.matches = [...new Set([...manifest.externally_connectable.matches, ...extra])];
+  writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
+  console.log("Added origins for this build:", extra.join(", "));
+}
 console.log("Extension built to extension/dist");

@@ -48,3 +48,6 @@ research/evidence/
 Copilot.md
 .vercel
 .env*
+
+# tester zip, built with npm run ext:zip
+extension/*.zip

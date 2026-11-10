@@ -39,16 +39,16 @@ export const PLAN_SLUG = "lynkr-monthly";
 function siteUrl(): string {
   const set = process.env.BETTER_AUTH_URL?.trim();
   if (process.env.VERCEL_ENV === "preview") {
-    const host = process.env.VERCEL_BRANCH_URL?.trim() || process.env.VERCEL_URL?.trim();
+    const host = process.env.VERCEL_BRANCH_URL?.trim() || process.env.VERCEL_URL?.trim() || process.env.RENDER_EXTERNAL_HOSTNAME?.trim();
     if (host) return `https://${host}`;
   }
   return set || "http://localhost:3000";
 }
 
-/** A preview is reachable at its branch address and its per-deployment address; both may sign in. */
+/** A preview is reachable at its branch address and its per-deployment address (Vercel), or at its own Render hostname; each may sign in. */
 function previewOrigins(): string[] {
   if (process.env.VERCEL_ENV !== "preview") return [];
-  return [process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL].filter((h): h is string => !!h?.trim()).map((h) => `https://${h.trim()}`);
+  return [process.env.VERCEL_BRANCH_URL, process.env.VERCEL_URL, process.env.RENDER_EXTERNAL_HOSTNAME].filter((h): h is string => !!h?.trim()).map((h) => `https://${h.trim()}`);
 }
 
 function build() {

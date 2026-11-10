@@ -38,3 +38,14 @@ Meeting booked takes a date and time in IST. Meeting done asks first whether it 
 ## Tests
 
 `npm run ext:build` then `npm run test:ext` runs the manifest checks, the panel states, Insert, the profile link, the outcome taps and the context-menu flow in Chrome against `tests/fixtures/linkedin-like.html` only; the API is answered by the test. The pairing handoff from a real Lynkr page is not covered. Set `LYNKR_BROWSER` to use a different Playwright channel.
+
+## Tester install (no Chrome Web Store)
+
+1. `npm run ext:build` then `npm run ext:zip` gives `extension/lynkr-extension-tester.zip`.
+   For a preview, build with the preview address so the extension may talk to it and be paired from it:
+   `LYNKR_EXT_EXTRA_ORIGINS="https://<your-preview>.onrender.com" npm run ext:build` (https origins only).
+2. The tester unzips it, opens `chrome://extensions`, switches on Developer mode and chooses Load unpacked.
+3. In Lynkr, use "Connect the Chrome extension" on the Outreach page and paste the extension ID Chrome shows.
+
+A store build never carries a preview address: the committed manifest lists only lynkr.cloud and localhost.
+Chrome may show a "developer mode extensions" notice and does not update an unpacked extension by itself.

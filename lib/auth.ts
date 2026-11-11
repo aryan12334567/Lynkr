@@ -7,6 +7,8 @@ import { checkout, dodopayments, portal, webhooks } from "@dodopayments/better-a
 import DodoPayments from "dodopayments";
 import { Pool } from "pg";
 import { billingProductId, dodoBaseUrl, forgetSubscription } from "./billing";
+import { applyGraceWebhook } from "./billing-grace";
+import { getDb } from "./db";
 import { sendEmail } from "./email";
 
 /**
@@ -99,6 +101,8 @@ function build() {
             onPayload: async (payload) => {
               const data = (payload as { data?: { customer?: { customer_id?: string } } }).data;
               forgetSubscription(data?.customer?.customer_id);
+              // B3: remember or clear the past-due deadline. It never throws, so it cannot break this webhook.
+              if (databaseUrl()) await applyGraceWebhook(getDb(), payload);
             },
           }),
         ],

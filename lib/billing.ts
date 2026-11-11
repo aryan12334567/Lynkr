@@ -1,4 +1,7 @@
 import DodoPayments from "dodopayments";
+import { pastDueGraceOn } from "./billing-grace";
+import type { Db } from "./db";
+import { databaseUrl } from "./dbUrl";
 
 /**
  * Lynkr is a paid subscription sold through Dodo Payments (Merchant of Record).
@@ -152,6 +155,16 @@ export const INSTANCE_HEADER = "x-lynkr-instance";
 
 const subs = new Map<string, { ok: boolean; at: number }>();
 
+/** True when Dodo lists a past_due subscription to the Lynkr product that is still inside its stored grace window. */
+export async function inPastDueGrace(client: Pick<DodoPayments, "subscriptions">, customerId: string, db?: Db, now?: Date): Promise<boolean> {
+  // Imported here, not at the top: these pull in the database layer, which billing otherwise does not need.
+  const { graceCovers } = await import("./billing-grace");
+  const page = await client.subscriptions.list({ customer_id: customerId, status: "past_due", ...(billingProductId() ? { product_id: billingProductId() } : {}) });
+  const ids = page.items.map((s) => s.subscription_id);
+  if (ids.length === 0) return false;
+  return graceCovers(db ?? (await import("./db")).getDb(), customerId, ids, now);
+}
+
 /** Called from Dodo webhooks: the next check asks Dodo again. */
 export function forgetSubscription(customerId: string | undefined): void {
   if (customerId) subs.delete(customerId);
@@ -166,13 +179,22 @@ export async function subscriptionActive(customerId: string | null): Promise<boo
   try {
     const client = new DodoPayments({ bearerToken: process.env.DODO_PAYMENTS_API_KEY, baseURL: dodoBaseUrl(), maxRetries: 1, timeout: 10_000 });
     const page = await client.subscriptions.list({ customer_id: customerId, status: "active", ...(billingProductId() ? { product_id: billingProductId() } : {}) });
-    const ok = page.items.length > 0;
+    let ok = page.items.length > 0;
+    // B3 (D-I5): a past_due subscription keeps access until its stored deadline, only while Dodo still says past_due.
+    if (!ok && pastDueGraceOn()) ok = await inPastDueGrace(client, customerId);
     if (subs.size > 5000) subs.clear();
     subs.set(customerId, { ok, at: now });
     return ok;
   } catch {
     return Boolean(hit?.ok && now - hit.at < OUTAGE_GRACE);
   }
+}
+
+/** B6b: true when this account has a linked license key that Dodo still confirms (a key-only payer who signed in). */
+export async function linkedKeyActive(userId: string): Promise<boolean> {
+  if (!databaseUrl()) return false;
+  const [{ getDb }, { linkedLicenseActive }] = await Promise.all([import("./db"), import("./license-link")]);
+  return linkedLicenseActive(getDb(), userId, validateLicense);
 }
 
 /** True when the request carries a license key that Dodo confirms for this browser. */
@@ -190,5 +212,6 @@ export async function requireLicense(req: Request): Promise<Response | null> {
   const { sessionUser } = await import("./auth");
   const user = await sessionUser(req);
   if (user && (await subscriptionActive(user.dodoCustomerId))) return null;
+  if (user && (await linkedKeyActive(user.id))) return null;
   return Response.json({ error: "An active subscription is needed. Subscribe, or enter your license key.", code: "subscription_required" }, { status: 402 });
 }

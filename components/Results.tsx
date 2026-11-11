@@ -11,6 +11,7 @@ import { TAB_LABEL, tabIds } from "@/lib/outreach/ui-tabs";
 import { DOMAIN_LABEL, STAGE_LABEL } from "@/lib/roles";
 import type { DraftEdit, Saved } from "@/lib/store";
 import { WeekPlan } from "./WeekPlan";
+import { useCalendar } from "./calendar/useCalendar";
 import { ConnectCoach } from "./ConnectCoach";
 import { OutreachWorkspace } from "./outreach/OutreachWorkspace";
 import { DraftCard } from "./DraftCard";
@@ -68,7 +69,8 @@ export function Results({
   account?: Account | null;
 }) {
   const [outreachV2, setOutreachV2] = useState(false);
-  useEffect(() => { fetch("/api/status").then(r => r.json()).then(d => setOutreachV2(d.outreach === "v2")).catch(() => {}); }, []);
+  const [calendarV2, setCalendarV2] = useState(false);
+  useEffect(() => { fetch("/api/status").then(r => r.json()).then(d => { setOutreachV2(d.outreach === "v2"); setCalendarV2(d.calendar === "v2"); }).catch(() => {}); }, []);
   const [rel, setRel] = useState<Relationship>("stranger");
   // The person described in Connect: in memory only, shared with the checker.
   const [packet, setPacket] = useState<Packet>(EMPTY_PACKET);
@@ -79,6 +81,8 @@ export function Results({
   }, [s.plan, setS]);
   const result = s.result!;
   const profile = s.profile!;
+  // Calendar v2: the mix rules, the why line, progress, the streak, and the plan kept in the account (off with LYNKR_CALENDAR=v1).
+  const calendar = useCalendar({ enabled: calendarV2, signedIn: account?.signedIn === true, plan: s.plan, profile, setPlan: (plan) => setS((prev) => ({ ...prev, plan })) });
   const current = TABS.find((t) => t.id === tab)!;
   // What a draft may draw on: confirmed facts, the background line and the target role.
   const groundIn = [...s.facts.filter((f) => f.reviewStatus === "confirmed" && f.useInDrafts).map((f) => f.text), profile.background, profile.targetRole];
@@ -280,6 +284,7 @@ export function Results({
                   onPlan={(plan) => setS((prev) => ({ ...prev, plan }))}
                   result={result}
                   outreachV2={outreachV2}
+                  calendar={calendarV2 ? { ...calendar, signedIn: account?.signedIn === true } : undefined}
                   fills={s.fills}
                   onOpenDraft={(draftId) => go(draftId.startsWith("out:") ? "outreach" : "posts")}
                 />

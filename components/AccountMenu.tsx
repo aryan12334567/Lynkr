@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, CreditCard, Fingerprint, LogOut, UserRound } from "lucide-react";
 import { authClient, openPortal, passkeysSupported, type Account } from "@/lib/auth-client";
+import { LinkLicense } from "./LinkLicense";
 import { MoveToAccount } from "./MoveToAccount";
 import { MyData } from "./MyData";
 
@@ -63,9 +64,9 @@ export function AccountMenu({ account, className = "" }: { account: Account | nu
       </p>
       <p className={`mt-2 text-[0.78rem] ${account?.subscribed ? "text-good" : "text-faint"}`}>{account?.subscribed ? "Subscription active" : "No active subscription"}</p>
       <div className="mt-2 flex flex-wrap gap-1">
-        {account?.subscribed && (
+        {(account?.subscribed || account?.hasBilling) && (
           <button onClick={billing} disabled={busy !== null} className={item}>
-            <CreditCard size={14} aria-hidden /> {busy === "billing" ? "Opening..." : "Billing"}
+            <CreditCard size={14} aria-hidden /> {busy === "billing" ? "Opening..." : "Manage subscription"}
           </button>
         )}
         {canPasskey && hasPasskey === false && (
@@ -83,6 +84,7 @@ export function AccountMenu({ account, className = "" }: { account: Account | nu
         </button>
       </div>
       {error && <p className="mt-1 text-[0.8rem] text-bad">{error}</p>}
+      <LinkLicense />
       {account?.email && <MoveToAccount email={account.email} />}
       <MyData />
     </div>

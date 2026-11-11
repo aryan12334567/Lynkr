@@ -19,9 +19,11 @@ export type Account = {
   signedIn: boolean;
   email: string | null;
   subscribed: boolean;
+  /** The account has a Dodo customer, so the billing portal can open even when the subscription is not active. */
+  hasBilling: boolean;
 };
 
-export const NO_ACCOUNT: Account = { accounts: false, google: false, googleClientId: null, apple: false, linkedin: false, signedIn: false, email: null, subscribed: false };
+export const NO_ACCOUNT: Account = { accounts: false, google: false, googleClientId: null, apple: false, linkedin: false, signedIn: false, email: null, subscribed: false, hasBilling: false };
 
 /** True when this browser can create and use passkeys (fingerprint, face or device PIN). */
 export const passkeysSupported = (): boolean => typeof window !== "undefined" && typeof window.PublicKeyCredential === "function";

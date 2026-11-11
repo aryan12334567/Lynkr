@@ -345,6 +345,8 @@ export async function takeDaily(db: Db, userId: string, kind: string, max: numbe
 const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"] as const;
 /** Tables from later migrations: skipped on a database that hasn't run them yet. */
 const OPTIONAL = ["outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"];
+/** Deleted by "Delete my data" but never exported: a linked license key is a credential (migration 007, lib/license-link.ts). */
+const DELETE_ONLY = ["account_license"];
 
 /** Everything Lynkr holds for this user, as plain JSON ("Download my data"). */
 export async function exportAll(db: Db, userId: string): Promise<Record<string, unknown>> {
@@ -361,6 +363,10 @@ export async function deleteAll(db: Db, userId: string): Promise<Record<string, 
   const counts: Record<string, number> = {};
   for (const t of TABLES) {
     if (OPTIONAL.includes(t) && !(await db.query<{ t: string | null }>("select to_regclass($1)::text as t", [`public.${t}`])).rows[0]?.t) continue;
+    counts[t] = (await db.query(`delete from ${t} where user_id = $1 returning 1`, [userId])).rows.length;
+  }
+  for (const t of DELETE_ONLY) {
+    if (!(await db.query<{ t: string | null }>("select to_regclass($1)::text as t", [`public.${t}`])).rows[0]?.t) continue;
     counts[t] = (await db.query(`delete from ${t} where user_id = $1 returning 1`, [userId])).rows.length;
   }
   return counts;

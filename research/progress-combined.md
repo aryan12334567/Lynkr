@@ -11,7 +11,7 @@
 | Billing | `feat/billing-v2` (on top of outreach) | B3, B5, B6b built; B6 skipped by design; B7 nothing to do yet; B2, B4, B8 need Dodo and Aryan | `tests/billing-grace.test.mts`, `tests/license-link.test.mts`; `npm test` 477/477 |
 | Posts | none | not started; blocked on LinkedIn API terms answer | no `lib/posts`, no migration 003 |
 | Commenter | none | not started (only the old `/api/comment` route) | no migration 004 |
-| Calendar | none | not started; Stage 1 is the next unblocked part | no code |
+| Calendar | `feat/calendar-v2` (on top of billing) | Stage 1 built: mix rules, why line, progress, streak, plan in the account, `LYNKR_CALENDAR`. Stage 2 (feed, grid, moves, Today, sources) not started. | `research/progress-calendar.md`; `npm test` 510/510, calendar e2e 22/22 |
 
 ## Billing detail
 

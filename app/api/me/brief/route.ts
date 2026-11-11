@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { accountContext, noCloud } from "@/lib/account";
 import { readJson } from "@/lib/http";
-import { saveBrief } from "@/lib/db";
+import { saveProfileBrief } from "@/lib/db";
 import { ProfileInput } from "@/lib/schemas";
 
 const Body = z.object({ profile: ProfileInput });
@@ -14,5 +14,5 @@ export async function PUT(req: Request) {
   if ("error" in read) return read.error;
   const parsed = Body.safeParse(read.body);
   if (!parsed.success) return Response.json({ error: "Please check your basics and try again." }, { status: 400 });
-  return Response.json({ version: await saveBrief(ctx.db, ctx.userId, parsed.data.profile) });
+  return Response.json({ version: await saveProfileBrief(ctx.db, ctx.userId, parsed.data.profile) });
 }

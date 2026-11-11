@@ -22,6 +22,8 @@ import { downloadIcs, googleCalendarUrl, type CalEvent } from "@/lib/ics";
 import { postJson } from "@/lib/store";
 import { offerPlanFollowUp } from "@/lib/outreach/ui-today";
 import { Button, Card, ErrorNote, inputCls } from "./ui";
+import { Streak } from "./calendar/Streak";
+import { progressLine, type Streak as StreakData, type WeekCount } from "@/lib/calendar/progress";
 
 const TAG_CLS: Record<Tag, string> = {
   proof: "bg-accent/15 text-accent",
@@ -56,6 +58,7 @@ export function WeekPlan({
   fills,
   onOpenDraft,
   outreachV2 = false,
+  calendar,
 }: {
   plan: Plan;
   onPlan: (p: Plan) => void;
@@ -65,6 +68,8 @@ export function WeekPlan({
   onOpenDraft?: (draftId: string) => void;
   /** Under outreach v2 the timeline owns follow-ups (CO-2), so a sent message gets no plan follow-up here. */
   outreachV2?: boolean;
+  /** Calendar v2 (LYNKR_CALENDAR=v2): the why line, this week's progress and the streak. Absent on v1. */
+  calendar?: { why: string; progress: WeekCount; streak: StreakData | null; problem: string | null; signedIn: boolean };
 }) {
   const [view, setView] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0);
@@ -325,9 +330,15 @@ export function WeekPlan({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold">
-              Week of {formatDay(plan.weekStart)}: {plan.counts.messages} messages, {plan.counts.comments} comments, {plan.counts.posts}{" "}
-              post{plan.counts.posts === 1 ? "" : "s"}
+              Week of {formatDay(plan.weekStart)}: {plan.counts.messages} message{plan.counts.messages === 1 ? "" : "s"}, {plan.counts.comments} comment{plan.counts.comments === 1 ? "" : "s"},{" "}
+              {plan.counts.posts} post{plan.counts.posts === 1 ? "" : "s"}
             </h3>
+            {calendar && <p className="mt-1 text-sm">{calendar.why}</p>}
+            {calendar && (
+              <p className="mt-1 text-sm font-medium" role="status">
+                {progressLine(calendar.progress, false)}
+              </p>
+            )}
             <p className="mt-1 text-sm text-soft">
               Scheduling sets a reminder. Nothing is posted or sent for you. Times are IST defaults, not &quot;best times&quot;.
             </p>
@@ -343,6 +354,13 @@ export function WeekPlan({
             )}
           </div>
         </div>
+
+        {calendar && (
+          <div className="mt-4 border-t border-line pt-4">
+            {calendar.streak ? <Streak data={calendar.streak} /> : !calendar.signedIn && <p className="text-[0.9rem] text-soft">Sign in to keep your plan on every device and to build a streak.</p>}
+            {calendar.problem && <p role="alert" className="mt-2 text-[0.85rem] text-bad">{calendar.problem}</p>}
+          </div>
+        )}
 
         <form onSubmit={sendChat} className="mt-4 flex flex-col gap-2 sm:flex-row">
           <label className="sr-only" htmlFor="plan-chat">

@@ -1,5 +1,5 @@
 import { accountContext, requireAccountForFree } from "@/lib/account";
-import { deleteAnswers, listAnswers, listFacts, pruneAnswerFacts, saveBrief, takeDaily, upsertAnswer, upsertAnswerFacts } from "@/lib/db";
+import { deleteAnswers, listAnswers, listFacts, pruneAnswerFacts, saveProfileBrief, takeDaily, upsertAnswer, upsertAnswerFacts } from "@/lib/db";
 import { BODY_LIMIT, readJson } from "@/lib/http";
 import { judgeAnswer } from "@/lib/interview/judge";
 import { applyAnswer, briefFrom, nextStep, progress, validateAnswer, type Answer } from "@/lib/interview/engine";
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         await pruneAnswerFacts(ctx.db, ctx.userId, answer.qid, kept);
       }
       const profile = profileFrom(bucket, answers);
-      if (profile) await saveBrief(ctx.db, ctx.userId, profile);
+      if (profile) await saveProfileBrief(ctx.db, ctx.userId, profile);
     }
   }
 

@@ -1,4 +1,5 @@
 import { addDays, daysBetween, mondayOf, todayIST, weekdayIndex } from "./ist";
+import type { Bucket, WeeklyTime } from "./schemas";
 
 /**
  * Weekly plan: Lynkr's default week (3 messages, 2 comments, 1 post) placed on
@@ -30,6 +31,8 @@ export type Plan = {
   items: PlanItem[];
   /** Item ids already shown as a browser notification. */
   notified: string[];
+  /** The person changed this week's counts (by chat or by hand), so the mix rules no longer recalculate it (R12). */
+  changedByUser?: boolean;
 };
 
 export const DEFAULT_COUNTS: Counts = { posts: 1, comments: 2, messages: 3 };
@@ -100,7 +103,8 @@ export function withCounts(plan: Plan, counts: Counts, times: Times = plan.times
   const retimed = plan.items.map((it) =>
     it.kind !== "follow_up" && it.status === "draft" && times[it.kind] !== plan.times[it.kind] ? { ...it, time: times[it.kind] } : it,
   );
-  return { ...plan, counts: c, times, items: layoutItems(plan.weekStart, c, times, retimed) };
+  const changed = c.posts !== plan.counts.posts || c.comments !== plan.counts.comments || c.messages !== plan.counts.messages;
+  return { ...plan, counts: c, times, items: layoutItems(plan.weekStart, c, times, retimed), ...(changed ? { changedByUser: true } : {}) };
 }
 
 export function updateItem(plan: Plan, id: string, patch: Partial<PlanItem>): Plan {
@@ -207,4 +211,97 @@ export function parsePlanChat(text: string, counts: Counts, times: Times): PlanC
     understood: true,
     reply: `Updated: ${clamped.messages} messages, ${clamped.comments} comments, ${clamped.posts} posts.${note}`,
   };
+}
+
+// ---- the week's mix from the person's goals and time (calendar plan U1, R10 to R13, KTD4) ----
+
+export type GoalFamily = "job_seeker" | "visibility" | "freelancer";
+export const FAMILY_LABEL: Record<GoalFamily, string> = { job_seeker: "Job seeker", visibility: "Visibility builder", freelancer: "Freelancer" };
+
+/** What the mix rules read. Every field is optional: nothing known gives the standard week. */
+export type MixInput = {
+  bucket?: Bucket | null;
+  /** The interview's "what do you want" answers. */
+  wants?: readonly string[];
+  /** Outreach goal ids, in the order the person picked them. */
+  outreachGoals?: readonly string[];
+  weeklyTime?: WeeklyTime | null;
+};
+
+const OUTREACH_FAMILY: Record<string, GoalFamily> = { job: "job_seeker", referral: "job_seeker", network: "visibility", mentor: "visibility", clients: "freelancer" };
+const BUCKET_FAMILY: Partial<Record<Bucket, GoalFamily>> = { fresher: "job_seeker", experienced: "job_seeker", switcher: "job_seeker", networker: "visibility", founder: "freelancer" };
+const WANT_FAMILY: Record<string, GoalFamily> = { job: "job_seeker", internship: "job_seeker", referral: "job_seeker", network: "visibility", mentor: "visibility", clients: "freelancer" };
+
+/**
+ * R10: the first Outreach goal that has a family wins; without one the interview bucket decides; without a bucket the
+ * interview's wants do. Outreach goals with no family (hire, fund, buy, partner, reconnect) are skipped.
+ */
+export function goalFamily(input: MixInput): GoalFamily | null {
+  for (const g of input.outreachGoals ?? []) if (OUTREACH_FAMILY[g]) return OUTREACH_FAMILY[g];
+  if (input.bucket && BUCKET_FAMILY[input.bucket]) return BUCKET_FAMILY[input.bucket]!;
+  for (const w of input.wants ?? []) if (WANT_FAMILY[w]) return WANT_FAMILY[w];
+  return null;
+}
+
+/** The default table of R10 (lead defaults, D-K1): posts, comments, messages per weekly time. */
+export const WEEK_MIX: Record<GoalFamily, Record<WeeklyTime, Counts>> = {
+  job_seeker: { "15m": { posts: 0, comments: 1, messages: 2 }, "30m": { posts: 1, comments: 2, messages: 3 }, "1h": { posts: 1, comments: 3, messages: 5 }, "2h": { posts: 2, comments: 4, messages: 7 } },
+  visibility: { "15m": { posts: 1, comments: 2, messages: 0 }, "30m": { posts: 2, comments: 3, messages: 1 }, "1h": { posts: 3, comments: 4, messages: 2 }, "2h": { posts: 4, comments: 6, messages: 3 } },
+  freelancer: { "15m": { posts: 0, comments: 2, messages: 1 }, "30m": { posts: 1, comments: 3, messages: 2 }, "1h": { posts: 2, comments: 4, messages: 3 }, "2h": { posts: 3, comments: 5, messages: 5 } },
+};
+
+/** The week's counts. Nothing known (no family) gives the standard week; an unknown time is 30 minutes. Always within LIMITS. */
+export function weekMix(family: GoalFamily | null, weeklyTime?: WeeklyTime | null): Counts {
+  if (!family) return { ...DEFAULT_COUNTS };
+  return clampCounts(WEEK_MIX[family][weeklyTime && WEEK_MIX[family][weeklyTime] ? weeklyTime : "30m"]);
+}
+
+const TIME_LABEL: Record<WeeklyTime, string> = { "15m": "15 minutes", "30m": "30 minutes", "1h": "1 hour", "2h": "2 hours or more" };
+const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+/** What each family's week is for, by kind. A fixed template: no model call, so the free Calendar costs nothing (R11). */
+const PURPOSE: Record<GoalFamily, { messages: string; comments: string; posts: string }> = {
+  job_seeker: { messages: "outreach first", comments: "to warm your targets", posts: "to show your proof" },
+  visibility: { messages: "to keep conversations going", comments: "to join conversations", posts: "to be seen" },
+  freelancer: { messages: "to reach buyers", comments: "to meet buyers", posts: "to show your work" },
+};
+
+/**
+ * R11 and R12: one line saying why this week looks the way it does. A week the person changed says so and names no rule.
+ * Zero counts are left out ("Visibility builder, 15 minutes a week" has no messages).
+ */
+export function whyThisWeek(counts: Counts, input: MixInput, changedByUser = false): string {
+  const parts = (purpose?: (typeof PURPOSE)[GoalFamily]) => {
+    const out: string[] = [];
+    if (counts.messages) out.push(purpose ? `${n(counts.messages, "message", "messages")} (${purpose.messages})` : n(counts.messages, "message", "messages"));
+    if (counts.comments) out.push(purpose ? `${n(counts.comments, "comment", "comments")} ${purpose.comments}` : n(counts.comments, "comment", "comments"));
+    if (counts.posts) out.push(purpose ? `${n(counts.posts, "post", "posts")} ${purpose.posts}` : n(counts.posts, "post", "posts"));
+    return out.join(", ");
+  };
+  if (changedByUser) return `Changed by you: ${parts() || "no actions"} this week.`;
+  const family = goalFamily(input);
+  if (!family) return `The standard week: ${parts()}.`;
+  return `${FAMILY_LABEL[family]}, ${TIME_LABEL[input.weeklyTime ?? "30m"]} a week: ${parts(PURPOSE[family])}.`;
+}
+
+/**
+ * R13: a new set of counts changes only what is still a Draft slot the plan owns. Anything scheduled or done stays where
+ * it is, even when the new counts would drop it. A week the person changed is left alone (R12).
+ */
+export function applyMix(plan: Plan, counts: Counts): Plan {
+  if (plan.changedByUser) return plan;
+  const c = clampCounts(counts);
+  // Every existing slot keeps its id, day, time and status; only missing ids become new drafts.
+  const next = layoutItems(plan.weekStart, c, plan.times, plan.items);
+  const kept = plan.items.filter((it) => it.kind !== "follow_up" && it.status !== "draft");
+  const have = new Set(next.map((it) => it.id));
+  const items = [...next, ...kept.filter((it) => !have.has(it.id))].sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time));
+  // A slot that was kept but would not exist at the new counts still counts toward the plan's counts.
+  const live = { posts: items.filter((i) => i.kind === "post").length, comments: items.filter((i) => i.kind === "comment").length, messages: items.filter((i) => i.kind === "message").length };
+  return { ...plan, counts: live, items };
+}
+
+/** A new week for this person: counts from the mix rules (R10), never from a browser default. */
+export function planForPerson(today: string, input: MixInput, times: Times = DEFAULT_TIMES): Plan {
+  return planForWeek(planWeekStart(today), weekMix(goalFamily(input), input.weeklyTime), times);
 }

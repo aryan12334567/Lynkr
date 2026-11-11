@@ -159,6 +159,16 @@ export async function saveBrief(db: Db, userId: string, data: Record<string, unk
   return r.rows[0].version;
 }
 
+/**
+ * Saves the profile the interview or the profile screen produced, keeping what other parts store in the same brief.
+ * The profile has no `outreach` field, so a plain save would drop the person's Outreach goals (calendar plan U1).
+ */
+export async function saveProfileBrief(db: Db, userId: string, profile: Record<string, unknown>): Promise<number> {
+  const cur = await getBrief(db, userId);
+  const outreach = cur?.data.outreach;
+  return saveBrief(db, userId, outreach === undefined ? profile : { ...profile, outreach });
+}
+
 // ---- Story Vault ----
 
 type FactRow = {

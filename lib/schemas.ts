@@ -478,3 +478,39 @@ export const DraftReply = z.object({
 });
 export type DraftReply = z.infer<typeof DraftReply>;
 
+
+// ---- comment options for the extension (Commenter plan U3, R5-R9) ----
+
+export const COMMENT_GOALS = ["job_seeker", "freelancer", "visibility"] as const;
+export type CommentGoal = (typeof COMMENT_GOALS)[number];
+export const COMMENT_ANGLES = ["experience", "add", "question"] as const;
+export type CommentAngle = (typeof COMMENT_ANGLES)[number];
+
+/** What the side panel sends: the selected text exactly as read, the goal, the person's own words, an edited author. */
+export const CommentOptionsRequest = z
+  .object({
+    selection: z.string().min(1).max(4000),
+    goal: z.enum(COMMENT_GOALS).optional(),
+    reaction: z.string().trim().max(500).default(""),
+    author: z.object({ name: z.string().trim().max(120), headline: z.string().trim().max(220).default("") }).optional(),
+  })
+  .strict();
+export type CommentOptionsRequest = z.infer<typeof CommentOptionsRequest>;
+
+export const CommentOption = z.object({
+  angle: z.enum(COMMENT_ANGLES),
+  body: z.string(),
+  postAnchor: z.string(),
+  factRefs: z.array(z.string()),
+  why: z.string(),
+});
+export type CommentOption = z.infer<typeof CommentOption>;
+
+/** The model's answer: flat on purpose (no unions), so every provider's strict schema mode accepts it. */
+export const CommentOptionsModel = z.object({
+  status: z.enum(["options", "skip"]),
+  /** Only when status is skip: off_topic means neither the facts nor the reaction connect to the post. */
+  skipWhy: z.string(),
+  options: z.array(CommentOption).max(3),
+});
+export type CommentOptionsModel = z.infer<typeof CommentOptionsModel>;

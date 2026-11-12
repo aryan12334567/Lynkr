@@ -1,7 +1,8 @@
 ﻿import { insertDraft } from "./insert.js";
+import { isLinkedInTab } from "./api.js";
 
-/** The most selected text one drafting request carries. */
-export const SELECTION_LIMIT = 3000;
+/** The most selected text the worker holds in memory. A LinkedIn post is at most 3,000 characters; nothing is cut below this. */
+export const SELECTION_LIMIT = 20000;
 
 let selection = { text: "", truncated: false };
 let selectedDraft = "";
@@ -12,7 +13,7 @@ function readSelection(): string {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: "write-with-lynkr", title: "Write with Lynkr", contexts: ["selection"] });
+  chrome.contextMenus.create({ id: "write-with-lynkr", title: "Write with Lynkr", contexts: ["selection"], documentUrlPatterns: ["https://www.linkedin.com/*"] });
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 });
 
@@ -47,6 +48,8 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "insert-draft" || !selectedDraft) return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
+  // Only on LinkedIn: anywhere else the panel copies the text instead (R10, R11).
+  if (!isLinkedInTab(tab.url)) { void chrome.runtime.sendMessage({ type: "INSERT_FAILED" }).catch(() => {}); return; }
   try {
     const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: insertDraft, args: [selectedDraft] });
     if (!result[0]?.result) void chrome.runtime.sendMessage({ type: "INSERT_FAILED" }).catch(() => {});

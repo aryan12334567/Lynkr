@@ -103,3 +103,78 @@ export function tapSaved(action, result) {
     const goal = result.goalReachedSuggested ? " This meets your goal. Tap Goal reached to record it." : "";
     return `${TAP_LABEL[action]} saved${when}.${goal} Undo it in Lynkr.`;
 }
+export const GOAL_LABEL = { job_seeker: "Job seeker", freelancer: "Freelancer", visibility: "Visibility builder" };
+export const ANGLE_LABEL = { experience: "From your experience", add: "Add a point", question: "Ask a question" };
+/** The most text one request carries; the server refuses more. */
+export const SELECTION_SEND_MAX = 4000;
+export const MESSAGE_SELECTION_MAX = 3000;
+/** What can be told before a request is made (R4). The server checks the same limits and the "see more" case. */
+export const SELECTION_PROBLEM_TEXT = {
+    short: "Select the part of the post you want to answer (at least a sentence).",
+    long: "That's longer than a LinkedIn post. Select just the part you're answering.",
+    see_more: "Expand the post (click 'see more') and select again, so Lynkr reads all of it.",
+};
+export function selectionProblem(text) {
+    const t = text.trim();
+    if (t.length < 20)
+        return "short";
+    if (t.length > 3600)
+        return "long";
+    if (/(…|\.\.\.)\s*(see\s+)?more\s*$/i.test(t))
+        return "see_more";
+    return null;
+}
+/** Insert and Ctrl+Shift+Y only run on LinkedIn (R10): the address must be exactly https://www.linkedin.com/. */
+export function isLinkedInTab(url) {
+    if (!url)
+        return false;
+    try {
+        const u = new URL(url);
+        return u.protocol === "https:" && u.hostname === "www.linkedin.com" && !u.port && !u.username && !u.password;
+    }
+    catch {
+        return false;
+    }
+}
+/** Whether Lynkr has the Commenter switched on. Anything but a clear "on" counts as off. */
+export async function commenterOn(origin, fetchFn = fetch, timeoutMs = 4000) {
+    if (!ORIGIN_PATTERN.test(origin))
+        return false;
+    try {
+        const res = await fetchFn(`${origin}/api/status`, { signal: AbortSignal.timeout(timeoutMs), cache: "no-store" });
+        const j = (await res.json());
+        return res.ok && j.commenter === "on";
+    }
+    catch {
+        return false;
+    }
+}
+/** Splits a comment into plain text and the sentences Lynkr could not tie to anything the person gave ("Check this line"). */
+export function flagSegments(body, flags) {
+    const hits = flags
+        .map((f) => ({ at: body.indexOf(f), len: f.length }))
+        .filter((h) => h.at >= 0 && h.len > 0)
+        .sort((a, b) => a.at - b.at);
+    const out = [];
+    let pos = 0;
+    for (const h of hits) {
+        if (h.at < pos)
+            continue;
+        if (h.at > pos)
+            out.push({ text: body.slice(pos, h.at), flagged: false });
+        out.push({ text: body.slice(h.at, h.at + h.len), flagged: true });
+        pos = h.at + h.len;
+    }
+    if (pos < body.length)
+        out.push({ text: body.slice(pos), flagged: false });
+    return out.length ? out : [{ text: body, flagged: false }];
+}
+/** The body of one generation request. The author is sent only when the person has edited it. */
+export function commentBody(selection, goal, reaction, author) {
+    return {
+        selection: selection.slice(0, SELECTION_SEND_MAX),
+        ...(goal ? { goal } : {}),
+        ...(reaction.trim() ? { reaction: reaction.trim().slice(0, 500) } : {}),
+        ...(author?.name ? { author: { name: author.name.slice(0, 120), headline: author.headline.slice(0, 220) } } : {}),
+    };
+}

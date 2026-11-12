@@ -1,5 +1,5 @@
 import { insertDraft } from "./insert.js";
-import { ApiError, ORIGIN_PATTERN, PROFILE_MESSAGES, TAP_LABEL, checkProfileTab, createClient, formatIST, tapSaved, tapsFor } from "./api.js";
+import { ANGLE_LABEL, ApiError, MESSAGE_SELECTION_MAX, ORIGIN_PATTERN, PROFILE_MESSAGES, SELECTION_PROBLEM_TEXT, TAP_LABEL, checkProfileTab, commentBody, commenterOn, createClient, flagSegments, formatIST, isLinkedInTab, selectionProblem, tapSaved, tapsFor, } from "./api.js";
 const el = (id) => document.getElementById(id);
 const status = el("status");
 const contactSelect = el("contact");
@@ -12,6 +12,14 @@ const client = createClient({
     onLapsed: () => view("unpaid"),
 });
 function say(message) { status.textContent = message; }
+let mode = "message", commenter = false, consented = false;
+function render() {
+    const show = (id, on) => { el(id).hidden = !on; };
+    show("chooser", mode === "choose");
+    show("consent", mode === "consent");
+    show("comment-view", mode === "comment");
+    show("message-view", mode === "message");
+}
 function view(name) { for (const n of ["paired", "unpaid", "unpaired"])
     el(n).hidden = n !== name; }
 const current = () => contacts.find(c => c.id === contactSelect.value);
@@ -54,6 +62,11 @@ async function load() {
     try {
         await loadContacts();
         say("");
+        commenter = await commenterOn(origin);
+        consented = (await chrome.storage.local.get(["commentConsent"])).commentConsent === true;
+        if (!commenter && mode !== "message")
+            mode = "message";
+        render();
     }
     catch (e) {
         say(e.message);
@@ -72,23 +85,36 @@ function showSelection() {
 }
 async function takeSelection() {
     const r = await chrome.runtime.sendMessage({ type: "TAKE_SELECTION" }).catch(() => null);
-    if (r?.text) {
-        selection = { text: r.text, truncated: !!r.truncated };
-        showSelection();
+    if (!r?.text)
+        return;
+    selection = { text: r.text, truncated: !!r.truncated || r.text.length > MESSAGE_SELECTION_MAX };
+    showSelection();
+    if (commenter) {
+        // A new selection starts a fresh choice. The old options and reaction are gone.
+        mode = "choose";
+        el("chooser-text").textContent = r.text.length > 400 ? `${r.text.slice(0, 400)}…` : r.text;
+        comment = { goal: null, edited: undefined, parsed: null, picked: 0, options: [] };
+        el("c-reaction").value = "";
+        render();
+        say("Choose what to do with the selected text.");
+        el("choose-comment").focus();
+    }
+    else {
         say("Choose who this is for, then write your draft.");
     }
 }
 // ---- drafts ----
 async function setDraft(text) { draft.value = text; await chrome.runtime.sendMessage({ type: "SET_DRAFT", text }).catch(() => { }); }
-async function copy() {
+async function copyText(text, done) {
     try {
-        await navigator.clipboard.writeText(draft.value);
-        say("Copied. Click in the box and paste.");
+        await navigator.clipboard.writeText(text);
+        say(done);
     }
     catch {
-        say("Copy was blocked. Select the draft and copy it manually.");
+        say("Copy was blocked. Select the text and copy it manually.");
     }
 }
+async function copy() { await copyText(draft.value, "Copied. Click in the box and paste."); }
 function showVersions(versions) {
     const box = el("drafts");
     box.replaceChildren();
@@ -115,7 +141,7 @@ el("write").addEventListener("click", async () => {
     try {
         say("Writing…");
         const result = await client.request("draft", {
-            body: { contactId: c.id, channel: el("channel").value, ...(selection ? { selection: selection.text, selectionUse: use } : {}) },
+            body: { contactId: c.id, channel: el("channel").value, ...(selection ? { selection: selection.text.slice(0, MESSAGE_SELECTION_MAX), selectionUse: use } : {}) },
         });
         // The selection was used once, for this request. It is gone from the panel now.
         if (selection) {
@@ -152,6 +178,207 @@ el("insert").addEventListener("click", async () => {
 });
 el("copy").addEventListener("click", () => { void copy(); });
 el("clear-selection").addEventListener("click", () => { selection = null; showSelection(); say("Selection discarded."); });
+// ---- comments (Commenter plan U5): the selection stays in this panel; each option is inserted or copied by the person ----
+let comment = { goal: null, edited: undefined, parsed: null, picked: 0, options: [] };
+const note = el("c-note");
+const reaction = el("c-reaction");
+function authorShown() { return comment.edited ?? comment.parsed; }
+function showAuthor() {
+    const a = authorShown();
+    el("c-author").textContent = a ? `${a.name}${a.headline ? ` · ${a.headline}` : ""}` : "Author not detected";
+    el("c-author-edit").textContent = a ? "Edit" : "Add";
+}
+function setGoal(goal) {
+    comment.goal = goal;
+    for (const r of document.querySelectorAll('input[name="c-goal"]'))
+        r.checked = r.value === goal;
+}
+function busy(on) {
+    for (const id of ["c-regen", "c-back"])
+        el(id).disabled = on;
+    for (const r of document.querySelectorAll('input[name="c-goal"]'))
+        r.disabled = on;
+    reaction.disabled = on;
+}
+function pick(i) {
+    comment.picked = i;
+    document.querySelectorAll(".opt").forEach((c, n) => c.classList.toggle("on", n === i));
+    const option = comment.options[i];
+    if (option)
+        void setDraft(option.body);
+}
+function showOptions(options) {
+    const list = el("c-options");
+    list.replaceChildren();
+    comment.options = options;
+    el("c-options-title").hidden = !options.length;
+    el("c-footer").hidden = !options.length;
+    options.forEach((o, i) => {
+        const item = document.createElement("li");
+        item.className = "opt";
+        const id = `c-opt-${i}`;
+        const label = document.createElement("label");
+        label.htmlFor = id;
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "c-opt";
+        radio.id = id;
+        radio.checked = i === 0;
+        radio.addEventListener("change", () => pick(i));
+        label.append(radio, document.createTextNode(ANGLE_LABEL[o.angle]));
+        const text = document.createElement("p");
+        for (const seg of flagSegments(o.body, o.flags)) {
+            if (!seg.flagged) {
+                text.append(document.createTextNode(seg.text));
+                continue;
+            }
+            const mark = document.createElement("span");
+            mark.className = "check";
+            mark.textContent = seg.text;
+            const tag = document.createElement("span");
+            tag.className = "check-tag";
+            tag.textContent = " (Check this line)";
+            text.append(mark, tag);
+        }
+        const why = document.createElement("p");
+        why.className = "why";
+        why.textContent = `Why this works: ${o.why}`;
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const insert = document.createElement("button");
+        insert.type = "button";
+        insert.className = "primary";
+        insert.textContent = "Insert";
+        insert.setAttribute("aria-label", `Insert ${ANGLE_LABEL[o.angle]} option`);
+        insert.addEventListener("click", () => { radio.checked = true; pick(i); void insertComment(o.body); });
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.textContent = "Copy";
+        copyBtn.setAttribute("aria-label", `Copy ${ANGLE_LABEL[o.angle]} option`);
+        copyBtn.addEventListener("click", () => { radio.checked = true; pick(i); void copyText(o.body, "Copied. Click in the comment box and paste."); });
+        actions.append(insert, copyBtn);
+        item.append(label, text, why, actions);
+        list.append(item);
+    });
+    if (options.length)
+        pick(0);
+}
+/** Puts the option in the comment box the person clicked, only on LinkedIn. Anything else copies it (R10, R11). */
+async function insertComment(text) {
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id || !isLinkedInTab(tab.url))
+            throw new Error("not linkedin");
+        const r = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: insertDraft, args: [text] });
+        if (!r[0]?.result)
+            throw new Error("not inserted");
+        say("Inserted. Review it, then press Post on LinkedIn.");
+    }
+    catch {
+        await copyText(text, "Copied. Click in the comment box and paste.");
+    }
+}
+async function generate() {
+    if (!selection)
+        return;
+    const problem = selectionProblem(selection.text);
+    if (problem) {
+        note.textContent = SELECTION_PROBLEM_TEXT[problem];
+        say(SELECTION_PROBLEM_TEXT[problem]);
+        showOptions([]);
+        return;
+    }
+    busy(true);
+    note.textContent = "";
+    say("Writing options…");
+    // The reaction box is disabled while writing, so focus moves there only after it is enabled again.
+    let toReaction = false;
+    try {
+        const result = await client.request("comment", { body: commentBody(selection.text, comment.goal, reaction.value, comment.edited) });
+        setGoal(result.goal);
+        comment.parsed = result.author;
+        showAuthor();
+        if (result.status === "skip") {
+            showOptions([]);
+            if (result.reason === "no_input") {
+                note.textContent = result.why;
+                toReaction = true;
+            }
+            else if (result.reason === "off_topic") {
+                note.textContent = `${result.why} Add your reaction and try again.`;
+                toReaction = true;
+            }
+            else
+                note.textContent = `${result.why} Press Regenerate to try again.`;
+            say("No comment written.");
+        }
+        else {
+            showOptions(result.options);
+            note.textContent = result.options.length === 1 ? "The other options didn't pass Lynkr's checks." : "";
+            say(`${result.options.length} ${result.options.length === 1 ? "option" : "options"} ready. Nothing is posted for you.`);
+            el("c-options-title").focus();
+        }
+    }
+    catch (e) {
+        showOptions([]);
+        const err = e;
+        note.textContent = err.message;
+        say(err instanceof ApiError && err.status === 429 ? err.message : `${err.message} Your selection is kept. Press Regenerate to retry.`);
+    }
+    finally {
+        busy(false);
+        if (toReaction)
+            reaction.focus();
+    }
+}
+function startComment() {
+    mode = "comment";
+    render();
+    showAuthor();
+    showOptions([]);
+    el("c-note").textContent = "";
+    void generate();
+}
+el("choose-comment").addEventListener("click", () => {
+    if (consented) {
+        startComment();
+        return;
+    }
+    mode = "consent";
+    render();
+    el("consent-title").focus();
+});
+el("choose-message").addEventListener("click", () => { mode = "message"; render(); say("Choose who this is for, then write your draft."); });
+el("consent-yes").addEventListener("click", () => { consented = true; void chrome.storage.local.set({ commentConsent: true }); startComment(); });
+el("consent-no").addEventListener("click", () => { mode = "choose"; render(); el("choose-comment").focus(); say("Nothing was sent."); });
+el("c-back").addEventListener("click", () => { mode = "choose"; render(); el("choose-comment").focus(); });
+el("c-regen").addEventListener("click", () => { void generate(); });
+for (const r of document.querySelectorAll('input[name="c-goal"]'))
+    r.addEventListener("change", () => { if (r.checked)
+        comment.goal = r.value; });
+// The author line: edits change what is shown and sent next time; they never start a generation by themselves (R3).
+const authorForm = el("c-author-form");
+el("c-author-edit").addEventListener("click", () => {
+    const a = authorShown();
+    el("c-name").value = a?.name ?? "";
+    el("c-headline").value = a?.headline ?? "";
+    authorForm.hidden = false;
+    el("c-name").focus();
+});
+authorForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = el("c-name").value.trim();
+    comment.edited = name ? { name, headline: el("c-headline").value.trim() } : undefined;
+    authorForm.hidden = true;
+    showAuthor();
+    el("c-author-edit").focus();
+});
+el("c-author-cancel").addEventListener("click", () => { authorForm.hidden = true; el("c-author-edit").focus(); });
+// An unpacked (developer) build can save a selection as a test fixture (plan A6). The Chrome Web Store adds update_url to an installed manifest, so a store build never shows this button.
+const unpacked = typeof chrome.runtime.getManifest === "function" && !("update_url" in chrome.runtime.getManifest());
+el("capture").hidden = !unpacked;
+el("capture").addEventListener("click", () => { if (selection)
+    void copyText(selection.text, "Selection copied to the clipboard as a fixture."); });
 // ---- the profile link: the tab's address is read only here, when pressed ----
 el("save-profile").addEventListener("click", async () => {
     const c = current();

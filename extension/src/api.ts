@@ -109,3 +109,81 @@ export function tapSaved(action: TapAction, result: { event?: { meetingAt?: stri
   const goal = result.goalReachedSuggested ? " This meets your goal. Tap Goal reached to record it." : "";
   return `${TAP_LABEL[action]} saved${when}.${goal} Undo it in Lynkr.`;
 }
+
+// ---- comments (Commenter plan U5) ----
+
+export type CommentGoal = "job_seeker" | "freelancer" | "visibility";
+export type CommentAngle = "experience" | "add" | "question";
+export type CommentOption = { angle: CommentAngle; body: string; postAnchor: string; factRefs: string[]; why: string; flags: string[] };
+export type CommentAuthor = { name: string; headline: string } | null;
+export type CommentResult =
+  | { status: "options"; goal: CommentGoal; author: CommentAuthor; options: CommentOption[]; dropped: number }
+  | { status: "skip"; reason: "no_input" | "off_topic" | "failed"; why: string; author: CommentAuthor; goal: CommentGoal };
+
+export const GOAL_LABEL: Record<CommentGoal, string> = { job_seeker: "Job seeker", freelancer: "Freelancer", visibility: "Visibility builder" };
+export const ANGLE_LABEL: Record<CommentAngle, string> = { experience: "From your experience", add: "Add a point", question: "Ask a question" };
+
+/** The most text one request carries; the server refuses more. */
+export const SELECTION_SEND_MAX = 4000;
+export const MESSAGE_SELECTION_MAX = 3000;
+
+/** What can be told before a request is made (R4). The server checks the same limits and the "see more" case. */
+export const SELECTION_PROBLEM_TEXT = {
+  short: "Select the part of the post you want to answer (at least a sentence).",
+  long: "That's longer than a LinkedIn post. Select just the part you're answering.",
+  see_more: "Expand the post (click 'see more') and select again, so Lynkr reads all of it.",
+} as const;
+export function selectionProblem(text: string): keyof typeof SELECTION_PROBLEM_TEXT | null {
+  const t = text.trim();
+  if (t.length < 20) return "short";
+  if (t.length > 3600) return "long";
+  if (/(…|\.\.\.)\s*(see\s+)?more\s*$/i.test(t)) return "see_more";
+  return null;
+}
+
+/** Insert and Ctrl+Shift+Y only run on LinkedIn (R10): the address must be exactly https://www.linkedin.com/. */
+export function isLinkedInTab(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && u.hostname === "www.linkedin.com" && !u.port && !u.username && !u.password;
+  } catch { return false; }
+}
+
+/** Whether Lynkr has the Commenter switched on. Anything but a clear "on" counts as off. */
+export async function commenterOn(origin: string, fetchFn: typeof fetch = fetch, timeoutMs = 4000): Promise<boolean> {
+  if (!ORIGIN_PATTERN.test(origin)) return false;
+  try {
+    const res = await fetchFn(`${origin}/api/status`, { signal: AbortSignal.timeout(timeoutMs), cache: "no-store" });
+    const j = (await res.json()) as { commenter?: unknown };
+    return res.ok && j.commenter === "on";
+  } catch { return false; }
+}
+
+/** Splits a comment into plain text and the sentences Lynkr could not tie to anything the person gave ("Check this line"). */
+export function flagSegments(body: string, flags: string[]): { text: string; flagged: boolean }[] {
+  const hits = flags
+    .map((f) => ({ at: body.indexOf(f), len: f.length }))
+    .filter((h) => h.at >= 0 && h.len > 0)
+    .sort((a, b) => a.at - b.at);
+  const out: { text: string; flagged: boolean }[] = [];
+  let pos = 0;
+  for (const h of hits) {
+    if (h.at < pos) continue;
+    if (h.at > pos) out.push({ text: body.slice(pos, h.at), flagged: false });
+    out.push({ text: body.slice(h.at, h.at + h.len), flagged: true });
+    pos = h.at + h.len;
+  }
+  if (pos < body.length) out.push({ text: body.slice(pos), flagged: false });
+  return out.length ? out : [{ text: body, flagged: false }];
+}
+
+/** The body of one generation request. The author is sent only when the person has edited it. */
+export function commentBody(selection: string, goal: CommentGoal | null, reaction: string, author: CommentAuthor | undefined) {
+  return {
+    selection: selection.slice(0, SELECTION_SEND_MAX),
+    ...(goal ? { goal } : {}),
+    ...(reaction.trim() ? { reaction: reaction.trim().slice(0, 500) } : {}),
+    ...(author?.name ? { author: { name: author.name.slice(0, 120), headline: author.headline.slice(0, 220) } } : {}),
+  };
+}

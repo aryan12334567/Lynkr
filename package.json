@@ -15,7 +15,7 @@
     "test:e2e:calendar": "node tests/e2e-calendar.mjs",
     "ext:build": "node extension/build.mjs",
     "ext:zip": "node extension/zip.mjs",
-    "test:ext": "node --test tests/ext-extension.test.mjs",
+    "test:ext": "node --test tests/ext-extension.test.mjs tests/ext-comment.test.mjs",
     "eval:outreach": "node --no-warnings --import ./tests/register.mjs scripts/eval-outreach.mts"
   },
   "dependencies": {

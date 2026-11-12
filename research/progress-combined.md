@@ -10,7 +10,7 @@
 | Outreach | `feat/outreach-v2`, PR #17 | U0-U20 built, not merged, preview live at lynkr-preview.onrender.com | `research/progress-vertical3.md`; `npm test`, e2e, a11y, eval |
 | Billing | `feat/billing-v2` (on top of outreach) | B3, B5, B6b built; B6 skipped by design; B7 nothing to do yet; B2, B4, B8 need Dodo and Aryan | `tests/billing-grace.test.mts`, `tests/license-link.test.mts`; `npm test` 477/477 |
 | Posts | none | not started; blocked on LinkedIn API terms answer | no `lib/posts`, no migration 003 |
-| Commenter | none | not started (only the old `/api/comment` route) | no migration 004 |
+| Commenter | `feat/commenter-v2` (on top of calendar) | Slice 1 built in demo mode: selection parser, options core with checks, `/api/ext/comment`, side-panel comment view. Slice 2 (log, receipts, week and Outreach links) not started. Real-LinkedIn check (A6) and live-model eval not done. | `research/progress-commenter.md`; tests 543, ext tests 35 |
 | Calendar | `feat/calendar-v2` (on top of billing) | Stage 1 built: mix rules, why line, progress, streak, plan in the account, `LYNKR_CALENDAR`. Stage 2 (feed, grid, moves, Today, sources) not started. | `research/progress-calendar.md`; `npm test` 510/510, calendar e2e 22/22 |
 
 ## Billing detail

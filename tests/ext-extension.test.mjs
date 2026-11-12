@@ -100,6 +100,7 @@ test("the context menu reads the selection the user made, holds it once in memor
  await import("../extension/dist/background.js");
  listeners.installed();
  assert.deepEqual(created.map(c => [c.id, c.title, c.contexts]), [["write-with-lynkr", "Write with Lynkr", ["selection"]]]);
+ assert.deepEqual(created[0].documentUrlPatterns, ["https://www.linkedin.com/*"]); // the menu item exists only on LinkedIn (R1)
  const take = () => new Promise(done => listeners.message({ type: "TAKE_SELECTION" }, {}, done));
  await listeners.menu({ menuItemId: "write-with-lynkr", selectionText: "menu copy" }, { id: 7, windowId: 3 });
  assert.deepEqual(opened, [{ windowId: 3 }]);
@@ -112,7 +113,7 @@ test("the context menu reads the selection the user made, holds it once in memor
  scripted = () => [{ result: "x".repeat(3500) }];
  await listeners.menu({ menuItemId: "write-with-lynkr", selectionText: "" }, { id: 7, windowId: 3 });
  const long = await take();
- assert.equal(long.text.length, 3000); assert.equal(long.truncated, true);
+ assert.equal(long.text.length, 3500); assert.equal(long.truncated, false); // nothing is cut silently any more (Commenter R4)
  await listeners.menu({ menuItemId: "other", selectionText: "ignored" }, { id: 7, windowId: 3 });
  assert.equal((await take()).text, "");
  // Pairing is accepted only from Lynkr's own origins.
@@ -151,18 +152,18 @@ const A = "11111111-1111-4111-8111-111111111111", B = "22222222-2222-4222-8222-2
  * Opens the built side panel with a stubbed `chrome` and Lynkr's API answered by `answer`. `fixture` is the local
  * LinkedIn-like page that Insert targets. Returns the page plus what the panel sent and stored.
  */
-async function openPanel({ paired = true, contacts = [contact(A, "Alice Rao"), contact(B, "Bob Iyer", "replied"), contact(C, "Cara Das", "meeting")], answer, selection = null, tabUrl, fixture }) {
+async function openPanel({ commenter = "off", consent = false, paired = true, contacts = [contact(A, "Alice Rao"), contact(B, "Bob Iyer", "replied"), contact(C, "Cara Das", "meeting")], answer, selection = null, tabUrl, fixture }) {
  const context = await (await launch()).newContext();
  const page = await context.newPage();
  const calls = [];
  await page.exposeFunction("__insertInFixture", async text => { await fixture.bringToFront(); return fixture.evaluate(insertDraft, text); });
- await page.addInitScript(({ paired, selection, tabUrl }) => {
+ await page.addInitScript(({ paired, selection, tabUrl, consent }) => {
   const listeners = [], writes = [];
   let pending = selection;
   window.__writes = writes; window.__copied = null; window.__sent = [];
   window.chrome = {
    storage: { local: {
-    get: async () => (paired ? { token: "t".repeat(43), apiOrigin: "https://www.lynkr.cloud" } : {}),
+    get: async () => (paired ? { token: "t".repeat(43), apiOrigin: "https://www.lynkr.cloud", ...(consent ? { commentConsent: true } : {}) } : {}),
     set: async v => { writes.push(JSON.stringify(v)); }, remove: async () => {},
    } },
    runtime: {
@@ -173,7 +174,7 @@ async function openPanel({ paired = true, contacts = [contact(A, "Alice Rao"), c
    scripting: { executeScript: async ({ args }) => [{ result: await window.__insertInFixture(args[0]) }] },
   };
   Object.defineProperty(navigator, "clipboard", { value: { writeText: async t => { window.__copied = t; } } });
- }, { paired, selection, tabUrl });
+ }, { paired, selection, tabUrl, consent });
  await page.route(url => url.href.startsWith(PANEL), async route => {
   const name = new URL(route.request().url()).pathname.split("/").pop();
   await route.fulfill({ body: await readFile(resolve(DIST, name)), contentType: name.endsWith(".html") ? "text/html" : "text/javascript" });
@@ -185,6 +186,7 @@ async function openPanel({ paired = true, contacts = [contact(A, "Alice Rao"), c
   const out = await answer(call);
   await route.fulfill({ status: out.status ?? 200, contentType: "application/json", body: JSON.stringify(out.json ?? {}) });
  });
+ await page.route("https://www.lynkr.cloud/api/status", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ commenter }) }));
  await page.goto(`${PANEL}sidepanel.html`);
  await page.locator("#paired:not([hidden]), #unpaired:not([hidden]), #unpaid:not([hidden])").first().waitFor();
  return { page, context, calls, contacts };
@@ -307,7 +309,7 @@ test("selected text: choose a contact, Reply to this; it is sent once, never sto
   try {
    await page.locator("#selection-card").waitFor();
    assert.equal(await page.locator("#selection-text").innerText(), "Great point on credit risk");
-   assert.equal(await page.getByText("Comment on this").count(), 0);
+   assert.equal(await page.locator("#chooser").isVisible(), false); // Comments are off here: the Outreach flow only
    assert.equal(await page.locator("input[name=selection-use]:checked").getAttribute("value"), "contact");
    await page.getByLabel("Reply to this").check();
    await page.locator("#write").click();

@@ -22,6 +22,12 @@ textarea{min-height:130px;resize:vertical}
 [hidden]{display:none!important}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #3a42c8;outline-offset:2px}
 #status{min-height:1.4em}
+.options{list-style:none;padding:0;margin:0}
+.opt{background:white;border:1px solid #e7e7e2;border-radius:12px;padding:14px;margin-top:12px}.opt.on{border-color:#3a42c8;box-shadow:0 0 0 1px #3a42c8}
+.opt label{display:flex;gap:8px;align-items:center;margin:0 0 6px;font-weight:600}.opt input{width:auto}
+.opt p{margin:6px 0;white-space:pre-wrap}.opt .why{color:#474c58;font-size:14px}
+.check{background:#fff3c4;border-radius:4px;padding:0 2px}.check-tag{font-size:12px;color:#7a5b00;font-weight:600}
+ul.plain{padding-left:18px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -40,6 +46,59 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 </section>
 
 <main id="paired" hidden>
+  <section id="chooser" class="card" hidden aria-labelledby="chooser-title">
+    <h2 id="chooser-title">What do you want to do with this?</h2>
+    <p id="chooser-text" class="quote"></p>
+    <div class="actions">
+      <button id="choose-comment" class="primary" type="button">Comment on this</button>
+      <button id="choose-message" type="button">Message someone about this</button>
+      <button id="capture" type="button" hidden>Capture selection as fixture</button>
+    </div>
+    <p class="muted">Your selection stays in this panel until you close it.</p>
+  </section>
+
+  <section id="consent" class="card" hidden aria-labelledby="consent-title">
+    <h2 id="consent-title" tabindex="-1">Before Lynkr writes comments</h2>
+    <ul class="plain">
+      <li>Lynkr reads only the text you select on LinkedIn, when you choose Write with Lynkr.</li>
+      <li>That text, your reaction and up to 12 of your saved facts that are safe in public are sent to Lynkr to write the options. The post itself is not saved.</li>
+      <li>You press Post yourself. Lynkr never posts, likes or sends anything.</li>
+    </ul>
+    <div class="actions">
+      <button id="consent-yes" class="primary" type="button">I agree</button>
+      <button id="consent-no" type="button">Not now</button>
+    </div>
+  </section>
+
+  <section id="comment-view" hidden aria-labelledby="comment-title">
+    <h2 id="comment-title">Comment on this post</h2>
+    <p><span id="c-author" class="muted"></span> <button id="c-author-edit" type="button">Add</button></p>
+    <form id="c-author-form" hidden>
+      <label for="c-name">Author name</label>
+      <input id="c-name" maxlength="120" autocomplete="off">
+      <label for="c-headline">Author headline (optional)</label>
+      <input id="c-headline" maxlength="220" autocomplete="off">
+      <div class="actions"><button id="c-author-save" class="primary" type="submit">Save</button><button id="c-author-cancel" type="button">Cancel</button></div>
+    </form>
+    <fieldset id="c-goal">
+      <legend>Your goal</legend>
+      <label class="choice"><input type="radio" name="c-goal" value="job_seeker"> Job seeker</label>
+      <label class="choice"><input type="radio" name="c-goal" value="freelancer"> Freelancer</label>
+      <label class="choice"><input type="radio" name="c-goal" value="visibility"> Visibility builder</label>
+    </fieldset>
+    <label for="c-reaction">Your reaction in a few words makes these sound like you (optional)</label>
+    <textarea id="c-reaction" maxlength="500" style="min-height:70px"></textarea>
+    <div class="actions">
+      <button id="c-regen" class="primary" type="button">Regenerate</button>
+      <button id="c-back" type="button">Choose something else</button>
+    </div>
+    <p id="c-note" class="muted"></p>
+    <h3 id="c-options-title" tabindex="-1" hidden>Options</h3>
+    <ol id="c-options" class="options"></ol>
+    <p class="muted" id="c-footer" hidden>Nothing is posted for you. Review the comment, then press Post on LinkedIn.</p>
+  </section>
+
+  <div id="message-view">
   <label for="search">Find a contact</label>
   <input id="search" type="search" autocomplete="off" placeholder="Search by name or company">
   <label for="contact">Contact</label>
@@ -131,6 +190,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     </form>
     <p class="muted">Made a wrong record? Undo it in Lynkr.</p>
   </section>
+  </div>
 </main>
 <script type="module" src="sidepanel.js"></script>
 </body>

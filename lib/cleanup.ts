@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { deleteAll, inactiveUsers, type Db } from "./db";
+import { purgeOld } from "./comment/log";
 
 /**
  * Scheduled cleanup (decision 6: data is kept until the person deletes it, and removed after
@@ -30,5 +31,11 @@ export async function cleanup(db: Db, opts: { now?: Date; dryRun: boolean }): Pr
   const ids = await inactiveUsers(db, cutoff(opts.now ?? new Date()));
   let rows = 0;
   if (!opts.dryRun) for (const id of ids) rows += Object.values(await deleteAll(db, id)).reduce((a, b) => a + b, 0);
+  // The comment log keeps unposted entries 7 days and everything 12 months (Commenter KTD5). Skipped before migration 004.
+  if (!opts.dryRun) {
+    try {
+      if ((await db.query<{ t: string | null }>("select to_regclass('public.comment_log')::text as t")).rows[0]?.t) rows += await purgeOld(db, opts.now ?? new Date());
+    } catch { /* the inactivity cleanup above already ran; the next daily run retries */ }
+  }
   return { users: ids.length, rows, dryRun: opts.dryRun };
 }

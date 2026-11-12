@@ -27,6 +27,7 @@ import { checkMessage, CHANNEL_RULES, hasPlaceholder, type Relationship } from "
 import { DEFAULT_CONNECT, notesLeft as notesLeftFor, type Person } from "../connect";
 import { confirmedFacts, saveFacts, type Db } from "../db";
 import { factsFor } from "../facts";
+import { bridgeText, linkedFor } from "../comment/link";
 import { OUTREACH_SYSTEM, outreachUser } from "../prompts";
 import { DraftModelReply, type Channel, type DraftRequest, type FactRef, type Intent } from "../schemas";
 import { briefSentences, cleanBriefText, isSensitive, looksPlanted } from "./brief";
@@ -753,6 +754,12 @@ export async function runDraft(db: Db, userId: string, req: DraftRequest, deps: 
  }
 
  const timeline = await timelineEvidence(db, userId, contact, deps.now ?? new Date());
+ // A comment the person posted on this contact's post and confirmed (Commenter R17): the date and their own words, nothing else.
+ try {
+  const linked = await linkedFor(db, userId, contact.id);
+  const text = linked ? cleanEvidenceText(bridgeText(linked), 320) : "";
+  if (text) timeline.extras.push({ id: "C1", label: "why_connected", text });
+ } catch { /* before migration 004 there is no log */ }
  const mock = deps.mock ?? isMock();
  try {
   const result = await generateOutreach(

@@ -193,6 +193,29 @@ function busy(on: boolean) {
   for (const r of document.querySelectorAll<HTMLInputElement>('input[name="c-goal"]')) r.disabled = on;
   reaction.disabled = on;
 }
+// ---- the log (Commenter plan R13): what was inserted or copied, from the option's signed receipt; Posted counts it ----
+let loggedId: string | null = null;
+async function logOption(o: CommentOption, via: "insert" | "copy") {
+  loggedId = null;
+  el("c-posted").hidden = true;
+  if (!o.receipt) return;
+  try {
+    const r = await client.request<{ entry: { id: string } }>("comment-log", { body: { receipt: o.receipt, body: o.body, via } });
+    loggedId = r.entry.id;
+    el("c-posted").hidden = false;
+  } catch { /* the comment is already in the box or on the clipboard; the log is optional */ }
+}
+async function markPosted(posted: boolean) {
+  if (!loggedId) return;
+  try {
+    await client.request("comment-log", { method: "PATCH", body: { id: loggedId, posted } });
+    say(posted ? "Marked as posted. It counts toward your week." : "Marked as not posted.");
+    el("c-posted").hidden = true;
+  } catch (e) { say((e as Error).message); }
+}
+el("c-posted-yes").addEventListener("click", () => { void markPosted(true); });
+el("c-posted-no").addEventListener("click", () => { void markPosted(false); });
+
 function pick(i: number) {
   comment.picked = i;
   document.querySelectorAll<HTMLElement>(".opt").forEach((c, n) => c.classList.toggle("on", n === i));
@@ -234,11 +257,11 @@ function showOptions(options: CommentOption[]) {
     const insert = document.createElement("button");
     insert.type = "button"; insert.className = "primary"; insert.textContent = "Insert";
     insert.setAttribute("aria-label", `Insert ${ANGLE_LABEL[o.angle]} option`);
-    insert.addEventListener("click", () => { radio.checked = true; pick(i); void insertComment(o.body); });
+    insert.addEventListener("click", () => { radio.checked = true; pick(i); void insertComment(o.body).then((how) => logOption(o, how)); });
     const copyBtn = document.createElement("button");
     copyBtn.type = "button"; copyBtn.textContent = "Copy";
     copyBtn.setAttribute("aria-label", `Copy ${ANGLE_LABEL[o.angle]} option`);
-    copyBtn.addEventListener("click", () => { radio.checked = true; pick(i); void copyText(o.body, "Copied. Click in the comment box and paste."); });
+    copyBtn.addEventListener("click", () => { radio.checked = true; pick(i); void copyText(o.body, "Copied. Click in the comment box and paste.").then(() => logOption(o, "copy")); });
     actions.append(insert, copyBtn);
     item.append(label, text, why, actions);
     list.append(item);
@@ -247,14 +270,15 @@ function showOptions(options: CommentOption[]) {
 }
 
 /** Puts the option in the comment box the person clicked, only on LinkedIn. Anything else copies it (R10, R11). */
-async function insertComment(text: string) {
+async function insertComment(text: string): Promise<"insert" | "copy"> {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id || !isLinkedInTab(tab.url)) throw new Error("not linkedin");
     const r = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: insertDraft, args: [text] });
     if (!r[0]?.result) throw new Error("not inserted");
     say("Inserted. Review it, then press Post on LinkedIn.");
-  } catch { await copyText(text, "Copied. Click in the comment box and paste."); }
+    return "insert";
+  } catch { await copyText(text, "Copied. Click in the comment box and paste."); return "copy"; }
 }
 
 async function generate() {
@@ -263,6 +287,8 @@ async function generate() {
   if (problem) { note.textContent = SELECTION_PROBLEM_TEXT[problem]; say(SELECTION_PROBLEM_TEXT[problem]); showOptions([]); return; }
   busy(true);
   note.textContent = "";
+  loggedId = null;
+  el("c-posted").hidden = true;
   say("Writing options…");
   // The reaction box is disabled while writing, so focus moves there only after it is enabled again.
   let toReaction = false;

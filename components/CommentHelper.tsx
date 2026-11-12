@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CommentReply, ProfileInput, StoryFact } from "@/lib/schemas";
 import { COMMENT_MAX_WORDS, COMMENT_MIN_WORDS, wordCount } from "@/lib/comment";
 import { postJson } from "@/lib/store";
 import { unsupportedSentences } from "@/lib/grounding";
 import { copyText } from "./DraftCard";
 import { Button, Card, ErrorNote, Label, Pill, inputCls } from "./ui";
+import { CommentOptions } from "./CommentOptions";
 
 /**
  * Comment on a post the user found (posts plan §3.3). Text only. The excerpt lives in
@@ -18,13 +19,23 @@ export function CommentHelper({
   mock,
   kept,
   onKeep,
+  signedIn = false,
 }: {
   profile: ProfileInput;
   facts: StoryFact[];
   mock: boolean | null;
   kept: string[];
   onKeep: (k: string[]) => void;
+  /** A signed-in person gets the options version when Lynkr has the Commenter switched on (plan R15). */
+  signedIn?: boolean;
 }) {
+  const [optionsOn, setOptionsOn] = useState(false);
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    fetch("/api/status", { cache: "no-store" }).then((r) => r.json()).then((j: { commenter?: string }) => { if (live) setOptionsOn(j.commenter === "on"); }).catch(() => {});
+    return () => { live = false; };
+  }, [signedIn]);
   const [excerpt, setExcerpt] = useState("");
   const [anchor, setAnchor] = useState("");
   const [perspective, setPerspective] = useState("");
@@ -67,6 +78,26 @@ export function CommentHelper({
   // Sentences in the AI's comment that don't come from what the user gave. The excerpt is in memory only.
   const unsupported = reply?.status === "draft" && !mock ? unsupportedSentences(reply.body, [perspective, excerpt, ...chosen.map((f) => f.text)]) : [];
   const used = reply ? confirmed.filter((f) => reply.factRefs.includes(f.id)) : [];
+
+  if (signedIn && optionsOn) {
+    return (
+      <div className="space-y-5">
+        <CommentOptions mock={mock} />
+        {kept.length > 0 && (
+          <Card>
+            <details className="text-[0.92rem]">
+              <summary className="cursor-pointer text-soft">Kept in this browser ({kept.length})</summary>
+              <ul className="mt-2 space-y-2">
+                {kept.map((k, i) => (
+                  <li key={i} className="rounded-md bg-muted p-3 font-serif">{k}</li>
+                ))}
+              </ul>
+            </details>
+          </Card>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Card>

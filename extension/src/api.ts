@@ -35,7 +35,7 @@ export type ClientOptions = {
  */
 export function createClient(options: ClientOptions) {
   let state: PanelState = "unpaired";
-  const request = async <T = Record<string, unknown>>(path: string, init: { method?: "GET" | "POST"; body?: unknown } = {}): Promise<T> => {
+  const request = async <T = Record<string, unknown>>(path: string, init: { method?: "GET" | "POST" | "PATCH"; body?: unknown } = {}): Promise<T> => {
     const auth = options.auth();
     if (!auth || !ORIGIN_PATTERN.test(auth.origin)) throw new ApiError(0, "Connect your Lynkr account first.");
     if (state !== "paired" && path !== "contacts") throw new ApiError(0, state === "unpaid" ? "An active subscription is needed." : "Connect your Lynkr account first.");
@@ -114,7 +114,7 @@ export function tapSaved(action: TapAction, result: { event?: { meetingAt?: stri
 
 export type CommentGoal = "job_seeker" | "freelancer" | "visibility";
 export type CommentAngle = "experience" | "add" | "question";
-export type CommentOption = { angle: CommentAngle; body: string; postAnchor: string; factRefs: string[]; why: string; flags: string[] };
+export type CommentOption = { angle: CommentAngle; body: string; postAnchor: string; factRefs: string[]; why: string; flags: string[]; receipt?: string };
 export type CommentAuthor = { name: string; headline: string } | null;
 export type CommentResult =
   | { status: "options"; goal: CommentGoal; author: CommentAuthor; options: CommentOption[]; dropped: number }

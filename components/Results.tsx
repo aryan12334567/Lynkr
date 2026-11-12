@@ -269,7 +269,7 @@ export function Results({
                     {result.posts.map((p, i) => card(`post:${i}`, "post", p))}
                   </section>
                   <section id="comments" className="space-y-4">
-                    <CommentHelper profile={profile} facts={s.facts} mock={mock} kept={s.keptComments} onKeep={(k) => setS((prev) => ({ ...prev, keptComments: k }))} />
+                    <CommentHelper signedIn={account?.signedIn === true} profile={profile} facts={s.facts} mock={mock} kept={s.keptComments} onKeep={(k) => setS((prev) => ({ ...prev, keptComments: k }))} />
                     <details className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
                       <summary className="cursor-pointer text-[0.95rem] font-medium">Example comment patterns</summary>
                       <div className="mt-4 space-y-4">{result.comments.map((c, i) => card(`comment:${i}`, "comment", c))}</div>

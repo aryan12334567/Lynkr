@@ -352,9 +352,9 @@ export async function takeDaily(db: Db, userId: string, kind: string, max: numbe
 
 // ---- export and delete ----
 
-const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"] as const;
+const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log"] as const;
 /** Tables from later migrations: skipped on a database that hasn't run them yet. */
-const OPTIONAL = ["outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach"];
+const OPTIONAL = ["outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log"];
 /** Deleted by "Delete my data" but never exported: a linked license key is a credential (migration 007, lib/license-link.ts). */
 const DELETE_ONLY = ["account_license"];
 

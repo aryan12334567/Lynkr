@@ -24,7 +24,7 @@ export function corsHeaders(req: Request): Headers {
   const id = process.env.LYNKR_EXT_ID?.trim();
   if (id && /^[a-p]{32}$/.test(id) && req.headers.get("origin") === `chrome-extension://${id}`) {
     headers.set("Access-Control-Allow-Origin", `chrome-extension://${id}`);
-    headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
     headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
   }
   return headers;

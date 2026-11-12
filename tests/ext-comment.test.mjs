@@ -360,6 +360,30 @@ test("a selection that cannot be answered is explained in the panel and never se
   });
 });
 
+test("Insert logs the option from its receipt, then Posted marks it; an option without a receipt logs nothing", async () => {
+  await withFixture(async fixture => {
+    const withReceipt = { ...OPTIONS, options: [{ ...OPTIONS.options[0], receipt: "r".repeat(40) }, OPTIONS.options[1]] };
+    const answer = async (c) => c.path === "contacts" ? { json: { contacts: [contact] } } : c.path === "comment" ? { json: withReceipt } : c.path === "comment-log" ? { json: { entry: { id: "22222222-2222-4222-8222-222222222222", posted: null } } } : { status: 500 };
+    const { page, context, calls } = await openPanel({ fixture, answer });
+    try {
+      await page.locator("#choose-comment").click();
+      await page.locator("#c-options li").first().waitFor();
+      await fixture.locator("#comment-box").focus();
+      await page.getByRole("button", { name: "Insert Add a point option" }).click();
+      await page.locator("#status:has-text('Inserted')").waitFor();
+      assert.equal(calls.filter(c => c.path === "comment-log").length, 0, "no receipt, nothing logged");
+      assert.equal(await page.locator("#c-posted").isVisible(), false);
+      await fixture.locator("#comment-box").focus();
+      await page.getByRole("button", { name: "Insert From your experience option" }).click();
+      await page.locator("#c-posted:not([hidden])").waitFor();
+      assert.deepEqual(calls.find(c => c.path === "comment-log").body, { receipt: "r".repeat(40), body: OPTIONS.options[0].body, via: "insert" });
+      await page.getByRole("button", { name: "Posted", exact: true }).click();
+      await page.locator("#status:has-text('Marked as posted')").waitFor();
+      assert.deepEqual(calls.filter(c => c.path === "comment-log").at(-1).body, { id: "22222222-2222-4222-8222-222222222222", posted: true });
+    } finally { await context.close(); }
+  });
+});
+
 test("one option that passed the checks is shown with the honest note", async () => {
   await withFixture(async fixture => {
     const { page, context } = await openPanel({ fixture, answer: base(() => ({ json: { ...OPTIONS, options: [OPTIONS.options[0]], dropped: 2 } })) });

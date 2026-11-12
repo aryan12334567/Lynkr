@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { goalFamily, applyMix, weekMix, whyThisWeek, type MixInput, type Plan } from "@/lib/plan";
+import { goalFamily, applyMix, commentsDone, weekMix, whyThisWeek, type MixInput, type Plan } from "@/lib/plan";
 import { weekProgress, type Streak } from "@/lib/calendar/progress";
 import type { ProfileInput } from "@/lib/schemas";
 
@@ -63,6 +63,27 @@ export function useCalendar({ enabled, signedIn, plan, profile, setPlan }: { ena
     // The account is read once per week and sign-in state; later changes are saved by the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, signedIn, weekStart]);
+
+  // Comments logged as posted this week count toward the plan (Commenter R16). Only when the Commenter is on and the person is signed in.
+  const [postedComments, setPostedComments] = useState(0);
+  useEffect(() => {
+    if (!enabled || !signedIn || !weekStart) return;
+    let live = true;
+    (async () => {
+      try {
+        const st = (await (await fetch("/api/status", { cache: "no-store" })).json()) as { commenter?: string };
+        if (st.commenter !== "on") return;
+        const r = await fetch(`/api/comments?since=${encodeURIComponent(`${weekStart}T00:00:00+05:30`)}`, { cache: "no-store" });
+        if (r.ok && live) setPostedComments(((await r.json()) as { entries?: unknown[] }).entries?.length ?? 0);
+      } catch { /* the plan works without it */ }
+    })();
+    return () => { live = false; };
+  }, [enabled, signedIn, weekStart]);
+  useEffect(() => {
+    if (!enabled || !synced || !plan || postedComments === 0) return;
+    const next = commentsDone(plan, postedComments);
+    if (next !== plan) setPlan(next);
+  }, [enabled, synced, plan, postedComments, setPlan]);
 
   // The mix rules, once the account copy (if any) has been read. A week the person changed is left alone (R12).
   useEffect(() => {

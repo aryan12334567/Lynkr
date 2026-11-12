@@ -16,6 +16,7 @@ import { BriefPanel } from "./BriefPanel";
 import { DraftVersions, type SentPlan } from "./DraftVersions";
 import { MeetingCard } from "./MeetingCard";
 import { PersonTimeline } from "./PersonTimeline";
+import { CommentBridge } from "./CommentBridge";
 
 /** Meeting cards hidden with "Later" stay hidden until the page is reloaded (R41). */
 const hiddenForSession = new Set<string>();
@@ -110,6 +111,7 @@ export function PersonCard({ contact, events, example, lapsed, send, onTimeline,
         {error && <div className="mt-2"><ErrorNote message={error} /></div>}
       </fieldset>
 
+      {!example && <CommentBridge contactId={contact.id} name={contact.name} lapsed={lapsed} />}
       <PersonTimeline contact={contact} events={events} lapsed={lapsed} send={send} onResult={onTimeline} onLapsed={onLapsed} onWriteIt={writeIt} onSaveWhy={saveWhy} />
 
       <BriefPanel contact={contact} disabled={!access.canRecord || example} onContact={onContact} />

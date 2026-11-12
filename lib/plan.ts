@@ -305,3 +305,16 @@ export function applyMix(plan: Plan, counts: Counts): Plan {
 export function planForPerson(today: string, input: MixInput, times: Times = DEFAULT_TIMES): Plan {
   return planForWeek(planWeekStart(today), weekMix(goalFamily(input), input.weeklyTime), times);
 }
+
+/**
+ * Comments the person logged as posted this week (Commenter plan R16). Marks that many comment items done, in date order.
+ * Never un-ticks anything and never lowers a count: when the person has also ticked items by hand, the larger number wins.
+ */
+export function commentsDone(plan: Plan, posted: number, now: Date = new Date()): Plan {
+  const comments = plan.items.filter((it) => it.kind === "comment").sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time));
+  const already = comments.filter((it) => it.status === "done").length;
+  const need = Math.min(Math.max(0, Math.floor(posted)), comments.length) - already;
+  if (need <= 0) return plan;
+  const mark = new Set(comments.filter((it) => it.status !== "done").slice(0, need).map((it) => it.id));
+  return { ...plan, items: plan.items.map((it) => (mark.has(it.id) ? { ...it, status: "done" as const, doneAt: now.toISOString() } : it)) };
+}

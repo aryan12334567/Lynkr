@@ -23,6 +23,7 @@ import { postJson } from "@/lib/store";
 import { offerPlanFollowUp } from "@/lib/outreach/ui-today";
 import { Button, Card, ErrorNote, inputCls } from "./ui";
 import { Streak } from "./calendar/Streak";
+import { CALENDAR_CHANGED } from "@/lib/calendar/events";
 import { progressLine, type Streak as StreakData, type WeekCount } from "@/lib/calendar/progress";
 
 const TAG_CLS: Record<Tag, string> = {
@@ -131,8 +132,10 @@ export function WeekPlan({
     setBusy(true);
     setError(null);
     try {
-      const change = await postJson<PlanChange>("/api/plan", { text: chat.trim(), counts: plan.counts, times: plan.times });
-      if (change.understood) onPlan(withCounts(plan, change.counts, change.times));
+      const change = await postJson<PlanChange>("/api/plan", { text: chat.trim(), counts: plan.counts, times: plan.times, weekStart: plan.weekStart });
+      // A move was made by the server through the item's owner: reload the week and the grid instead of changing counts.
+      if (change.moved) window.dispatchEvent(new Event(CALENDAR_CHANGED));
+      else if (change.understood) onPlan(withCounts(plan, change.counts, change.times));
       setReply(change.reply);
       if (change.understood) setChat("");
     } catch (err) {

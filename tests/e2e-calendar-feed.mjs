@@ -64,6 +64,14 @@ async function run(width, paid) {
       if (it) { server.items = server.items.map((x) => (x.id === body.id ? { ...x, day: body.day, time: body.time ?? x.time } : x)); }
       r.fulfill({ json: { ok: true } });
     });
+    // Plan chat: a move is made by the server through the item's owner, so the stub moves the post and says so (U7, AE6).
+    const chatBodies = [];
+    await page.route("**/api/plan", async (r) => {
+      const body = JSON.parse(r.request().postData() || "{}");
+      chatBodies.push(body);
+      server.items = server.items.map((x) => (x.id === "plan:2026-11-09:post-0" ? { ...x, day: "2026-11-13" } : x));
+      r.fulfill({ json: { counts: body.counts, times: body.times, understood: true, moved: true, reply: "Moved your post to Friday." } });
+    });
     await page.reload();
     await page.getByRole("tab", { name: "This week" }).click();
     const view = page.locator("[data-calendar-view]");
@@ -153,6 +161,16 @@ async function run(width, paid) {
       await chipOf("plan:2026-11-09:message-0").first().getByRole("button", { name: /^Pick someone to contact,/ }).click();
       await page.locator("[data-paywall-card]").waitFor({ timeout: 4000 });
       check(id("F15 opening a gated item shows the paywall card"), /part of the subscription/.test(await page.locator("[data-paywall-card]").innerText()));
+    }
+
+    // U7: a chat move reloads the grid, shows the reply, and sends the week's Monday so the server can find the item.
+    await page.getByLabel("Change this week").fill("move Thursday's post to Friday");
+    await page.getByRole("button", { name: "Update plan" }).click();
+    await page.getByText("Moved your post to Friday.").waitFor({ timeout: 8000 });
+    check(id("F21 a chat move shows the reply and sends the week"), chatBodies.length === 1 && chatBodies[0].weekStart === "2026-11-09", JSON.stringify(chatBodies[0] ?? {}).slice(0, 160));
+    if (!mobile) {
+      await page.locator("[data-day='2026-11-13'] [data-chip='plan:2026-11-09:post-0']").waitFor({ timeout: 8000 });
+      check(id("F22 the grid shows the post on Friday after the chat move"), true);
     }
 
     // Month view: three chips then "+N more", which opens the day in the week view.

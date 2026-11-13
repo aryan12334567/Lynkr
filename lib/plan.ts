@@ -1,4 +1,5 @@
 import { addDays, daysBetween, mondayOf, todayIST, weekdayIndex } from "./ist";
+import { parseMove, type ChatMove } from "./calendar/chat";
 import type { Bucket, WeeklyTime } from "./schemas";
 
 /**
@@ -145,7 +146,7 @@ export function addFollowUp(plan: Plan, messageId: string, today: string = today
 
 // ---- adjust by chat (rule-based; used without an AI key) ----
 
-export type PlanChange = { counts: Counts; times: Times; understood: boolean; reply: string };
+export type PlanChange = { counts: Counts; times: Times; understood: boolean; reply: string; /** The server moved the item (calendar plan U7): the client reloads the calendar. */ moved?: boolean; /** One item to move (calendar plan U7); the server matches it to the person's own item. */ move?: ChatMove };
 
 const WORD_NUM: Record<string, number> = { no: 0, zero: 0, none: 0, one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5, six: 6 };
 const KIND_WORD: [RegExp, keyof Counts, keyof Times][] = [
@@ -166,8 +167,10 @@ function toTime(h: number, m: number, ampm?: string): string | null {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-/** Understands: "2 posts", "no comments", "more/fewer outreach", "posts at 8am", "comments at 1:30 pm". */
+/** Understands: "2 posts", "no comments", "more/fewer outreach", "posts at 8am", "comments at 1:30 pm", and "move Thursday's post to Friday" (U7). */
 export function parsePlanChat(text: string, counts: Counts, times: Times): PlanChange {
+  const move = parseMove(text);
+  if (move) return { counts, times, understood: true, reply: "Moving it.", move };
   const t = text.toLowerCase();
   const next: Counts = { ...counts };
   const nextTimes: Times = { ...times };

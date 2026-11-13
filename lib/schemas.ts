@@ -239,6 +239,8 @@ export const PlanChatRequest = z.object({
   text: z.string().trim().min(1).max(500),
   counts: z.object({ posts: z.number().int(), comments: z.number().int(), messages: z.number().int() }),
   times: z.object({ post: HHMM, comment: HHMM, message: HHMM }),
+  /** The Monday of the week on screen: where a chat move looks for the item (calendar plan U7). */
+  weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export const PlanChatReply = z.object({
@@ -250,6 +252,13 @@ export const PlanChatReply = z.object({
   message_time: z.string(),
   understood: z.boolean(),
   reply: z.string(),
+  /** At most one move ("move Thursday's post to Friday"). Null when the request is not a move. */
+  move: z.object({
+    from_day: z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]).nullable(),
+    kind: z.enum(["post", "comment", "message", "meeting"]),
+    to_day: z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]),
+    time: z.string().nullable(),
+  }).nullable(),
 });
 export type PlanChatReply = z.infer<typeof PlanChatReply>;
 

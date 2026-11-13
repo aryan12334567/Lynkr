@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { goalFamily, applyMix, commentsDone, weekMix, whyThisWeek, type MixInput, type Plan } from "@/lib/plan";
 import { weekProgress, type Streak } from "@/lib/calendar/progress";
 import type { ProfileInput } from "@/lib/schemas";
+import { CALENDAR_CHANGED } from "@/lib/calendar/events";
 
 /**
  * Calendar v2 for the week screen (calendar plan U1, U2, U6).
@@ -63,6 +64,23 @@ export function useCalendar({ enabled, signedIn, plan, profile, setPlan }: { ena
     // The account is read once per week and sign-in state; later changes are saved by the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, signedIn, weekStart]);
+
+  // A move made through the Calendar or by chat changed the account's week: read it back, so this screen's copy is never
+  // the stale one that a later save would write over the move.
+  useEffect(() => {
+    if (!enabled || !signedIn || !weekStart) return;
+    const wk = weekStart;
+    const on = async () => {
+      try {
+        const r = await fetch(`/api/calendar/plan?week=${wk}`, { cache: "no-store" });
+        if (!r.ok) return;
+        const d = (await r.json()) as { plan: Plan | null };
+        if (d.plan) { lastSent.current = JSON.stringify(d.plan); setPlan(d.plan); }
+      } catch { /* the next load reads it */ }
+    };
+    window.addEventListener(CALENDAR_CHANGED, on);
+    return () => window.removeEventListener(CALENDAR_CHANGED, on);
+  }, [enabled, signedIn, weekStart, setPlan]);
 
   // Comments logged as posted this week count toward the plan (Commenter R16). Only when the Commenter is on and the person is signed in.
   const [postedComments, setPostedComments] = useState(0);

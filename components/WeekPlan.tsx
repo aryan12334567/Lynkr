@@ -73,7 +73,7 @@ export function WeekPlan({
   /** Calendar v2 (LYNKR_CALENDAR=v2): the why line, this week's progress and the streak. Absent on v1. */
   calendar?: { why: string; progress: WeekCount; streak: StreakData | null; problem: string | null; signedIn: boolean };
   /** Calendar v2 for a signed-in person: wraps today's grid, which it gets back as `fallback` when the feed is unavailable. */
-  grid?: (fallback: React.ReactNode) => React.ReactNode;
+  grid?: (fallback: React.ReactNode, setActive: (on: boolean) => void) => React.ReactNode;
 }) {
   const [view, setView] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0);
@@ -83,6 +83,8 @@ export function WeekPlan({
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [notify, setNotify] = useState(false);
+  // The Calendar feed is showing: it carries the week's file and in-tab reminders for every owner, so the plan-only ones step aside.
+  const [feedActive, setFeedActive] = useState(false);
 
   const shownWeek = addDays(plan.weekStart, offset * 7);
   const today = todayIST();
@@ -350,10 +352,12 @@ export function WeekPlan({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" disabled={open.length === 0} onClick={() => downloadIcs(`lynkr-week-${plan.weekStart}.ics`, open.map(eventFor))}>
-              Download week (.ics)
-            </Button>
-            {!notify && (
+            {!feedActive && (
+              <Button variant="ghost" disabled={open.length === 0} onClick={() => downloadIcs(`lynkr-week-${plan.weekStart}.ics`, open.map(eventFor))}>
+                Download week (.ics)
+              </Button>
+            )}
+            {!notify && !feedActive && (
               <Button variant="ghost" onClick={enableNotify}>
                 Remind me in this tab
               </Button>
@@ -427,7 +431,7 @@ export function WeekPlan({
       )}
           </>
         );
-        return grid ? grid(classic) : classic;
+        return grid ? grid(classic, setFeedActive) : classic;
       })()}
     </div>
   );

@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { downloadIcs } from "@/lib/ics";
+import { dueReminders, weekEvents } from "@/lib/calendar/reminders";
+import { Button } from "../ui";
 import { monthCells } from "@/lib/calendar/grid";
 import type { FeedItem } from "@/lib/calendar/types";
 import { addDays, formatDay, mondayOf, todayIST } from "@/lib/ist";
@@ -18,7 +21,7 @@ const SOURCE_WORDS: Record<string, string> = { posts: "Posts", outreach: "Outrea
  * grid, a month grid, or a day list on phones, and sends every move back through the feed's move route. When the feed
  * cannot be had at all (no database, the switch off), it renders `fallback`, today's week screen, so nothing is lost.
  */
-export function CalendarView({ enabled, fallback }: { enabled: boolean; fallback: React.ReactNode }) {
+export function CalendarView({ enabled, fallback, onActive }: { enabled: boolean; fallback: React.ReactNode; onActive?: (on: boolean) => void }) {
   const today = todayIST();
   const [view, setView] = useState<"week" | "month">("week");
   const [anchor, setAnchor] = useState(today);
@@ -33,6 +36,32 @@ export function CalendarView({ enabled, fallback }: { enabled: boolean; fallback
     return { from: days[0], to: days[days.length - 1] };
   }, [view, anchor, monday]);
   const f = useFeed({ enabled, ...range });
+  const [notify, setNotify] = useState(false);
+  const [notifyNote, setNotifyNote] = useState<string | null>(null);
+  const shown = useRef(new Set<string>());
+  const feedItems = f.feed?.items;
+  const active = !!f.feed;
+  useEffect(() => { onActive?.(active); }, [active, onActive]);
+
+  // In-tab reminders (R20): a browser notification when an open item's time arrives, once. Only while this tab is open.
+  useEffect(() => {
+    if (!notify || !feedItems) return;
+    const tick = () => {
+      for (const it of dueReminders(feedItems, Date.now(), shown.current)) {
+        shown.current.add(it.id);
+        new Notification(`Lynkr: ${it.title}`, { body: "Open Lynkr, then do it yourself on LinkedIn." });
+      }
+    };
+    tick();
+    const t = setInterval(tick, 30_000);
+    return () => clearInterval(t);
+  }, [notify, feedItems]);
+
+  async function enableNotify() {
+    if (typeof Notification === "undefined") { setNotifyNote("This browser can't show notifications. Use the calendar file instead."); return; }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") { setNotify(true); setNotifyNote(null); } else setNotifyNote("Notifications are blocked. Use the calendar file instead.");
+  }
 
   if (!enabled || f.failed) return <>{fallback}</>;
 
@@ -70,6 +99,15 @@ export function CalendarView({ enabled, fallback }: { enabled: boolean; fallback
           <span className="text-soft">{view === "week" ? `Week of ${formatDay(monday)}` : formatDay(range.from.slice(0, 7) + "-15").replace(/^\w+, \d+ /, "")}</span>
           <button className="min-h-9 rounded px-2 hover:bg-muted max-sm:hidden" onClick={() => (view === "week" ? shiftWeek(1) : shiftMonth(1))} aria-label={view === "week" ? "Next week" : "Next month"}>→</button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="ghost" disabled={!feedItems || weekEvents(feedItems).length === 0} onClick={() => feedItems && downloadIcs(`lynkr-${view === "week" ? monday : range.from}.ics`, weekEvents(feedItems))}>
+          Download {view === "week" ? "week" : "month"} (.ics)
+        </Button>
+        {!notify && <Button variant="ghost" onClick={() => void enableNotify()}>Remind me in this tab</Button>}
+        {notify && <span className="text-xs text-good">Reminders on while this tab stays open.</span>}
+        {notifyNote && <span role="alert" className="text-xs text-bad">{notifyNote}</span>}
       </div>
 
       <UndoBar undo={f.undo} onUndo={() => void f.undoLast()} />

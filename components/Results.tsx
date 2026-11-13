@@ -286,7 +286,7 @@ export function Results({
                   result={result}
                   outreachV2={outreachV2}
                   calendar={calendarV2 ? { ...calendar, signedIn: account?.signedIn === true } : undefined}
-                  grid={calendarV2 && account?.signedIn === true ? (fallback) => <CalendarView enabled fallback={fallback} /> : undefined}
+                  grid={calendarV2 && account?.signedIn === true ? (fallback, setActive) => <CalendarView enabled fallback={fallback} onActive={setActive} /> : undefined}
                   fills={s.fills}
                   onOpenDraft={(draftId) => go(draftId.startsWith("out:") ? "outreach" : "posts")}
                 />

@@ -186,6 +186,14 @@ async function run(width, paid) {
     await page.evaluate(() => { window.location.hash = "#app/plan"; });
     await page.locator("[data-calendar-view]").waitFor({ timeout: 8000 });
 
+    // U9: the week's calendar file has an event for every open item, and adds no attendee.
+    await page.locator(mobile ? "[data-view=day-list] [data-chip]" : "[data-view=week] [data-chip]").first().waitFor({ timeout: 8000 });
+    await page.waitForFunction(() => document.querySelectorAll("button").length > 0 && ![...document.querySelectorAll("button")].some((b) => /^Download week/.test(b.textContent || "") && !b.closest("[data-calendar-view]")), null, { timeout: 8000 });
+    const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 8000 }), page.getByRole("button", { name: /Download week/ }).click()]);
+    const icsText = readFileSync(await dl.path(), "utf-8");
+    const events = (icsText.match(/BEGIN:VEVENT/g) ?? []).length;
+    check(id("F26 the week file has one event per open item, every owner, and no attendee"), events === 6 && /BEGIN:VCALENDAR/.test(icsText) && !/ATTENDEE/.test(icsText), `${events} events`);
+
     // Month view: three chips then "+N more", which opens the day in the week view.
     if (!mobile) {
       server.items = [...server.items, ...Array.from({ length: 6 }, (_, i) => item(`plan:2026-11-09:extra-${i}`, "plan", "comment", "2026-11-18", `0${i}:00`, { title: `Extra ${i}` }))];

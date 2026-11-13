@@ -33,12 +33,56 @@ Stage 1 is the free "This week" screen with rules, progress and a streak. Switch
 - **Evidence:** `npm run test:e2e:calendar` 22/22 on, `LYNKR_EXPECT=v1` 6/6 off, at 1280 and 375 px, axe clean. v1 regression 27/27 and 5/5, Outreach e2e 20/20 and a11y 24/24, interview v2 36/36 and 9/9. `npm test` 510/510.
 - **Next:** none.
 
-## Not built (Stage 2 and later)
+## Stage 2 (built 2026-11-13, branch `feat/calendar-stage2-v2`, stacked on `feat/commenter-v2`)
 
-- U3 feed and source adapters (posts, outreach steps, comments), U4 moves and undo, U5 month and week grid with drag, U7 chat moves, U8 Today slice, U9 reminders rework, U11 release.
-- Paywall chips on gated items: nothing is gated until posts, outreach and comments feed the calendar.
+Switch: the same `LYNKR_CALENDAR=v2`. A signed-in person gets the feed screens; signed-out, key-only and v1 keep today's screens, unchanged. When the feed cannot be had (no database, 404, 401), `CalendarView` renders today's grid as its fallback.
+
+### U3 Calendar feed
+- **Done:** `lib/calendar/{types,sources,feed,load,server}.ts`, `GET /api/calendar?from&to`. Plan slots, outreach steps and comment counts become one `FeedItem` list; outreach steps fill message slots by day (R9, AE2); a meeting is always an extra; comment slots are marked done from the posted count (current week only); a failed or off source is named in `sources`; the window is clamped (1 month back, 5 ahead); a missing current or next week is made once from the mix rules.
+- **Evidence:** `tests/calendar-feed.test.mts` (10), `tests/calendar-feed-db.test.mts` (6, PGlite). Mutation-checked: slot fill, comment order, week creation, comment count, user scoping.
+- **Next:** Posts adapter (see Not built).
+
+### U4 Moves and undo
+- **Done:** `lib/calendar/move.ts`, `POST /api/calendar/move`, `lib/outreach/move.ts` (the outreach PATCH now calls it). A plan slot keeps its time, records its old place in `moves`, and stays in its own week; an outreach step goes through its owner's supersede; a post goes through a Posts seam (404 until Posts exists). One op id moves once; undo is the reverse move with a new op id. The route asks `requireLicense` for post and outreach moves (402); plan moves need only a session.
+- **Evidence:** `tests/calendar-move.test.mts` (8): AE3 with a stubbed Posts owner, op idempotency, undo, refusals, ownership, 402 with nothing changed, overlapping writes. Mutation-checked: time kept, op replay, paywall.
+- **Next:** wire the real Posts reschedule when Posts lands.
+
+### U5 Calendar screens
+- **Done:** `components/calendar/{CalendarView,ItemChip,ChangeDate,UndoBar,grids,useFeed}`, `lib/calendar/grid.ts`. Week grid, month grid (3 chips, "+N more"), phone day list with a week strip, chips with type, time, status words and goal, Change date dialog, desktop drag and drop (valid days marked, past days refused), Undo bar, source notices, paywall card for gated items, loading and empty states. `WeekPlan` takes a grid slot.
+- **Evidence:** `tests/calendar-grid.test.mts` (7); `tests/e2e-calendar-feed.mjs` (stubbed feed and move routes; `npm run test:e2e:calendar-feed`): paid 1280 23/23, phone 16/16, free 25/25, axe clean at 1280 and 375, no sideways scroll. Stage 1 regression 22/22, v1 6/6.
+- **Next:** none.
+
+### U7 Chat moves
+- **Done:** `lib/calendar/{chat,chat-move}.ts`, `app/api/plan/route.ts`, schema and prompt. "move Thursday's post to Friday" is parsed (demo) or returned by the model, which sees only each item's weekday and kind; the server matches it to the person's own item and moves it through the same owner code as a drag; the week says "Changed by you". No match: "I couldn't find that item"; several: not guessed. A move reloads the grid and re-reads the account week so a later autosave cannot undo it.
+- **Evidence:** `tests/calendar-chat.test.mts` (9): AE6, parser, "publish now" is not a move, no name or id in the prompt, ownership. Mutation-checked: changed-by-user flag, day matching.
+- **Next:** live-model check of the move field (needs the key).
+
+### U8 Today
+- **Done:** `lib/calendar/today.ts`, `components/Today.tsx`. With v2 and an account: today's open items and overdue ones with how late, the ring from the feed, the plan card names the calculated mix.
+- **Evidence:** `tests/calendar-today.test.mts` (4); e2e F23 to F25.
+- **Next:** none.
+
+### U9 Reminders
+- **Done:** `lib/calendar/reminders.ts`, `CalendarView` buttons. One event per open item of every owner; "publishes itself" for an auto-published post, "reminder" for the rest; no attendee; in-tab reminders fire once for due, scheduled items.
+- **Evidence:** `tests/calendar-reminders.test.mts` (4), e2e F26. Mutation-checked.
+- **Next:** none.
+
+### Whole-stage verification
+`npx tsc --noEmit` clean; `npm test` 626/626; `npx next build` clean; `npm run lint` 1 error, the old `MondayTodo.tsx` refs one (not from this work). Browser: the three feed runs, Stage 1 22/22, v1 6/6.
+
+### U10 copy and U11 release (drafts only, nothing published)
+- **[VISIBLE] strings in code, not approved:** the paywall card ("<item> is part of the subscription. The Calendar, your week, progress and reminders are free. Drafting posts, comments and outreach messages is ₹499 a month." with "See what's included" and "Not now"); "Download week (.ics)", "Remind me in this tab"; "Sign in to move items by chat."; "I couldn't find that item."; "Nothing planned. Change the plan by chat or add a post."
+- **Still to draft for Aryan (B9):** Landing free list line "Your weekly LinkedIn calendar"; the combined paid list in `Paywall.tsx`; the note "Nothing is posted or sent for you" stays until Posts' D-P1.
+- **Release steps (Aryan):** deploy the branch to the preview (Render branch `feat/calendar-stage2-v2`), sign in, open "This week", drag and use Change date on a plan slot, try a chat move, check Today. Production: merge after #17 to #20, then `LYNKR_CALENDAR=v2`.
+
+## Not built
+
+
+- **Posts source:** the feed reports `posts: "off"`; the move route has a `PostsOwner` seam that answers 404 until Posts exists. Post items, their statuses (Failed, Overdue, Check LinkedIn) and the real reschedule are wired when Posts U2 and U9 land.
+- **Plan slots stay in their week** when moved (decided below); moving across weeks is not built.
+- **Not browser-tested against a real database:** the feed and moves are tested with PGlite and with a stubbed feed in the browser; the signed-in preview run is Aryan's release step.
 - "Mark done" is the existing control (Schedule, then Mark sent or Mark posted).
-- Stage 2 waits on Posts U2/U9, Outreach U16 (built), Commenter U4b.
+- Stage 2 Posts part waits on Posts U2/U9.
 
 ## Decided by the lead (reversible)
 
@@ -46,3 +90,6 @@ Stage 1 is the free "This week" screen with rules, progress and a streak. Switch
 - A person without an account gets progress but no streak (the browser keeps one week); the screen says how to get one.
 - The streak counts back from the last finished week with a plan; a week with no plan is skipped, not a reset (R19).
 - Existing browser plans are recalculated once on first load under v2 (they were built with the old default counts). A week the person changed is never recalculated.
+- Stage 2: plan slots move only inside their own week (a drag to another week is refused with a reason); undo is the reverse move; the paywall card links to the landing page's pricing section until a proper checkout hand-off is chosen.
+- Stage 2: free accounts see post, outreach and comment items and can open a plan slot only to the paywall card; they can still move plan slots.
+- Stage 2: when the feed shows, the plan-only "Download week" and "Remind me" buttons step aside, so there is one of each, covering every owner.

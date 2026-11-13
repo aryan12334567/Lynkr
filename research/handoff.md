@@ -12,6 +12,8 @@ Written 2026-10-30 by the Claude Code session that started this work. Read this 
 - Gotchas: `.env.local` DATABASE_URL is probably production: start test servers with the database switched off (`VERCEL_ENV=preview DATABASE_URL= ...`). The Node "jit_page" crash can hit `outreach-followup.test.mts` in a full run; it passes alone. The v1 e2e run rewrites screenshots in `docs/`; do not commit them. In-memory rate limits make a test server refuse after many interview runs: restart it.
 - Left out of commits on purpose: `prod/lynkr-outreach-intelligence-plan.md`, `research/lynkr-distribution-strategy.md` (unrelated), `docs/*.png` (test side effects), `research/build-plan-outreach.md` (line endings only).
 
+**Calendar Stage 2 (2026-11-13):** built on `feat/calendar-stage2-v2` (on `feat/commenter-v2`): U3 feed, U4 moves, U5 screens, U7 chat moves, U8 Today, U9 reminders. `npm test` 626/626, build clean, e2e green. Posts source is a stub. Not pushed, not on the preview. See `research/progress-calendar.md`.
+
 **Aryan's go-live list (Render, Chrome Web Store deferred):**
 1. **A1** Exa key: paste as `EXA_API_KEY` in the Render **lynkr-preview** environment (key is also in `.env.local` for local runs).
 2. **A2** OpenAI key: paste as `OPENAI_API_KEY` in lynkr-preview (reuse the key from `.env.local`); check the OpenAI project has a monthly budget.

@@ -25,7 +25,7 @@
 - **U8 copy:** the consent text, panel strings and privacy lines are drafts in code; none approved (A3). Privacy page, store listing and paywall line not touched.
 - **U9a live-model eval and reader test:** needs `OPENAI_API_KEY` and raters. Quality of real options is unmeasured; demo options are templates.
 - **Migration 004 is not applied** on the preview database. Until it is, the log, week count and link routes answer empty.
-- **Slice 2 UI is not browser-tested:** the web options helper, the log list and the link prompt need a database and a signed-in account. The logic under them is tested.
+- **Slice 2 UI browser-tested 2026-11-13 on the preview (signed in, live model, migration 004 applied):** options helper (author parsed from the pasted header, goal radios, reaction box), Copy shows "Did you post it?", Posted logs the entry ("Marked as posted. It counts toward your week."), "Comments you've written" lists it with Delete, adding a person named like the author shows "Is this the ... you commented on" and Link stores it ("You commented on their post on 13 Nov. Unlink"). Not seen: the one-line bridge in a drafted message, and the week count (the test comment fell on a Friday, so the plan starts next Monday and correctly did not count it). Findings: a live generation took about 40 seconds; "Why this works" reads "Anchor: ..." (prompt wording leaks); the "Add a point" option was mostly flagged lines.
 - **U9b release checklist (A4) and the DPDP basis for keeping authors' names (D-C8)** are Aryan's.
 - Changed from the plan: ids in request bodies instead of `[id]` routes; the web helper uses a new route, `/api/comment/options`, and `/api/comment` is unchanged.
 - `app/api/comment` (web helper) is unchanged.

@@ -15,7 +15,7 @@ Each option:
 - body is 30 to 70 words, ready to post, with no blanks, no greeting and no sign-off.
 - postAnchor is a short phrase (5 to 15 words) copied exactly from the post, the line the comment answers.
 - factRefs lists only the fact ids used, at most 2. A comment may use no fact when it rests on the person's reaction.
-- why is at most 25 words for the person: the line answered and how the comment serves their goal. It may name only the anchor, the author, the person's target role and companies that appear in the facts.
+- why is at most 25 words for the person: the line answered and how the comment serves their goal, written as one plain sentence with no label such as "Anchor:". It may name only the anchor, the author, the person's target role and companies that appear in the facts.
 Goal rules:
 - job_seeker: show a skill relevant to the target role. Never ask for a job, a referral or an opening.
 - freelancer: show how the person thinks about the problem. Never pitch, never offer services, never write "DM me".

@@ -32,6 +32,8 @@ function makeServer(paid) {
       item("plan:2026-11-09:message-0", "plan", "message", "2026-11-12", "10:30", { title: "Pick someone to contact", href: "#app/outreach" }),
       item("outreach:m1", "outreach", "meeting", "2026-11-14", "15:00", { title: "Meeting · Priya", status: "due", statusText: "Due", href: "#app/outreach", movable: paid, lockedReason: paid ? undefined : "Needs a subscription" }),
       item("outreach:old", "outreach", "follow_up", "2026-11-11", "10:30", { title: "Follow-up · Dev", status: "replaced", statusText: "Replaced", movable: false }),
+      item("plan:2026-11-09:message-1", "plan", "message", "2026-11-11", "10:30", { title: "Pick someone to contact", href: "#app/outreach" }),
+      item("plan:2026-11-09:comment-1", "plan", "comment", "2026-11-10", "12:30", { title: "Comment" }),
     ],
     moves: [],
     refuse: null,
@@ -172,6 +174,17 @@ async function run(width, paid) {
       await page.locator("[data-day='2026-11-13'] [data-chip='plan:2026-11-09:post-0']").waitFor({ timeout: 8000 });
       check(id("F22 the grid shows the post on Friday after the chat move"), true);
     }
+
+    // U8: Today is today's slice of the calendar, with what is overdue, and the week's N of M.
+    await page.evaluate(() => { window.location.hash = "#app/today"; });
+    await page.locator("[data-today-feed]").waitFor({ timeout: 8000 });
+    const todayText = await page.locator("[data-today-feed]").innerText();
+    check(id("F23 Today lists today's item and the overdue one, with how late"), /Pick someone to contact/.test(todayText) && /1 day late/.test(todayText) && !/Follow-up · Dev/.test(todayText), todayText.replace(/\n/g, " | ").slice(0, 160));
+    check(id("F24 the ring counts the week from the feed"), /0\/6/.test(await page.locator("main").innerText()));
+    const mainText = await page.locator("main").innerText();
+    check(id("F25 the plan card says the calculated mix, not the fixed sentence"), /with reminders\./.test(mainText) && !/Three messages, two comments and one post/.test(mainText));
+    await page.evaluate(() => { window.location.hash = "#app/plan"; });
+    await page.locator("[data-calendar-view]").waitFor({ timeout: 8000 });
 
     // Month view: three chips then "+N more", which opens the day in the week view.
     if (!mobile) {

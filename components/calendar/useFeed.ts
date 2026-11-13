@@ -10,7 +10,7 @@ export type Undo = { id: string; day: string; time: string; text: string };
 
 const newOp = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
 
-async function fetchFeed(from: string, to: string): Promise<FeedWithAccess | null> {
+export async function fetchFeed(from: string, to: string): Promise<FeedWithAccess | null> {
   try {
     const r = await fetch(`/api/calendar?from=${from}&to=${to}`, { cache: "no-store" });
     return r.ok ? ((await r.json()) as FeedWithAccess) : null;

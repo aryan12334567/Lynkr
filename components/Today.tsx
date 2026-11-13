@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DueToday, MondayTodo } from "./outreach/MondayTodo";
 import { isMonday } from "@/lib/outreach/ui-today";
 import { ArrowRight, CalendarDays, Library, PenLine, Send, Users } from "lucide-react";
@@ -9,6 +9,10 @@ import { openSlots } from "@/lib/slots";
 import { personFollowUpDue } from "@/lib/connect";
 import { todayIST } from "@/lib/ist";
 import { TAG_LABEL } from "@/lib/plan";
+import { addDays, mondayOf } from "@/lib/ist";
+import { mixWords, todayRow, todaySlice, weekRing } from "@/lib/calendar/today";
+import type { FeedItem } from "@/lib/calendar/types";
+import { fetchFeed } from "./calendar/useFeed";
 
 type Tab = "vault" | "outreach" | "posts" | "plan" | "connect" | "check";
 
@@ -16,8 +20,19 @@ type Tab = "vault" | "outreach" | "posts" | "plan" | "connect" | "check";
  * A personal home screen: what to do next, from what's already in this browser.
  * Nothing new is generated here.
  */
-export function Today({ s, go, outreachV2 = false }: { s: Saved; go: (t: Tab) => void; outreachV2?: boolean }) {
+export function Today({ s, go, outreachV2 = false, calendarV2 = false, signedIn = false }: { s: Saved; go: (t: Tab) => void; outreachV2?: boolean; calendarV2?: boolean; signedIn?: boolean }) {
   const [outreachDue, setOutreachDue] = useState(0);
+  // Calendar v2 (U8, R23): today's slice of the account's calendar. Without it, today's plan from this browser, as before.
+  const [feedItems, setFeedItems] = useState<FeedItem[] | null>(null);
+  const onFeed = calendarV2 && signedIn;
+  useEffect(() => {
+    if (!onFeed) return;
+    let live = true;
+    const monday = mondayOf(todayIST());
+    fetchFeed(monday, addDays(monday, 6)).then((f) => { if (live && f) setFeedItems(f.items); });
+    return () => { live = false; };
+  }, [onFeed]);
+  const slice = onFeed && feedItems ? todaySlice(feedItems, todayIST()) : null;
   const r = s.result!;
   const drafts: [string, string, Tab][] = [
     ...r.posts.map((p, i) => [`post:${i}`, p.body, "posts"] as [string, string, Tab]),
@@ -40,9 +55,10 @@ export function Today({ s, go, outreachV2 = false }: { s: Saved; go: (t: Tab) =>
   if (outreachV2 && outreachDue) cards.push({ icon: Users, title: `${outreachDue} outreach action${outreachDue === 1 ? "" : "s"} due`, body: "Review your suggested next steps.", action: "Open Outreach", tab: "outreach" });
   if (!outreachV2 && followUps) cards.push({ icon: Users, title: `${followUps} follow-up${followUps === 1 ? "" : "s"} due`, body: "One short message with something new, then stop.", action: "Open Connect", tab: "connect" });
   cards.push({ icon: Send, title: "Write to one person", body: "Check there's a real reason first, then get a short note.", action: outreachV2 ? "Open Outreach" : "Open Connect", tab: outreachV2 ? "outreach" : "connect" });
-  cards.push({ icon: CalendarDays, title: "Plan this week", body: "Three messages, two comments and one post, with reminders.", action: "Open This week", tab: "plan" });
+  cards.push({ icon: CalendarDays, title: "Plan this week", body: calendarV2 && s.plan ? `${mixWords(s.plan.counts)}, with reminders.` : "Three messages, two comments and one post, with reminders.", action: "Open This week", tab: "plan" });
 
-  const ring = planTotal ? planDone / planTotal : 0;
+  const week = onFeed && feedItems ? weekRing(feedItems, today) : { planned: planTotal, done: planDone };
+  const ring = week.planned ? week.done / week.planned : 0;
 
   return (
     <div className="space-y-8">
@@ -77,7 +93,7 @@ export function Today({ s, go, outreachV2 = false }: { s: Saved; go: (t: Tab) =>
             </svg>
             <div>
               <p className="font-serif text-[1.6rem] font-extrabold leading-none">
-                {planDone}/{planTotal || 6}
+                {week.done}/{week.planned || 6}
               </p>
               <p className="mt-1 text-[0.85rem] text-soft">done this week</p>
             </div>
@@ -117,7 +133,24 @@ export function Today({ s, go, outreachV2 = false }: { s: Saved; go: (t: Tab) =>
             <CalendarDays size={15} aria-hidden /> Open this week
           </button>
         </div>
-        {todays.length === 0 ? (
+        {slice ? (
+          slice.today.length + slice.overdue.length === 0 ? (
+            <p className="mt-3 rounded-2xl border border-dashed border-line p-5 text-[0.95rem] text-soft">Nothing planned for today. Take the day, or get ahead on tomorrow.</p>
+          ) : (
+            <ul className="mt-3 space-y-2" data-today-feed>
+              {[...slice.overdue, ...slice.today].map((it) => {
+                const row = todayRow(it, today);
+                return (
+                  <li key={it.id} className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-sm">
+                    <span className="font-serif text-[0.95rem] font-bold text-accent">{row.time}</span>
+                    <span className="text-[0.95rem]">{row.title}</span>
+                    <span className="ml-auto text-[0.85rem] text-faint">{row.late ? `${row.late} · ${row.status}` : row.status}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : todays.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-dashed border-line p-5 text-[0.95rem] text-soft">
             {s.plan ? "Nothing planned for today. Take the day, or get ahead on tomorrow." : "Open This week to get a Monday to Friday plan."}
           </p>

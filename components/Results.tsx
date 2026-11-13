@@ -203,7 +203,7 @@ export function Results({
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-4"
             >
-              {tab === "today" && <Today s={s} go={go} outreachV2={outreachV2} />}
+              {tab === "today" && <Today s={s} go={go} outreachV2={outreachV2} calendarV2={calendarV2} signedIn={account?.signedIn === true} />}
 
               {tab === "vault" && (
                 <VaultReview

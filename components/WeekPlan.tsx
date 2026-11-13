@@ -59,6 +59,7 @@ export function WeekPlan({
   onOpenDraft,
   outreachV2 = false,
   calendar,
+  grid,
 }: {
   plan: Plan;
   onPlan: (p: Plan) => void;
@@ -70,6 +71,8 @@ export function WeekPlan({
   outreachV2?: boolean;
   /** Calendar v2 (LYNKR_CALENDAR=v2): the why line, this week's progress and the streak. Absent on v1. */
   calendar?: { why: string; progress: WeekCount; streak: StreakData | null; problem: string | null; signedIn: boolean };
+  /** Calendar v2 for a signed-in person: wraps today's grid, which it gets back as `fallback` when the feed is unavailable. */
+  grid?: (fallback: React.ReactNode) => React.ReactNode;
 }) {
   const [view, setView] = useState<"week" | "month">("week");
   const [offset, setOffset] = useState(0);
@@ -385,6 +388,9 @@ export function WeekPlan({
         </div>
       </Card>
 
+      {(() => {
+        const classic = (
+          <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1" role="tablist" aria-label="Calendar view">
           {(["week", "month"] as const).map((v) => (
@@ -416,6 +422,10 @@ export function WeekPlan({
       {plan.weekStart > today && offset === 0 && (
         <p className="text-xs text-faint">It&apos;s late in the week (IST), so this plan starts next Monday.</p>
       )}
+          </>
+        );
+        return grid ? grid(classic) : classic;
+      })()}
     </div>
   );
 }

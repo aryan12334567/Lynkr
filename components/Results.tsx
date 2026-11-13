@@ -12,6 +12,7 @@ import { DOMAIN_LABEL, STAGE_LABEL } from "@/lib/roles";
 import type { DraftEdit, Saved } from "@/lib/store";
 import { WeekPlan } from "./WeekPlan";
 import { useCalendar } from "./calendar/useCalendar";
+import { CalendarView } from "./calendar/CalendarView";
 import { ConnectCoach } from "./ConnectCoach";
 import { OutreachWorkspace } from "./outreach/OutreachWorkspace";
 import { DraftCard } from "./DraftCard";
@@ -285,6 +286,7 @@ export function Results({
                   result={result}
                   outreachV2={outreachV2}
                   calendar={calendarV2 ? { ...calendar, signedIn: account?.signedIn === true } : undefined}
+                  grid={calendarV2 && account?.signedIn === true ? (fallback) => <CalendarView enabled fallback={fallback} /> : undefined}
                   fills={s.fills}
                   onOpenDraft={(draftId) => go(draftId.startsWith("out:") ? "outreach" : "posts")}
                 />

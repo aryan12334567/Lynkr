@@ -63,8 +63,9 @@ async function run(width, paid) {
       server.moves.push(body);
       if (server.refuse) return r.fulfill({ status: server.refuse.status, json: { error: server.refuse.error } });
       const it = server.items.find((x) => x.id === body.id);
-      if (it) { server.items = server.items.map((x) => (x.id === body.id ? { ...x, day: body.day, time: body.time ?? x.time } : x)); }
-      r.fulfill({ json: { ok: true } });
+      const replacement = it && it.owner === "outreach" ? `outreach:r${server.moves.length}` : null;
+      if (it) { server.items = server.items.map((x) => (x.id === body.id ? { ...x, id: replacement ?? x.id, day: body.day, time: body.time ?? x.time } : x)); }
+      r.fulfill({ json: { ok: true, item: replacement ? { id: replacement } : null } });
     });
     // Plan chat: a move is made by the server through the item's owner, so the stub moves the post and says so (U7, AE6).
     const chatBodies = [];
@@ -126,11 +127,24 @@ async function run(width, paid) {
     check(id("F9 Undo sends the reverse move with a new op id"), server.moves.length === 2 && back.day === "2026-11-12" && back.time === "09:00" && back.op_id !== server.moves[0].op_id, JSON.stringify(back));
 
     // A refused move (the owner says no) shows its reason next to the item and sends once.
+    if (paid && !mobile) {
+      // An outreach move replaces the step: Undo must move the NEW step back, not the old one.
+      await chipOf("outreach:m1").getByRole("button", { name: /Change date/ }).click();
+      await page.getByRole("dialog").getByLabel("Date").fill("2026-11-15");
+      await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+      await page.locator("[data-undo-bar]").waitFor({ timeout: 8000 });
+      await page.locator("[data-undo-bar]").getByRole("button", { name: "Undo" }).click();
+      await page.waitForFunction(() => !document.querySelector("[data-undo-bar]"), null, { timeout: 8000 });
+      const last = server.moves.at(-1);
+      check(id("F9a Undo of an outreach move targets the replacement step"), /^outreach:r\d+$/.test(last.id) && last.day === "2026-11-14", JSON.stringify(last));
+    }
     server.refuse = { status: 409, error: "Publishing now" };
     await chipOf("plan:2026-11-09:post-0").getByRole("button", { name: /Change date/ }).click();
     await page.getByRole("dialog").getByLabel("Date").fill("2026-11-14");
+    const movesBefore = server.moves.length;
     await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
-    await page.getByRole("dialog").waitFor({ state: "visible" });
+    await page.getByRole("dialog").getByRole("alert").waitFor({ timeout: 5000 });
+    check(id("F10a a refused move stays in the dialog with the owner's reason, and was sent once"), /Publishing now/.test(await page.getByRole("dialog").getByRole("alert").innerText()) && server.moves.length === movesBefore + 1);
     server.refuse = null;
     await page.keyboard.press("Escape");
     await page.getByRole("dialog").waitFor({ state: "detached", timeout: 3000 });
@@ -172,7 +186,7 @@ async function run(width, paid) {
     check(id("F21 a chat move shows the reply and sends the week"), chatBodies.length === 1 && chatBodies[0].weekStart === "2026-11-09", JSON.stringify(chatBodies[0] ?? {}).slice(0, 160));
     if (!mobile) {
       await page.locator("[data-day='2026-11-13'] [data-chip='plan:2026-11-09:post-0']").waitFor({ timeout: 8000 });
-      check(id("F22 the grid shows the post on Friday after the chat move"), true);
+      check(id("F22 the grid shows the post on Friday after the chat move"), (await page.locator("[data-day='2026-11-12'] [data-chip='plan:2026-11-09:post-0']").count()) === 0);
     }
 
     // U8: Today is today's slice of the calendar, with what is overdue, and the week's N of M.

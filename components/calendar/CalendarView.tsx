@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { downloadIcs } from "@/lib/ics";
 import { dueReminders, weekEvents } from "@/lib/calendar/reminders";
 import { Button } from "../ui";
-import { monthCells } from "@/lib/calendar/grid";
+import { monthCells, monthLabel } from "@/lib/calendar/grid";
 import type { FeedItem } from "@/lib/calendar/types";
 import { addDays, formatDay, mondayOf, todayIST } from "@/lib/ist";
 import { MondayTodo } from "../outreach/MondayTodo";
@@ -48,8 +48,15 @@ export function CalendarView({ enabled, fallback, onActive }: { enabled: boolean
     if (!notify || !feedItems) return;
     const tick = () => {
       for (const it of dueReminders(feedItems, Date.now(), shown.current)) {
-        shown.current.add(it.id);
-        new Notification(`Lynkr: ${it.title}`, { body: "Open Lynkr, then do it yourself on LinkedIn." });
+        try {
+          // Some browsers (Chrome on Android) refuse the constructor: say so instead of failing the screen.
+          new Notification(`Lynkr: ${it.title}`, { body: "Open Lynkr, then do it yourself on LinkedIn." });
+          shown.current.add(it.id);
+        } catch {
+          setNotify(false);
+          setNotifyNote("This browser can't show reminders here. Use the calendar file instead.");
+          return;
+        }
       }
     };
     tick();
@@ -96,7 +103,7 @@ export function CalendarView({ enabled, fallback, onActive }: { enabled: boolean
         </div>
         <div className="flex items-center gap-2 text-sm">
           <button className="min-h-9 rounded px-2 hover:bg-muted max-sm:hidden" onClick={() => (view === "week" ? shiftWeek(-1) : shiftMonth(-1))} aria-label={view === "week" ? "Previous week" : "Previous month"}>←</button>
-          <span className="text-soft">{view === "week" ? `Week of ${formatDay(monday)}` : formatDay(range.from.slice(0, 7) + "-15").replace(/^\w+, \d+ /, "")}</span>
+          <span className="text-soft">{view === "week" ? `Week of ${formatDay(monday)}` : monthLabel(anchor)}</span>
           <button className="min-h-9 rounded px-2 hover:bg-muted max-sm:hidden" onClick={() => (view === "week" ? shiftWeek(1) : shiftMonth(1))} aria-label={view === "week" ? "Next week" : "Next month"}>→</button>
         </div>
       </div>

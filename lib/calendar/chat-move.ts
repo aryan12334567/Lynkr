@@ -38,6 +38,9 @@ export async function applyChatMove(
   if (out.status !== 200) return { moved: false, reply: String(out.body.error ?? "Couldn't move that.") };
 
   // R12: a chat change overrides the rule for that week only, and the Why line says so.
-  await db.query(`update plan_items set data = jsonb_set(data, '{changedByUser}', 'true'::jsonb), updated_at = now() where user_id = $1 and item_key = $2`, [userId, `week:${o.weekStart}`]);
+  // The move is done; the flag is best effort, and only a plan slot changes the week's plan.
+  if (item.id.startsWith("plan:")) {
+    await db.query(`update plan_items set data = jsonb_set(data, '{changedByUser}', 'true'::jsonb), updated_at = now() where user_id = $1 and item_key = $2`, [userId, `week:${o.weekStart}`]).catch(() => {});
+  }
   return { moved: true, reply: `Moved your ${o.move.kind} to ${DAY_NAME[o.move.to_day]}.` };
 }

@@ -19,6 +19,9 @@ export async function fetchFeed(from: string, to: string): Promise<FeedWithAcces
   }
 }
 
+/** One move. Resolves to the owner's refusal in words, or the item as it now stands (its id changes when the owner replaces it). */
+type MoveOutcome = { problem: string } | { item: FeedItem | null };
+
 /**
  * The Calendar feed for the days on screen, and the one way to move an item (calendar plan U5, KTD5, KTD6). Every move
  * is one POST with its own op id; Undo is the reverse move with a new op id and is gone after a reload (R15).
@@ -31,21 +34,28 @@ export function useFeed({ enabled, from, to }: { enabled: boolean; from: string;
   const [moving, setMoving] = useState<string | null>(null);
   const [undo, setUndo] = useState<Undo | null>(null);
   const range = useRef({ from, to, key });
+  // One counter for every fetch: only the newest answer is used, so an old reload can never replace a newer range.
+  const seq = useRef(0);
+  const busy = useRef(new Set<string>());
   useEffect(() => { range.current = { from, to, key }; });
 
   useEffect(() => {
     if (!enabled) return;
-    let live = true;
-    fetchFeed(from, to).then((feed) => { if (live) setGot({ key, feed }); });
-    return () => { live = false; };
+    const mine = ++seq.current;
+    fetchFeed(from, to).then((feed) => { if (mine === seq.current) setGot({ key, feed }); });
+    return () => { seq.current++; };
   }, [enabled, from, to, key]);
 
+  /** Re-reads the range on screen. A failed re-read keeps what is showing instead of swapping the whole view for the fallback. */
   const reload = useCallback(async () => {
     const r = range.current;
-    setGot({ key: r.key, feed: await fetchFeed(r.from, r.to) });
+    const mine = ++seq.current;
+    const feed = await fetchFeed(r.from, r.to);
+    if (mine !== seq.current || !feed) return;
+    setGot({ key: r.key, feed });
   }, []);
 
-  // A change made elsewhere (a chat move) refreshes this grid.
+  // A change made elsewhere (a chat move, the plan sync) refreshes this grid.
   useEffect(() => {
     if (!enabled) return;
     const on = () => { void reload(); };
@@ -53,31 +63,34 @@ export function useFeed({ enabled, from, to }: { enabled: boolean; from: string;
     return () => window.removeEventListener(CALENDAR_CHANGED, on);
   }, [enabled, reload]);
 
-  /** Sends one move. Resolves to null on success, or the words to show next to the item. */
-  const post = useCallback(async (id: string, day: string, time?: string): Promise<string | null> => {
+  const post = useCallback(async (id: string, day: string, time?: string): Promise<MoveOutcome> => {
     const r = await fetch("/api/calendar/move", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ op_id: newOp(), id, day, ...(time ? { time } : {}) }) });
-    if (r.ok) return null;
-    const body = (await r.json().catch(() => ({}))) as { error?: string };
-    return r.status === 402 ? "Moving this is part of the subscription." : body.error ?? "Couldn't move that.";
+    const body = (await r.json().catch(() => ({}))) as { error?: string; item?: FeedItem | null };
+    if (r.ok) return { item: body.item ?? null };
+    return { problem: r.status === 402 ? "Moving this is part of the subscription." : body.error ?? "Couldn't move that." };
   }, []);
 
-  const move = useCallback(async (item: FeedItem, day: string, time?: string): Promise<boolean> => {
+  const move = useCallback(async (item: FeedItem, day: string, time?: string): Promise<string | null> => {
+    if (busy.current.has(item.id)) return "Still moving this one.";
+    busy.current.add(item.id);
     setProblems((p) => { const n = { ...p }; delete n[item.id]; return n; });
     setMoving(item.id);
-    const problem = await post(item.id, day, time);
-    setMoving(null);
-    if (problem) { setProblems((p) => ({ ...p, [item.id]: problem })); return false; }
-    setUndo({ id: item.id, day: item.day, time: item.time, text: `Moved ${item.title} to ${shortDay(day)}.` });
+    const out = await post(item.id, day, time);
+    busy.current.delete(item.id);
+    setMoving((m) => (m === item.id ? null : m));
+    if ("problem" in out) { setProblems((p) => ({ ...p, [item.id]: out.problem })); return out.problem; }
+    // An owner that replaces the item (an outreach step) gives it a new id: Undo must move that one back.
+    setUndo({ id: out.item?.id ?? item.id, day: item.day, time: item.time, text: `Moved ${item.title} to ${shortDay(day)}.` });
     window.dispatchEvent(new Event(CALENDAR_CHANGED));
-    return true;
+    return null;
   }, [post]);
 
   const undoLast = useCallback(async () => {
     if (!undo) return;
     const u = undo;
     setUndo(null);
-    const problem = await post(u.id, u.day, u.time);
-    if (problem) setProblems((p) => ({ ...p, [u.id]: `Couldn't undo: ${problem}` }));
+    const out = await post(u.id, u.day, u.time);
+    if ("problem" in out) setProblems((p) => ({ ...p, [u.id]: `Couldn't undo: ${out.problem}` }));
     window.dispatchEvent(new Event(CALENDAR_CHANGED));
   }, [undo, post]);
 

@@ -25,6 +25,7 @@ export async function GET(req: Request) {
     from: q.get("from") ?? undefined,
     to: q.get("to") ?? undefined,
     paid,
+    createWeeks: q.get("create") === "1",
     switches: { outreach: outreachVersion() === "v2", commenter: commenterSwitch() === "on", posts: false },
   });
   return Response.json({ ...feed, paid }, { headers: { "Cache-Control": "no-store" } });

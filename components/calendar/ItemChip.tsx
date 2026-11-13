@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 import { chipStatus, chipSummary } from "@/lib/calendar/grid";
+import { downloadIcs } from "@/lib/ics";
+import { eventFor, googleUrlFor, isOpen } from "@/lib/calendar/reminders";
 import type { FeedItem } from "@/lib/calendar/types";
 
 const TONE: Record<string, string> = {
@@ -33,7 +35,7 @@ export function ItemChip({
     <div
       data-chip={item.id}
       data-status={item.status}
-      draggable={item.movable}
+      draggable={item.movable && !moving}
       onDragStart={(e) => { e.dataTransfer.setData("text/plain", item.id); e.dataTransfer.effectAllowed = "move"; onDragStart?.(item); }}
       className={`rounded-lg border border-line bg-surface p-2 text-left text-[0.8rem] ${item.movable ? "cursor-grab" : ""} ${moving ? "opacity-60" : ""} ${item.status === "done" ? "opacity-75" : ""}`}
     >
@@ -58,6 +60,12 @@ export function ItemChip({
           item.lockedReason && !replaced && <span className="text-faint">{item.lockedReason}</span>
         )}
       </div>
+      {isOpen(item) && (
+        <div className="mt-1 flex flex-wrap gap-2 text-faint">
+          <button className="min-h-8 hover:underline" onClick={() => downloadIcs(`lynkr-${item.day}.ics`, [eventFor(item)])} aria-label={`Download .ics for ${item.title}`}>.ics</button>
+          <a className="min-h-8 hover:underline" href={googleUrlFor(item)} target="_blank" rel="noopener noreferrer" aria-label={`Add ${item.title} to Google Calendar`}>Google Calendar</a>
+        </div>
+      )}
       {problem && <p role="alert" className="mt-1 text-bad">{problem}</p>}
     </div>
   );

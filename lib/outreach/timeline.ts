@@ -130,6 +130,8 @@ async function apply(db: Db, userId: string, op: InsertOp | UpdateOp | Supersede
     if (op.supersedes) {
       const old = await getEvent(db, userId, op.supersedes.id);
       if (!old || old.contactId !== op.contactId) throw new TimelineError("not_found", "Step not found.");
+      // The status was read by the caller before this transaction took the contact lock: a step another move already replaced is gone.
+      if (op.supersedes.reason === "moved" && old.status === "superseded") throw new TimelineError("conflict", "That step was already moved.");
     }
     const r = await db.query(
       `insert into outreach_events (id, user_id, contact_id, kind, status, due_at, done_at, meeting_at, happened, rating, note, rule, supersedes_id, trigger_id, op_id)

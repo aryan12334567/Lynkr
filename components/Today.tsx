@@ -13,6 +13,7 @@ import { addDays, mondayOf } from "@/lib/ist";
 import { mixWords, todayRow, todaySlice, weekRing } from "@/lib/calendar/today";
 import type { FeedItem } from "@/lib/calendar/types";
 import { fetchFeed } from "./calendar/useFeed";
+import { CALENDAR_CHANGED } from "@/lib/calendar/events";
 
 type Tab = "vault" | "outreach" | "posts" | "plan" | "connect" | "check";
 
@@ -28,9 +29,13 @@ export function Today({ s, go, outreachV2 = false, calendarV2 = false, signedIn 
   useEffect(() => {
     if (!onFeed) return;
     let live = true;
-    const monday = mondayOf(todayIST());
-    fetchFeed(monday, addDays(monday, 6)).then((f) => { if (live && f) setFeedItems(f.items); });
-    return () => { live = false; };
+    const load = () => {
+      const monday = mondayOf(todayIST());
+      fetchFeed(monday, addDays(monday, 6)).then((f) => { if (live && f) setFeedItems(f.items); });
+    };
+    load();
+    window.addEventListener(CALENDAR_CHANGED, load);
+    return () => { live = false; window.removeEventListener(CALENDAR_CHANGED, load); };
   }, [onFeed]);
   const slice = onFeed && feedItems ? todaySlice(feedItems, todayIST()) : null;
   const r = s.result!;

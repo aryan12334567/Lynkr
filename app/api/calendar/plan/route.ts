@@ -36,7 +36,9 @@ async function write(req: Request, once: boolean): Promise<Response> {
     const r = await importWeekOnce(ctx.db, ctx.userId, week, b.plan);
     return Response.json({ plan: r.plan, imported: r.imported });
   }
-  if (!(await putWeek(ctx.db, ctx.userId, week, b.plan))) return Response.json({ error: "That plan isn't valid." }, { status: 400 });
+  const saved = await putWeek(ctx.db, ctx.userId, week, b.plan);
+  if (saved === "stale") return Response.json({ error: "Your week changed on another screen. Reloading it.", code: "stale" }, { status: 409 });
+  if (!saved) return Response.json({ error: "That plan isn't valid." }, { status: 400 });
   return Response.json({ ok: true });
 }
 

@@ -42,7 +42,7 @@ test("the model is shown each item's weekday and kind and nothing else", async (
     const person = { bridge: "public_work", goal: "job", intent: "learn_role", tier: "tier_1", company: "Swiggy", role: "Lead" } as const;
     const c = await addContact(db, "A", { ...person, name: "Priya Shah" });
     await recordEvent(db, "A", { type: "insert", opId: "op-name-0001", contactId: c.id, kind: "follow_up", status: "due", dueAt: new Date("2026-11-11T05:00:00Z") });
-    const feed = await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON });
+    const feed = await calendarFeed(db, "A", { now: NOW, createWeeks: true, from: MON, to: "2026-11-15", paid: true, switches: ON });
     const lines = modelItemLines(feed.items, MON);
     const prompt = planChatUser("move Wednesday's message to Friday", DEFAULT_COUNTS, DEFAULT_TIMES, lines);
     assert.doesNotMatch(prompt, /Priya|Shah|Swiggy|outreach:|plan:\d/i, "no name, company or id reaches the model");
@@ -64,7 +64,7 @@ async function world(run: (db: Db) => Promise<void>) {
 
 test("AE6: 'move Thursday's post to Friday' moves the slot through the owner and the week says Changed by you", async () => {
   await world(async (db) => {
-    await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON }); // makes the week
+    await calendarFeed(db, "A", { now: NOW, createWeeks: true, from: MON, to: "2026-11-15", paid: true, switches: ON }); // makes the week
     const week = (await getWeek(db, "A", MON))!;
     const post = week.items.find((i) => i.kind === "post")!;
     const from = (["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).find((k) => dayInWeek(MON, k) === post.day)!;
@@ -81,7 +81,7 @@ test("AE6: 'move Thursday's post to Friday' moves the slot through the owner and
 
 test("an item that is not there is 'I couldn't find that item' and nothing changes", async () => {
   await world(async (db) => {
-    await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON });
+    await calendarFeed(db, "A", { now: NOW, createWeeks: true, from: MON, to: "2026-11-15", paid: true, switches: ON });
     const snap = JSON.stringify(await getWeek(db, "A", MON));
     const r = await applyChatMove(db, "A", { weekStart: MON, move: { from_day: "sun", kind: "meeting", to_day: "fri", time: null }, switches: ON, now: NOW });
     assert.deepEqual(r, { moved: false, reply: "I couldn't find that item." });
@@ -104,7 +104,7 @@ test("'move my meeting to Saturday' moves the outreach meeting through its owner
 
 test("two items that could be it are not guessed: the person is pointed to Change date", async () => {
   await world(async (db) => {
-    await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON });
+    await calendarFeed(db, "A", { now: NOW, createWeeks: true, from: MON, to: "2026-11-15", paid: true, switches: ON });
     const week = (await getWeek(db, "A", MON))!;
     const snap = JSON.stringify(week);
     const r = await applyChatMove(db, "A", { weekStart: MON, move: { from_day: null, kind: "message", to_day: "sat", time: null }, switches: ON, now: NOW });
@@ -116,8 +116,8 @@ test("two items that could be it are not guessed: the person is pointed to Chang
 
 test("another person's items are never matched: B's move touches only B's week", async () => {
   await world(async (db) => {
-    await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON });
-    await calendarFeed(db, "B", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON });
+    await calendarFeed(db, "A", { now: NOW, createWeeks: true, from: MON, to: "2026-11-15", paid: true, switches: ON });
+    await calendarFeed(db, "B", { now: NOW, createWeeks: true, from: MON, to: "2026-11-15", paid: true, switches: ON });
     const aBefore = JSON.stringify(await getWeek(db, "A", MON));
     const bPost = (await getWeek(db, "B", MON))!.items.find((x) => x.kind === "post")!;
     const to = bPost.day === dayInWeek(MON, "fri") ? "thu" : "fri";

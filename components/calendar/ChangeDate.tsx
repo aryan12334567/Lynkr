@@ -14,7 +14,8 @@ export function ChangeDate({
 }: {
   item: FeedItem;
   today: string;
-  onSave: (day: string, time: string) => Promise<boolean>;
+  /** Resolves to null when saved, or the reason it was refused. */
+  onSave: (day: string, time: string) => Promise<string | null>;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -35,13 +36,14 @@ export function ChangeDate({
     const p = dateProblem(day, time, today, new Date(Date.now() + 330 * 60_000).toISOString().slice(11, 16));
     if (p) { setProblem(p); return; }
     setBusy(true);
-    const ok = await onSave(day, time);
+    const refused = await onSave(day, time);
     setBusy(false);
-    if (ok) onClose();
+    if (refused) setProblem(refused);
+    else onClose();
   }
 
   return (
-    <dialog ref={ref} aria-labelledby="change-date-title" onClose={onClose} onCancel={onClose} className="w-[min(92vw,22rem)] rounded-2xl border border-line bg-surface p-5 text-ink shadow-lg backdrop:bg-black/30">
+    <dialog ref={ref} aria-labelledby="change-date-title" onClose={onClose} className="w-[min(92vw,22rem)] rounded-2xl border border-line bg-surface p-5 text-ink shadow-lg backdrop:bg-black/30">
       <form onSubmit={save} noValidate>
         <h4 id="change-date-title" className="font-semibold">Change date</h4>
         <p className="mt-1 text-sm text-soft">{item.title}</p>

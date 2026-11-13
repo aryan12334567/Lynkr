@@ -2,7 +2,7 @@
  * Pure helpers for the Calendar screens (calendar plan U5): which days a view shows, how items group into them, which
  * drops are allowed, and the words on a chip. No React and no fetch, so the rules are tested without a browser.
  */
-import { addDays, mondayOf } from "../ist";
+import { addDays, formatMonth, mondayOf } from "../ist";
 import { shortDay } from "./sources";
 import type { FeedItem } from "./types";
 
@@ -61,3 +61,6 @@ export function dateProblem(day: string, time: string, today: string, nowHHMM: s
 export function daysWithItems(items: readonly FeedItem[]): Set<string> {
   return new Set(items.filter((i) => i.status !== "replaced").map((i) => i.day));
 }
+
+/** The month the grid shows, from the day on screen: "November 2026" even when the grid starts in October. */
+export const monthLabel = (anyDay: string): string => formatMonth(monthCells(anyDay).first);

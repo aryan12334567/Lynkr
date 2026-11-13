@@ -27,11 +27,19 @@ export function parsePlanFeedId(id: string): { week: string; slot: string } | nu
 
 /** One week's plan slots. Posts and comment slots are paid screens when opened; message slots open Outreach, also paid (R25). */
 export function planItems(plan: Plan, why: string | null, label: string | null): FeedItem[] {
-  return plan.items.map((it) => {
+  const out: FeedItem[] = [];
+  for (const it of plan.items) {
+    out.push(...planItem(plan, it, why, label));
+  }
+  return out;
+}
+
+function planItem(plan: Plan, it: Plan["items"][number], why: string | null, label: string | null): FeedItem[] {
+  {
     const done = it.status === "done";
     const status: FeedStatus = done ? "done" : it.status === "scheduled" ? "scheduled" : "draft";
     const statusText = done ? DONE_TEXT[it.kind] : it.status === "scheduled" ? "Reminder set" : "Draft";
-    return {
+    const live: FeedItem = {
       id: planFeedId(plan.weekStart, it.id),
       owner: "plan",
       kind: it.kind as FeedKind,
@@ -47,7 +55,17 @@ export function planItems(plan: Plan, why: string | null, label: string | null):
       ...(done ? { lockedReason: "Already done" } : {}),
       gated: true,
     };
-  });
+    // R14: where the slot used to be stays on the Calendar, struck through, saying where it went.
+    const seen = new Set<string>([`${it.day} ${it.time}`]);
+    const ghosts: FeedItem[] = [];
+    (it.moves ?? []).forEach((m, i) => {
+      const key = `${m.day} ${m.time}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      ghosts.push({ ...live, id: `${live.id}:was:${i}`, day: m.day, time: m.time, status: "replaced", statusText: "Replaced", replacedBy: it.day, movable: false, lockedReason: "Replaced", gated: false });
+    });
+    return [live, ...ghosts];
+  }
 }
 
 // ---- outreach steps (owner: outreach) ----
@@ -61,7 +79,7 @@ const STEP_DONE: Record<string, string> = { meeting: "Happened", close: "Closed"
 /** The paid-gate decision for outreach and post items (R25, KTD1): only an active subscription can move or open them. */
 export type Access = { paid: boolean };
 
-export function outreachFeedItems(steps: readonly OutreachStep[], access: Access): FeedItem[] {
+export function outreachFeedItems(steps: readonly (OutreachStep & { replacedAt?: string })[], access: Access): FeedItem[] {
   return steps.map((s) => {
     const replaced = s.status === "superseded";
     const done = s.status === "done";
@@ -84,6 +102,7 @@ export function outreachFeedItems(steps: readonly OutreachStep[], access: Access
       ...(!movable ? { lockedReason: replaced ? "Replaced" : done ? "Already done" : "Needs a subscription" } : {}),
       gated: true,
       contactId: s.contactId,
+      ...(replaced && s.replacedAt ? { replacedBy: todayIST(new Date(s.replacedAt)) } : {}),
     };
   });
 }
@@ -98,14 +117,15 @@ export function fillMessageSlots(plan: readonly FeedItem[], steps: readonly Feed
   const fillers = steps.filter((s) => s.kind !== "meeting" && s.status !== "replaced").sort(byTime);
   const used = new Set<string>();
   const out: FeedItem[] = [];
-  const slots = plan.filter((p) => p.kind === "message");
+  // A slot the person already marked done stays done and keeps their mark; a due step beside it is an extra item.
+  const slots = plan.filter((p) => p.kind === "message" && p.status !== "done");
   for (const slot of [...slots].sort(byTime)) {
     const step = fillers.find((s) => s.day === slot.day && !used.has(s.id));
     if (!step) { out.push(slot); continue; }
     used.add(step.id);
     out.push({ ...step, fills: slot.id });
   }
-  for (const p of plan) if (p.kind !== "message") out.push(p);
+  for (const p of plan) if (p.kind !== "message" || p.status === "done") out.push(p);
   for (const s of steps) if (!used.has(s.id)) out.push(s);
   return out.sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time) || a.id.localeCompare(b.id));
 }

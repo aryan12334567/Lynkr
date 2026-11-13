@@ -48,10 +48,17 @@ export async function getWeek(db: Db, userId: string, monday: string): Promise<P
   return parsed.success ? (parsed.data as Plan) : null;
 }
 
-/** Replaces one week's plan. Returns false when the week or the body is not valid. Touches no other key. */
-export async function putWeek(db: Db, userId: string, monday: string, body: unknown): Promise<boolean> {
+/**
+ * Replaces one week's plan. Returns false when the week or the body is not valid, and "stale" when the account's week
+ * was moved since the sender read it: moves record their op id in `ops`, so a plan that lacks the newest one was read
+ * before that move and would silently undo it. Touches no other key.
+ */
+export async function putWeek(db: Db, userId: string, monday: string, body: unknown): Promise<boolean | "stale"> {
   const parsed = PlanBody.safeParse(body);
   if (!isMonday(monday) || !parsed.success || parsed.data.weekStart !== monday) return false;
+  const current = await getWeek(db, userId, monday);
+  const newest = current?.ops?.at(-1);
+  if (newest && !(parsed.data.ops ?? []).includes(newest)) return "stale";
   await db.query(
     `insert into plan_items (user_id, item_key, data) values ($1, $2, $3::jsonb)
      on conflict (user_id, item_key) do update set data = excluded.data, updated_at = now()`,

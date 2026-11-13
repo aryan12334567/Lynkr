@@ -34,7 +34,14 @@ export function weekEvents(items: readonly FeedItem[]): CalEvent[] {
 /** The Google link for one item. No attendee is ever added: the feed holds none, and a guest would be invited by Google. */
 export const googleUrlFor = (i: FeedItem): string => googleCalendarUrl(eventFor(i));
 
-/** In-tab reminders: items that are open, whose time has arrived, and that have not been shown. */
+/** An item that came due longer ago than this is not a reminder any more: turning reminders on must not fire last week's. */
+export const REMINDER_WINDOW_MS = 24 * 3600_000;
+
+/** In-tab reminders: items that are open, whose time arrived within the last day, and that have not been shown. */
 export function dueReminders(items: readonly FeedItem[], nowMs: number, shown: ReadonlySet<string>): FeedItem[] {
-  return items.filter((i) => isOpen(i) && i.status !== "draft" && !shown.has(i.id) && istToUTC(i.day, i.time).getTime() <= nowMs);
+  return items.filter((i) => {
+    if (!isOpen(i) || i.status === "draft" || shown.has(i.id)) return false;
+    const at = istToUTC(i.day, i.time).getTime();
+    return at <= nowMs && at > nowMs - REMINDER_WINDOW_MS;
+  });
 }

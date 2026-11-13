@@ -14,7 +14,7 @@ import { getWeek, importWeekOnce } from "./plan-store";
 import type { Feed, SourceState } from "./types";
 
 export type Switches = { outreach: boolean; commenter: boolean; posts: boolean };
-export type FeedOptions = { now?: Date; from?: string; to?: string; paid: boolean; switches: Switches };
+export type FeedOptions = { now?: Date; from?: string; to?: string; paid: boolean; switches: Switches; /** Make a missing current or next week from the mix rules. Off by default: the browser's own plan is moved up first (AE5). */ createWeeks?: boolean };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -53,7 +53,7 @@ export async function calendarFeed(db: Db, userId: string, opt: FeedOptions): Pr
   try {
     for (const monday of mondaysBetween(from, to)) {
       let plan: Plan | null = await getWeek(db, userId, monday);
-      if (!plan && (monday === thisWeek || monday === addDays(thisWeek, 7))) {
+      if (!plan && opt.createWeeks && (monday === thisWeek || monday === addDays(thisWeek, 7))) {
         plan = (await importWeekOnce(db, userId, monday, planForPerson(monday, mix))).plan;
       }
       if (plan) weeks.push({ plan, label, why: whyThisWeek(plan.counts, mix, plan.changedByUser === true) });

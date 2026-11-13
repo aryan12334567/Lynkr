@@ -32,13 +32,14 @@ export async function moveStep(db: Db, userId: string, m: StepMove): Promise<Ste
   const old = await db.query(
     "select id, contact_id, kind, status, due_at, meeting_at, rule, trigger_id from outreach_events where user_id = $1 and id = $2", [userId, m.id],
   );
-  const e = old.rows[0] as { id: string; contact_id: string; kind: string; status: string; meeting_at: Date | null; rule: string | null; trigger_id: string | null } | undefined;
+  const e = old.rows[0] as { id: string; contact_id: string; kind: string; status: string; due_at: Date | null; meeting_at: Date | null; rule: string | null; trigger_id: string | null } | undefined;
   if (!e) return { status: 404, body: { error: "Step not found." } };
   const isMeeting = e.kind === "meeting_booked";
   if (!(e.status === "due" || (isMeeting && e.status === "done"))) return { status: 409, body: { error: "Only a step that is still due can be moved." } };
 
-  // A meeting keeps its own time of day unless a new one is given; other steps go to the outreach time.
-  const keep = isMeeting && e.meeting_at ? new Date(new Date(e.meeting_at).getTime() + 330 * 60_000).toISOString().slice(11, 16) : DEFAULT_TIMES.message;
+  // A step keeps its own time of day unless a new one is given (R14: a drop changes the day only). A step with no time falls back to the outreach time.
+  const own = isMeeting ? e.meeting_at : e.due_at;
+  const keep = own ? new Date(new Date(own).getTime() + 330 * 60_000).toISOString().slice(11, 16) : DEFAULT_TIMES.message;
   const at = istToUTC(m.day, m.time ?? keep);
   try {
     const out = await recordEvent(db, userId, {

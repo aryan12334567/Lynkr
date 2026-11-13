@@ -57,7 +57,7 @@ export function useCalendar({ enabled, signedIn, plan, profile, setPlan }: { ena
       } catch {
         if (live) setProblem("Couldn't reach your account. Your plan is kept in this browser for now.");
       } finally {
-        if (live) setSyncedWeek(wk);
+        if (live) { setSyncedWeek(wk); window.dispatchEvent(new Event(CALENDAR_CHANGED)); } // the grid may have read the feed before the plan was moved up
       }
     })();
     return () => { live = false; };
@@ -70,16 +70,19 @@ export function useCalendar({ enabled, signedIn, plan, profile, setPlan }: { ena
   useEffect(() => {
     if (!enabled || !signedIn || !weekStart) return;
     const wk = weekStart;
+    let live = true;
     const on = async () => {
+      // Whatever this screen was about to save was made before the move: drop it, then read the account's week.
+      if (timer.current) { clearTimeout(timer.current); timer.current = null; }
       try {
         const r = await fetch(`/api/calendar/plan?week=${wk}`, { cache: "no-store" });
-        if (!r.ok) return;
+        if (!r.ok || !live) return;
         const d = (await r.json()) as { plan: Plan | null };
-        if (d.plan) { lastSent.current = JSON.stringify(d.plan); setPlan(d.plan); }
+        if (d.plan && d.plan.weekStart === wk && live) { lastSent.current = JSON.stringify(d.plan); setPlan(d.plan); }
       } catch { /* the next load reads it */ }
     };
     window.addEventListener(CALENDAR_CHANGED, on);
-    return () => window.removeEventListener(CALENDAR_CHANGED, on);
+    return () => { live = false; window.removeEventListener(CALENDAR_CHANGED, on); };
   }, [enabled, signedIn, weekStart, setPlan]);
 
   // Comments logged as posted this week count toward the plan (Commenter R16). Only when the Commenter is on and the person is signed in.
@@ -119,6 +122,7 @@ export function useCalendar({ enabled, signedIn, plan, profile, setPlan }: { ena
     timer.current = setTimeout(async () => {
       try {
         const r = await fetch("/api/calendar/plan", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ week: plan.weekStart, plan }) });
+        if (r.status === 409) { window.dispatchEvent(new Event(CALENDAR_CHANGED)); return; } // the week moved on another screen: read it back
         if (!r.ok) { setProblem("Couldn't save your plan to your account. It is kept in this browser."); return; }
         lastSent.current = body;
         setProblem(null);

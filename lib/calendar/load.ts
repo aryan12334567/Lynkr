@@ -4,11 +4,11 @@
  */
 import type { Db } from "../db";
 import { calendarItems, calendarRow, type CalendarItem } from "../outreach/calendar";
+import { OUTREACH_SELECT } from "../outreach/move";
 
 export type OutreachStepRow = CalendarItem;
 
 /** Finished and closed contacts have left the Calendar (R46). Rows carry each contact's meeting answers, so a booked meeting reads as done once answered. */
-export const OUTREACH_SELECT = "select e.id, e.contact_id, e.kind, e.status, e.due_at, e.done_at, e.meeting_at, e.rule, c.name, c.goal from outreach_events e join contacts c on c.id = e.contact_id and c.user_id = e.user_id";
 
 export async function loadOutreachSteps(db: Db, userId: string, from: Date, to: Date): Promise<OutreachStepRow[]> {
   const ready = await db.query<{ name: string | null }>("select to_regclass('public.outreach_events')::text as name");

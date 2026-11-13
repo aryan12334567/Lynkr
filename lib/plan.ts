@@ -19,6 +19,8 @@ export type PlanItem = {
   status: Status;
   doneAt?: string;
   replied?: boolean;
+  /** Where the slot was before each move, oldest first, so the Calendar can strike the old date through (R14). */
+  moves?: { day: string; time: string }[];
 };
 
 export type Counts = { posts: number; comments: number; messages: number };
@@ -33,6 +35,8 @@ export type Plan = {
   notified: string[];
   /** The person changed this week's counts (by chat or by hand), so the mix rules no longer recalculate it (R12). */
   changedByUser?: boolean;
+  /** Move operation ids already applied to this week, newest last, so a retried move is a no-op (KTD5). */
+  ops?: string[];
 };
 
 export const DEFAULT_COUNTS: Counts = { posts: 1, comments: 2, messages: 3 };

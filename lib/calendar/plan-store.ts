@@ -27,6 +27,7 @@ const Item = z.object({
   status: z.enum(["draft", "scheduled", "done"]),
   doneAt: z.string().max(40).optional(),
   replied: z.boolean().optional(),
+  moves: z.array(z.object({ day: z.string().regex(DAY), time: z.string().regex(/^\d{2}:\d{2}$/) })).max(20).optional(),
 });
 const Counts = z.object({ posts: z.number().int().min(0).max(10), comments: z.number().int().min(0).max(10), messages: z.number().int().min(0).max(10) });
 /** What the browser may send for a week. The server never trusts the day to be a Monday: the key says which week it is. */
@@ -37,6 +38,7 @@ export const PlanBody = z.object({
   items: z.array(Item).max(60),
   notified: z.array(z.string().max(80)).max(60).default([]),
   changedByUser: z.boolean().optional(),
+  ops: z.array(z.string().max(100)).max(40).optional(),
 });
 
 export async function getWeek(db: Db, userId: string, monday: string): Promise<Plan | null> {

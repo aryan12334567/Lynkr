@@ -4,8 +4,9 @@ import { checkoutConfigured, paywallEnabled } from "@/lib/billing";
 import { interviewVersion } from "@/lib/interview/flags";
 import { commenterSwitch } from "@/lib/comment/flags";
 import { calendarVersion } from "@/lib/calendar/flags";
+import { postsVersion } from "@/lib/posts/flags";
 
 export async function GET() {
   // paywall: the app needs a subscription (license key). checkout: the subscribe button can open Dodo.
-  return Response.json({ mock: isMock(), model: isMock() ? null : modelName(), provider: providerLabel(), paywall: paywallEnabled(), checkout: checkoutConfigured(), outreach: outreachVersion(), interview: interviewVersion(), calendar: calendarVersion(), commenter: commenterSwitch() });
+  return Response.json({ mock: isMock(), model: isMock() ? null : modelName(), provider: providerLabel(), paywall: paywallEnabled(), checkout: checkoutConfigured(), outreach: outreachVersion(), interview: interviewVersion(), calendar: calendarVersion(), commenter: commenterSwitch(), posts: postsVersion() });
 }

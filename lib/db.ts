@@ -360,9 +360,9 @@ export async function giveBackDaily(db: Db, userId: string, kind: string): Promi
 
 // ---- export and delete ----
 
-const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log"] as const;
+const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log", "post_versions", "post_answers", "posts"] as const;
 /** Tables from later migrations: skipped on a database that hasn't run them yet. */
-const OPTIONAL = ["outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log"];
+const OPTIONAL = ["outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log", "post_versions", "post_answers", "posts"];
 /** Deleted by "Delete my data" but never exported: a linked license key is a credential (migration 007, lib/license-link.ts). */
 const DELETE_ONLY = ["account_license"];
 

@@ -7,7 +7,7 @@ import type { StoryFact } from "@/lib/schemas";
 import type { Saved } from "@/lib/store";
 import { track } from "@/lib/track";
 import { importText, prefillFrom } from "@/lib/pdf/linkedinPdf";
-import { briefFrom, minutesLeft, progress as progressOf, type AnswerInput, type NextStep } from "@/lib/interview/engine";
+import { briefFrom, minutesLeft, progress as progressOf, type AnswerInput, type NextStep, canDraftEarly } from "@/lib/interview/engine";
 import { profileFrom } from "@/lib/interview/profile";
 import { byId } from "@/lib/interview/bank";
 import { activeSecsFor, addCandidateFacts, confirmCandidates, type Interview2Body, type Interview2Reply, type V2State } from "@/lib/interview/client";
@@ -217,6 +217,18 @@ export function InterviewFlow({
               setStep(null);
             }}
           />
+        )}
+
+        {v2.phase === "interview" && bucket && brief && canDraftEarly(v2.answers) && profileFrom(bucket, v2.answers, v2.importText) && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4" data-early-drafts>
+            <p className="text-[0.95rem] text-soft">You&apos;ve told Lynkr enough for a first draft. The remaining questions make it sharper, and you can come back to them.</p>
+            <button
+              onClick={() => { setV2({ phase: "summary" }); window.scrollTo({ top: 0 }); }}
+              className="min-h-11 rounded-full bg-accent px-5 font-medium text-white hover:opacity-90"
+            >
+              See my first drafts now
+            </button>
+          </div>
         )}
 
         {v2.phase === "interview" && bucket && brief && (

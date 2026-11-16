@@ -176,6 +176,17 @@ export function nextStep(bucket: Bucket, answers: Answer[], opts: { elapsedSecs?
 
 // ---- saving an answer ----
 
+/** The question about one piece of work the person is proud of: the first answer a draft can be written from. */
+export const FIRST_PROOF_QID = "C1";
+
+/**
+ * True once there is one real piece of work to write from (audit P11). The person may then see their first drafts and
+ * come back for the remaining questions; nothing is skipped or lost.
+ */
+export function canDraftEarly(answers: Answer[]): boolean {
+  return answers.some((a) => a.qid === FIRST_PROOF_QID && a.attempt === 0 && a.status === "answered" && a.text.trim().length > 0);
+}
+
 export type AnswerInput = { qid: string; attempt: number; status: AnswerStatus; text: string; trigger?: Trigger; round?: number };
 
 /** Why this answer can't be saved, or null. Checks it against the bank and what's already saved. */

@@ -8,7 +8,7 @@ import { reachResults } from "../tests/e2e-outreach-helpers.mjs";
 const BASE = process.env.LYNKR_URL || "http://localhost:3000";
 const browser = await chromium.launch({ channel: process.env.LYNKR_BROWSER || "chrome" });
 const out = [];
-for (const width of [375, 1280]) {
+for (const early of [false, true]) for (const width of [375, 1280]) {
   const ctx = await browser.newContext({ viewport: { width, height: width < 600 ? 780 : 800 } });
   const page = await ctx.newPage();
   await page.addInitScript(() => {
@@ -18,9 +18,9 @@ for (const width of [375, 1280]) {
     setInterval(() => { const h = document.querySelector("main h1, main h2"); if (h?.textContent) window.__m.headings.add(h.textContent.trim().slice(0, 80)); }, 100);
   });
   const t0 = Date.now();
-  await reachResults(page, BASE);
+  await reachResults(page, BASE, { early });
   const m = await page.evaluate(() => ({ taps: window.__m.taps, fields: window.__m.fields.size, screens: [...window.__m.headings] }));
-  out.push({ width, taps: m.taps, fieldsTypedInto: m.fields, questionsOrScreens: m.screens.length, scriptSeconds: Math.round((Date.now() - t0) / 1000), screens: m.screens });
+  out.push({ path: early ? "first drafts as soon as offered" : "every question first", width, taps: m.taps, fieldsTypedInto: m.fields, questionsOrScreens: m.screens.length, scriptSeconds: Math.round((Date.now() - t0) / 1000) });
   await ctx.close();
 }
 await browser.close();

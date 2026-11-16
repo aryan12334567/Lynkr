@@ -21,7 +21,7 @@ export function answerFor(prompt) {
 }
 
 /** From the landing page to the results screen (all tabs visible). */
-export async function reachResults(page, BASE) {
+export async function reachResults(page, BASE, opts = {}) {
   const question = () => page.locator("main h2").first().innerText();
   const save = () => page.getByRole("button", { name: /Save and continue/ });
   // Complete interview flow to reach Results with tabs
@@ -41,6 +41,12 @@ export async function reachResults(page, BASE) {
   for (let i = 0; i < 40; i++) {
     if (await page.getByRole("heading", { name: /what Lynkr heard/ }).count()) break;
     await save().waitFor({ timeout: 30000 });
+    // The short way (opts.early): take the first drafts as soon as they are offered.
+    if (opts.early && (await page.getByRole("button", { name: "See my first drafts now" }).count())) {
+      await page.getByRole("button", { name: "See my first drafts now" }).click();
+      await page.getByRole("heading", { name: /what Lynkr heard/ }).waitFor({ timeout: 10000 });
+      break;
+    }
     const q = await question();
     const p = q.toLowerCase();
 

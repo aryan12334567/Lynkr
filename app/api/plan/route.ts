@@ -19,6 +19,9 @@ export const maxDuration = 60;
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+/** Chat moves belong to the Calendar's v2 screens. On v1 a "move" request is not one, and the model's move field is ignored. */
+const movesOn = () => calendarVersion() === "v2";
+
 const switches = (): Switches => ({ outreach: outreachVersion() === "v2", commenter: commenterSwitch() === "on", posts: false });
 
 /**
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
   const { text, counts, times, weekStart } = parsed.data;
 
   if (isMock()) {
-    const change = parsePlanChat(text, counts, times);
+    const change = parsePlanChat(text, counts, times, { moves: movesOn() });
     return change.move ? moved(req, change, weekStart) : Response.json(change satisfies PlanChange);
   }
 
@@ -81,6 +84,10 @@ export async function POST(req: Request) {
     if (!r.understood) {
       change.counts = counts;
       change.times = times;
+    }
+    if (r.understood && r.move && !movesOn()) {
+      // The model offered a move on a screen that has none: say so, change nothing.
+      return Response.json({ counts, times, understood: false, reply: "Moving items by chat isn't available on this screen." } satisfies PlanChange);
     }
     if (r.understood && r.move) {
       change.counts = counts;

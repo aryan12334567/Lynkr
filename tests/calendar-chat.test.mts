@@ -98,7 +98,12 @@ test("'move my meeting to Saturday' moves the outreach meeting through its owner
     assert.equal(r.moved, true, r.reply);
     const rows = await db.query("select status from outreach_events where contact_id = $1 and kind = 'meeting_booked'", [c.id]);
     assert.ok(rows.rows.some((x) => x.status === "superseded"), "the old date is kept as replaced");
-    assert.ok(ev.event.id);
+    // The one live meeting is on Saturday 14 Nov, at the time it had (09:30Z is 15:00 IST), and the old step is not a second live one.
+    const feed = await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON });
+    const live = feed.items.filter((i) => i.kind === "meeting" && i.status !== "replaced");
+    assert.equal(live.length, 1, "exactly one live meeting");
+    assert.deepEqual([live[0].day, live[0].time], ["2026-11-14", "15:00"]);
+    assert.notEqual(live[0].id, `outreach:${ev.event.id}`, "the live step is the replacement, not the old one");
   });
 });
 

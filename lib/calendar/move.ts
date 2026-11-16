@@ -47,7 +47,11 @@ export async function moveItem(db: Db, userId: string, req: MoveRequest, ctx: Mo
   if (req.id.startsWith("post:")) {
     if (!ctx.paid) return PAID_ANSWER;
     if (!ctx.posts) return { status: 404, body: { error: "Posts aren't available yet." } };
-    return ctx.posts.reschedule(userId, req.id.slice("post:".length), req.day, req.time, req.op_id);
+    try {
+      return await ctx.posts.reschedule(userId, req.id.slice("post:".length), req.day, req.time, req.op_id);
+    } catch {
+      return { status: 503, body: { error: "Posts isn't answering right now. Nothing was changed; try again." } };
+    }
   }
 
   return { status: 404, body: { error: "Item not found." } };

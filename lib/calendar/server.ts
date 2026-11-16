@@ -10,7 +10,7 @@ import { FAMILY_LABEL, goalFamily, planForPerson, whyThisWeek, type MixInput, ty
 import type { ProfileInput } from "../schemas";
 import { buildFeed, type WeekInput } from "./feed";
 import { loadOutreachSteps, type OutreachStepRow } from "./load";
-import { getWeek, importWeekOnce } from "./plan-store";
+import { getWeeks, importWeekOnce } from "./plan-store";
 import type { Feed, SourceState } from "./types";
 
 export type Switches = { outreach: boolean; commenter: boolean; posts: boolean };
@@ -51,8 +51,10 @@ export async function calendarFeed(db: Db, userId: string, opt: FeedOptions): Pr
   // Plan weeks. A missing current or next week is made from the mix rules and stored once (KTD3); other weeks are only read.
   const weeks: WeekInput[] = [];
   try {
-    for (const monday of mondaysBetween(from, to)) {
-      let plan: Plan | null = await getWeek(db, userId, monday);
+    const mondays = mondaysBetween(from, to);
+    const stored = await getWeeks(db, userId, mondays);
+    for (const monday of mondays) {
+      let plan: Plan | null = stored.get(monday) ?? null;
       if (!plan && opt.createWeeks && (monday === thisWeek || monday === addDays(thisWeek, 7))) {
         plan = (await importWeekOnce(db, userId, monday, planForPerson(monday, mix))).plan;
       }

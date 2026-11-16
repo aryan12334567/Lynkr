@@ -15,7 +15,7 @@ test("Today shows today's open items and the overdue ones, not finished, replace
   ];
   const s = todaySlice(items, TODAY);
   assert.deepEqual(s.today.map((i) => i.id), ["a"]);
-  assert.deepEqual(s.overdue.map((i) => i.id), ["f", "c"].sort((x, y) => (x === "f" ? -1 : 1) - (y === "f" ? -1 : 1)), "oldest first");
+  assert.deepEqual(s.overdue.map((i) => i.id), ["f", "c"], "oldest first: f is Monday 9 Nov, c is Tuesday 10 Nov");
 });
 
 test("the ring is the week's done over planned, as the week screen counts it", () => {

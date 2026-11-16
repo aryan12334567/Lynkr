@@ -168,8 +168,8 @@ function toTime(h: number, m: number, ampm?: string): string | null {
 }
 
 /** Understands: "2 posts", "no comments", "more/fewer outreach", "posts at 8am", "comments at 1:30 pm", and "move Thursday's post to Friday" (U7). */
-export function parsePlanChat(text: string, counts: Counts, times: Times): PlanChange {
-  const move = parseMove(text);
+export function parsePlanChat(text: string, counts: Counts, times: Times, opts: { moves?: boolean } = {}): PlanChange {
+  const move = opts.moves === false ? null : parseMove(text);
   if (move) return { counts, times, understood: true, reply: "Moving it.", move };
   const t = text.toLowerCase();
   const next: Counts = { ...counts };

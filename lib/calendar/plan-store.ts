@@ -48,6 +48,19 @@ export async function getWeek(db: Db, userId: string, monday: string): Promise<P
   return parsed.success ? (parsed.data as Plan) : null;
 }
 
+/** Several weeks in one query (the feed shows up to about 26). Weeks that are missing or not valid are absent from the map. */
+export async function getWeeks(db: Db, userId: string, mondays: readonly string[]): Promise<Map<string, Plan>> {
+  const keys = mondays.filter(isMonday).map((m) => WEEK_PREFIX + m);
+  const out = new Map<string, Plan>();
+  if (keys.length === 0) return out;
+  const r = await db.query<{ item_key: string; data: unknown }>("select item_key, data from plan_items where user_id = $1 and item_key = any($2::text[])", [userId, keys]);
+  for (const row of r.rows) {
+    const parsed = PlanBody.safeParse(row.data);
+    if (parsed.success) out.set(row.item_key.slice(WEEK_PREFIX.length), parsed.data as Plan);
+  }
+  return out;
+}
+
 /**
  * Replaces one week's plan. Returns false when the week or the body is not valid, and "stale" when the account's week
  * was moved since the sender read it: moves record their op id in `ops`, so a plan that lacks the newest one was read

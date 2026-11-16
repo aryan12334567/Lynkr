@@ -67,8 +67,23 @@ Switch: the same `LYNKR_CALENDAR=v2`. A signed-in person gets the feed screens; 
 - **Evidence:** `tests/calendar-reminders.test.mts` (4), e2e F26. Mutation-checked.
 - **Next:** none.
 
+### Code review fixes (commit `3be215a`, 2026-11-14)
+A full review of Stage 2 found nine defects; each was reproduced with a failing test first (`tests/calendar-review.test.mts`, R1 to R13), then fixed:
+- Undo of an outreach move targets the replacement step (the move response carries the live item).
+- A drag keeps the step's time; a done slot is never replaced by a due step; a replaced item keeps its place, struck through, with where it went.
+- The month header names the right month; a move date must be real and inside the Calendar's range; an op id belongs to one slot; the move uses the injected clock; a second concurrent outreach move is refused.
+- A move cancels a pending autosave and re-reads the week; a stale whole-week save is refused (409); one request counter makes the feed reload last-answer-wins.
+- Evidence: 13 regression tests (3 mutation-checked), browser configs green. Still open and listed under Not built.
+
+### UI rounds after the preview check (commits `a50747d`, `c51a4e6`, 2026-11-16)
+Aryan used the preview and said an item looked like it was on two days. The reference was UpLinked's public calendar demo (REA; `research/feature-evidence-calendar.md`): a compact card with a status badge and the title, no link rows per card.
+- **One item, one place.** The grids no longer draw replaced items. A moved plan slot carries `movedFrom` (where it started); its chip says "Moved from Thu, 12 Nov" with a **Move back** button that sends the reverse move with the original time; moved back home, the note goes away. (R15 test; e2e F4, F8a, F9b, F9c at 1280 and 375.)
+- **Quieter chips.** The `.ics` and Google Calendar links fold into one "Add to calendar" control per open chip. A slot moved several times keeps one ghost in the feed data (R14), though the grids hide it.
+- **Preview.** Render does not auto-deploy this branch: after a push press Manual Deploy, "Deploy latest commit". The preview service `lynkr-preview` builds `feat/calendar-stage2-v2`.
+- **Not done:** an outreach step moved away has no "Moved from" note or Move back button (only plan slots do).
+
 ### Whole-stage verification
-`npx tsc --noEmit` clean; `npm test` 626/626; `npx next build` clean; `npm run lint` 1 error, the old `MondayTodo.tsx` refs one (not from this work). Browser: the three feed runs, Stage 1 22/22, v1 6/6.
+`npx tsc --noEmit` clean; `npm test` 638 (the `outreach-timeline` file crashes Node on Windows in a full run and passes alone, 14/14); `npx next build` clean; `npm run lint` 1 error, the old `MondayTodo.tsx` refs one (not from this work). Browser (fresh server per run, `LYNKR_INTERVIEW=v2` needed): paid 1280 28/28, phone 20/20, free 29/29; Stage 1 22/22, v1 6/6 as of the review round.
 
 ### U10 copy and U11 release (drafts only, nothing published)
 - **[VISIBLE] strings in code, not approved:** the paywall card ("<item> is part of the subscription. The Calendar, your week, progress and reminders are free. Drafting posts, comments and outreach messages is ₹499 a month." with "See what's included" and "Not now"); "Download week (.ics)", "Remind me in this tab"; "Sign in to move items by chat."; "I couldn't find that item."; "Nothing planned. Change the plan by chat or add a post."

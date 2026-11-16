@@ -30,7 +30,8 @@ From the end-to-end audit, 2026-11-16. Each has the evidence, a recommendation a
 
 - **Evidence:** `first-win` takes one of 5 daily tries before the model call (`app/api/first-win/route.ts:42`); search and AI spend are counted before Exa and the model (`lib/outreach/brief.ts`). A provider outage uses up a fresher's tries.
 - **Recommendation:** give the try back when the provider fails (not when a draft is rejected).
-- **Cost:** small; needs a decrement next to each `takeDaily`.
+- **Done for first win** (`giveBackDaily`, tested). Still open for search and outreach AI spend, which count in other tables.
+- **Cost:** small; needs a decrement next to each remaining counter.
 
 ## P6. A sharing image
 
@@ -58,6 +59,19 @@ From the end-to-end audit, 2026-11-16. Each has the evidence, a recommendation a
 - Export leaves out the linked license key on purpose (it is a credential).
 - Deletion is not one transaction: a failure midway leaves part of the data.
 - **Recommendation:** have these five read against the Privacy and Terms drafts before the paid launch.
+
+## P11. The first draft comes after about 17 questions
+
+- **Evidence:** `scripts/measure-first-value.mjs` (demo mode, a script): 36 taps, 16 typed fields and 19 to 20 questions or screens between the landing page and "Your first drafts", at phone and desktop width. A nervous fresher typing on a phone will not do that in three minutes.
+- **Recommendation:** show the first headline and one message right after the first project answer (question 8 or 9 today), then say "Answer five more and these get sharper". The remaining questions stay, after the first result instead of before it.
+- **Cost:** the interview order is a settled decision in `build-plan-interview.md`, so this needs your yes. Then about one unit: the first-win call moves earlier and runs again at the end.
+
+## P12. Posts: what is needed before it can be built
+
+- **State:** not started. The plan has 17 units, a migration, and 15 open decisions (D-P1 to D-P15, each with a recommended option).
+- **The plan no longer fits the hosting.** It was written for Vercel: Vercel Blob for pictures (A4), Vercel's Protection Bypass for the scheduler (A3b), Vercel Preview variables. The app now runs on Render. Picture storage and the scheduler's way in need a new choice before U6 and U9.
+- **Needs you first:** add "Share on LinkedIn" to the LinkedIn app (A1), send the support question (`research/linkedin-terms-question.md`, A2), create the cron-job.org key (A3), and say yes to the recommended options of D-P1 to D-P15 or change them.
+- **Recommendation:** start Posts as its own session with `ce-plan` on the hosting change, then `ce-work`. Until LinkedIn answers, build it with publishing stubbed and the copy-and-post-yourself path as the released one.
 
 ## P10. Smaller items, listed and left
 

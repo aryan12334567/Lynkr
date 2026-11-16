@@ -350,6 +350,14 @@ export async function takeDaily(db: Db, userId: string, kind: string, max: numbe
   return r.rows.length > 0;
 }
 
+/** Returns one of today's tries, for when the provider failed and the person got nothing. Never goes below zero. */
+export async function giveBackDaily(db: Db, userId: string, kind: string): Promise<void> {
+  await db.query(
+    `update usage_daily set count = count - 1 where user_id = $1 and day = (now() at time zone 'Asia/Kolkata')::date and kind = $2 and count > 0`,
+    [userId, kind],
+  );
+}
+
 // ---- export and delete ----
 
 const TABLES = ["facts", "interview_answers", "context_brief", "drafts", "plan_items", "usage_daily", "lynkr_user", "outreach_events", "contacts", "ext_tokens", "outreach_daily_usage", "lynkr_user_outreach", "comment_log"] as const;

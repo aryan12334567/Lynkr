@@ -76,3 +76,20 @@ test("a comment is not asked for a second time when the first answer was slow an
     }
   } finally { Date.now = realNow; }
 });
+
+test("a try that the provider wasted is given back, and the count never goes below zero", async () => {
+  const { PGlite } = await import("@electric-sql/pglite");
+  const { giveBackDaily, takeDaily } = await import("../lib/db");
+  const pg = new PGlite();
+  try {
+    await pg.exec("create table usage_daily (user_id text not null, day date not null, kind text not null, count int not null default 0, primary key (user_id, day, kind));");
+    const db = { query: async (sql: string, params?: unknown[]) => ({ rows: (await pg.query(sql, params)).rows as never[] }) } as never;
+    for (let i = 0; i < 5; i++) assert.equal(await takeDaily(db, "A", "first_win", 5), true);
+    assert.equal(await takeDaily(db, "A", "first_win", 5), false, "the sixth is refused");
+    await giveBackDaily(db, "A", "first_win");
+    assert.equal(await takeDaily(db, "A", "first_win", 5), true, "one try came back");
+    for (let i = 0; i < 9; i++) await giveBackDaily(db, "A", "first_win");
+    const n = await pg.query<{ count: number }>("select count from usage_daily");
+    assert.equal(n.rows[0].count, 0);
+  } finally { await pg.close(); }
+});

@@ -1,7 +1,7 @@
 import { accountContext, requireAccountForFree } from "@/lib/account";
 import { cleanStrings } from "@/lib/clean";
 import { resolveContext } from "@/lib/context";
-import { takeDaily } from "@/lib/db";
+import { giveBackDaily, takeDaily } from "@/lib/db";
 import { BODY_LIMIT, readJson } from "@/lib/http";
 import { checkLimits } from "@/lib/limit";
 import { callStructured, isMock, LlmError } from "@/lib/llm";
@@ -58,6 +58,8 @@ export async function POST(req: Request) {
       referral: { ...r.referral, body: stripIds(r.referral.body), factRefs: r.referral.factRefs.filter((x) => ids.has(x)) },
     } satisfies FirstWinReply);
   } catch (err) {
+    // The provider failed, so the person got nothing: today's try is returned. A refusal of their own text (4xx) is not.
+    if (ctx && (!(err instanceof LlmError) || err.status >= 429)) await giveBackDaily(ctx.db, ctx.userId, "first_win").catch(() => {});
     if (err instanceof LlmError) return Response.json({ error: err.message }, { status: err.status });
     return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }

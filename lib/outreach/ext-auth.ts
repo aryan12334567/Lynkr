@@ -54,6 +54,8 @@ export async function extensionAuth(req: Request): Promise<{ db: Db; userId: str
     const owner = await tokenOwner(db, raw);
     if (!owner) return { error: extJson(req, { error: "Invalid or expired token." }, 401) };
     if (paywallEnabled() && !(await extDeps.subscribed(owner.customerId))) return { error: extJson(req, { error: "Your Lynkr subscription has lapsed. Upgrade to keep using the extension.", code: "subscription_required" }, 402) };
+    // Someone who works only from the extension is still an active user. A failure here never blocks the call.
+    await db.query("update lynkr_user set last_active_at = now() where user_id = $1", [owner.userId]).catch(() => {});
     return { db, userId: owner.userId };
   } catch { return { error: extJson(req, { error: "Extension access is unavailable." }, 503) }; }
 }

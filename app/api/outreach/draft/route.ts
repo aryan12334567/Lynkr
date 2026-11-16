@@ -17,10 +17,9 @@ export const maxDuration = 60;
  * no database, no one's data. Only her fixed details are used; every other contact goes through the checks below.
  */
 async function exampleDrafts(req: Request): Promise<Response | null> {
-  const text = await req.clone().text().catch(() => "");
-  if (text.length > 4096) return null;
-  let body: unknown;
-  try { body = JSON.parse(text); } catch { return null; }
+  const read = await readJson(req.clone(), 4096);
+  if ("error" in read) return null;
+  const body = read.body;
   if (!body || typeof body !== "object" || (body as { contactId?: unknown }).contactId !== DEMO_CONTACT_ID) return null;
   const parsed = DraftRequest.safeParse({ ...body, contactId: "00000000-0000-4000-8000-000000000000" });
   if (!parsed.success) return Response.json({ error: "Check the contact and channel." }, { status: 400 });

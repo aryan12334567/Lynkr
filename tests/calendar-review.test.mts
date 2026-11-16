@@ -107,6 +107,23 @@ test("R14 a slot moved twice leaves one note where it started, not one per hop",
   });
 });
 
+test("R15 a moved slot says where it started, and moving it back clears that", async () => {
+  await world(async (db) => {
+    const before = (await getWeek(db, "A", MON))!.items.find((i) => i.id === "post-0")!;
+    const to = before.day === "2026-11-13" ? "2026-11-12" : "2026-11-13";
+    const id = planFeedId(MON, "post-0");
+    const read = async () => (await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON, ...CREATE })).items.find((i) => i.id === id)!;
+    assert.equal((await read()).movedFrom, undefined, "not moved yet");
+    assert.equal((await moveItem(db, "A", { op_id: op(), id, day: to }, PAID)).status, 200);
+    const moved = await read();
+    assert.deepEqual(moved.movedFrom, { day: before.day, time: before.time }, "says where it started");
+    assert.equal((await moveItem(db, "A", { op_id: op(), id, day: moved.movedFrom!.day, time: moved.movedFrom!.time }, PAID)).status, 200);
+    const home = await read();
+    assert.equal(home.day, before.day);
+    assert.equal(home.movedFrom, undefined, "back home: nothing to say");
+  });
+});
+
 test("R5 the month header names the month the grid shows (Nov 2026 starts on a Sunday)", () => {
   assert.match(monthLabel("2026-11-18"), /Nov/);
   assert.match(monthLabel("2026-11-18"), /2026/);

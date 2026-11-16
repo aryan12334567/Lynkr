@@ -82,6 +82,7 @@ export function CalendarView({ enabled, fallback, onActive }: { enabled: boolean
     items, today, problems: f.problems, moving: f.moving, onOpen: open,
     onChangeDate: (item: FeedItem) => { setEditing({ item }); },
     onDrop: (item: FeedItem, day: string) => { void f.move(item, day); },
+    onMoveBack: (item: FeedItem) => { if (item.movedFrom) void f.move(item, item.movedFrom.day, item.movedFrom.time); },
   };
   const shiftWeek = (d: number) => { const next = addDays(monday, 7 * d); setAnchor(next); setChosen(next); };
   const shiftMonth = (d: number) => { const [y, m] = anchor.split("-").map(Number); setAnchor(new Date(Date.UTC(y, m - 1 + d, 1)).toISOString().slice(0, 10)); };

@@ -39,6 +39,7 @@ function planItem(plan: Plan, it: Plan["items"][number], why: string | null, lab
     const done = it.status === "done";
     const status: FeedStatus = done ? "done" : it.status === "scheduled" ? "scheduled" : "draft";
     const statusText = done ? DONE_TEXT[it.kind] : it.status === "scheduled" ? "Reminder set" : "Draft";
+    const origin = (it.moves ?? [])[0];
     const live: FeedItem = {
       id: planFeedId(plan.weekStart, it.id),
       owner: "plan",
@@ -53,6 +54,7 @@ function planItem(plan: Plan, it: Plan["items"][number], why: string | null, lab
       href: SLOT_HREF[it.kind],
       movable: !done,
       ...(done ? { lockedReason: "Already done" } : {}),
+      ...(origin && !done && (origin.day !== it.day || origin.time !== it.time) ? { movedFrom: { day: origin.day, time: origin.time } } : {}),
       gated: true,
     };
     // R14: where the slot used to be stays on the Calendar, struck through, saying where it went.

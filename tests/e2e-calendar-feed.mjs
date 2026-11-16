@@ -64,7 +64,16 @@ async function run(width, paid) {
       if (server.refuse) return r.fulfill({ status: server.refuse.status, json: { error: server.refuse.error } });
       const it = server.items.find((x) => x.id === body.id);
       const replacement = it && it.owner === "outreach" ? `outreach:r${server.moves.length}` : null;
-      if (it) { server.items = server.items.map((x) => (x.id === body.id ? { ...x, id: replacement ?? x.id, day: body.day, time: body.time ?? x.time } : x)); }
+      if (it) {
+        const origin = it.movedFrom ?? { day: it.day, time: it.time };
+        const day = body.day, time = body.time ?? it.time;
+        const home = origin.day === day && origin.time === time;
+        server.items = server.items.map((x) => {
+          if (x.id !== body.id) return x;
+          const { movedFrom, ...rest } = x;
+          return { ...rest, id: replacement ?? x.id, day, time, ...(it.owner === "plan" && !home ? { movedFrom: origin } : {}) };
+        });
+      }
       r.fulfill({ json: { ok: true, item: replacement ? { id: replacement } : null } });
     });
     // Plan chat: a move is made by the server through the item's owner, so the stub moves the post and says so (U7, AE6).
@@ -99,9 +108,8 @@ async function run(width, paid) {
 
     // A replaced step is struck through with its status text.
     if (!mobile) {
-      const old = chipOf("outreach:old");
-      const struck = await old.locator("button").first().evaluate((el) => getComputedStyle(el).textDecorationLine);
-      check(id("F4 a replaced item is struck through and still says Replaced"), /line-through/.test(struck) && /Replaced/.test(await old.innerText()));
+      // One item shows in one place: the replaced step is history, not a second card on its old day.
+      check(id("F4 a replaced item is not shown as a second card"), (await chipOf("outreach:old").count()) === 0);
     }
 
     // AE3 (UI): Change date with the keyboard moves the post and keeps what the owner returns.
@@ -120,11 +128,34 @@ async function run(width, paid) {
     check(id("F7 the move is sent once, with an op id, the day and the time"), server.moves.length === 1 && server.moves[0].day === "2026-11-13" && server.moves[0].time === "09:00" && !!server.moves[0].op_id, JSON.stringify(server.moves[0]));
     check(id("F8 the dialog closes and the offer to Undo appears"), (await page.getByRole("dialog").count()) === 0 && /Moved/.test(await page.locator("[data-undo-bar]").innerText()));
 
+    // The moved item is in one place, says where it started, and can go back with one click.
+    const showDay = async (d) => { if (mobile) await page.locator(`[data-view=day-list] button:has-text('${d}')`).first().click(); }; // the phone lists one day at a time
+    await showDay("Fri");
+    const movedChips = await page.locator("[data-chip='plan:2026-11-09:post-0']:visible").count();
+    const movedNote = await chipOf("plan:2026-11-09:post-0").locator("[data-moved-from]").innerText().catch(() => "");
+    check(id("F8a a moved item shows once, says where it started and offers Move back"), movedChips === 1 && /Moved from/.test(movedNote) && /Move back/.test(movedNote), movedNote.replace(/\n/g, " | "));
+
     // R15: Undo sends the reverse move with a new op id.
     await page.locator("[data-undo-bar]").getByRole("button", { name: "Undo" }).click();
     await page.waitForFunction(() => !document.querySelector("[data-undo-bar]"), null, { timeout: 8000 });
     const back = server.moves[1];
     check(id("F9 Undo sends the reverse move with a new op id"), server.moves.length === 2 && back.day === "2026-11-12" && back.time === "09:00" && back.op_id !== server.moves[0].op_id, JSON.stringify(back));
+
+    await showDay("Thu");
+    check(id("F9b back home, the chip no longer says it was moved"), (await chipOf("plan:2026-11-09:post-0").locator("[data-moved-from]").count()) === 0);
+
+    // Move back: move it again, then put it back from the chip itself.
+    await chipOf("plan:2026-11-09:post-0").getByRole("button", { name: /Change date/ }).click();
+    await page.getByRole("dialog").getByLabel("Date").fill("2026-11-13");
+    await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+    await page.locator("[data-undo-bar]").waitFor({ timeout: 8000 });
+    const beforeBack = server.moves.length;
+    await showDay("Fri");
+    await chipOf("plan:2026-11-09:post-0").getByRole("button", { name: "Move back" }).click();
+    await page.waitForFunction(() => !document.querySelector("[data-chip='plan:2026-11-09:post-0'] [data-moved-from]"), null, { timeout: 8000 });
+    await showDay("Thu");
+    const back2 = server.moves.at(-1);
+    check(id("F9c Move back puts it on the day it started, with the same time"), server.moves.length === beforeBack + 1 && back2.day === "2026-11-12" && back2.time === "09:00", JSON.stringify(back2));
 
     // A refused move (the owner says no) shows its reason next to the item and sends once.
     if (paid && !mobile) {

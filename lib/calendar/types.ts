@@ -38,6 +38,8 @@ export type FeedItem = {
   replacedBy?: string;
   /** A paid screen that a free account sees as the paywall card when opened (R25). */
   gated: boolean;
+  /** Where a moved plan slot started, when it is not there now: the chip says so and offers "Move back". */
+  movedFrom?: { day: string; time: string };
   /** An outreach step that took a message slot's place (R9). */
   fills?: string;
   contactId?: string;

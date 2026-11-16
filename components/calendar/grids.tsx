@@ -15,7 +15,12 @@ export type GridProps = {
   onOpen: (item: FeedItem) => void;
   onChangeDate: (item: FeedItem, opener: HTMLElement | null) => void;
   onDrop: (item: FeedItem, day: string) => void;
+  /** Puts a moved item back where it started. */
+  onMoveBack?: (item: FeedItem) => void;
 };
+
+/** One item shows in one place: what was replaced is history, not a second card on the old day. */
+const shown = (items: readonly FeedItem[]) => items.filter((i) => i.status !== "replaced");
 
 const byId = (items: readonly FeedItem[], id: string) => items.find((i) => i.id === id);
 
@@ -44,7 +49,7 @@ function Chips({ list, props, compact, setDragging }: { list: readonly FeedItem[
   return (
     <>
       {list.map((it) => (
-        <ItemChip key={it.id} item={it} compact={compact} moving={props.moving === it.id} problem={props.problems[it.id]} onOpen={props.onOpen} onChangeDate={props.onChangeDate} onDragStart={setDragging} />
+        <ItemChip key={it.id} item={it} compact={compact} moving={props.moving === it.id} problem={props.problems[it.id]} onOpen={props.onOpen} onChangeDate={props.onChangeDate} onMoveBack={props.onMoveBack} onDragStart={setDragging} />
       ))}
     </>
   );
@@ -53,7 +58,7 @@ function Chips({ list, props, compact, setDragging }: { list: readonly FeedItem[
 /** Seven columns, Monday to Sunday (R2). Hidden under 640 px, where the day list takes over (R3). */
 export function WeekGrid({ monday, ...props }: GridProps & { monday: string }) {
   const [dragging, setDragging] = useState<FeedItem | null>(null);
-  const by = groupByDay(props.items);
+  const by = groupByDay(shown(props.items));
   return (
     <div className="hidden gap-3 sm:grid sm:grid-cols-7" data-view="week" onDragEnd={() => setDragging(null)}>
       {weekDays(monday).map((day, i) => {
@@ -78,7 +83,7 @@ export function WeekGrid({ monday, ...props }: GridProps & { monday: string }) {
 export function MonthGrid({ anyDay, onOpenDay, ...props }: GridProps & { anyDay: string; onOpenDay: (day: string) => void }) {
   const [dragging, setDragging] = useState<FeedItem | null>(null);
   const { first, days } = monthCells(anyDay);
-  const by = groupByDay(props.items);
+  const by = groupByDay(shown(props.items));
   return (
     <div data-view="month" onDragEnd={() => setDragging(null)}>
       <h4 className="mb-2 font-semibold">{formatMonth(first)}</h4>
@@ -107,8 +112,8 @@ export function MonthGrid({ anyDay, onOpenDay, ...props }: GridProps & { anyDay:
  * "Change date" is the way to move on touch, and the page never scrolls sideways.
  */
 export function DayList({ monday, chosen, onChoose, onWeek, ...props }: GridProps & { monday: string; chosen: string; onChoose: (day: string) => void; onWeek: (delta: number) => void }) {
-  const dots = daysWithItems(props.items);
-  const list = groupByDay(props.items).get(chosen) ?? [];
+  const dots = daysWithItems(shown(props.items));
+  const list = groupByDay(shown(props.items)).get(chosen) ?? [];
   return (
     <div className="sm:hidden" data-view="day-list">
       <div className="flex items-center justify-between gap-1" role="group" aria-label="Choose a day">
@@ -127,7 +132,7 @@ export function DayList({ monday, chosen, onChoose, onWeek, ...props }: GridProp
       <h4 className="mt-3 font-semibold">{formatDay(chosen)}</h4>
       <div className="mt-2 space-y-2">
         {list.length === 0 ? <p className="text-sm text-faint">Nothing planned for this day.</p> : list.map((it) => (
-          <ItemChip key={it.id} item={{ ...it, movable: it.movable }} moving={props.moving === it.id} problem={props.problems[it.id]} onOpen={props.onOpen} onChangeDate={props.onChangeDate} />
+          <ItemChip key={it.id} item={{ ...it, movable: it.movable }} moving={props.moving === it.id} problem={props.problems[it.id]} onOpen={props.onOpen} onChangeDate={props.onChangeDate} onMoveBack={props.onMoveBack} />
         ))}
       </div>
     </div>

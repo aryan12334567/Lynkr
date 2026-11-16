@@ -4,9 +4,9 @@ Started and checkpointed 2026-11-16. Three states are kept apart everywhere: **r
 
 ## Status (five lines, kept current)
 
-1. **Done:** dimensions 1 (draft quality), 3 (reliability), 4 (security, the code-level part), 5 (paywall check), 8 (SEO and sharing), parts of 11 and 12 (runbook, `.env.example`). Five audit commits on top of `f20a48c`.
+1. **Done:** the audit (dimensions 1, 3, 4, 5, 8, parts of 2, 6, 10, 11, 12) and the second pass: early first drafts, English facts for Hinglish answers, and **Posts** (text posts, reminders, guarded publishing). `npm test` 765 of 765, build compiles, every v2 browser suite green.
 2. **In progress:** nothing. The run stopped here on purpose: the usage window was closing.
-3. **Blocked (Aryan):** merges #17 to #20 and the Interview LinkedIn branch; production variables and migrations; live Dodo; Posts (LinkedIn API terms answer); copy approvals; the live-model eval; the real-LinkedIn check (A6).
+3. **Blocked (Aryan):** merges #17 to #20 and the Interview LinkedIn branch; migrations 003 and 008 on the preview and production databases; production variables; live Dodo and Billing B2, B4, B8; the LinkedIn question and smoke test; copy and legal approvals; the live-model eval; the real-LinkedIn check (A6).
 4. **Branch and commit:** `feat/calendar-stage2-v2`; see "Commits" below for the head.
 5. **Next command:** Render, `lynkr-preview`, Manual Deploy, "Deploy latest commit"; then time one comment generation on the preview (it was 49 s before the change).
 
@@ -78,13 +78,39 @@ Ten, in `research/proposals.md`, each with evidence, a recommendation and the co
 9. **Legal read** of Privacy and Terms against P9. Worked when: each of the five points has a sentence in the published text or a decision not to.
 10. **Tester round and the real-LinkedIn check (A6)** as written in `research/handoff.md`; the Chrome Web Store listing only when paying users must install from the store.
 
-## What "the full build" still lacks
+## Second pass, 2026-11-17: "build everything, don't ask"
 
-- **Posts** is not built (17 units). It needs the hosting change planned and your decisions first: proposal P12.
-- **Billing B2, B4, B8** need Dodo test events, a test cancel and a test card: yours to trigger.
-- **Copy release (B9, U10)** and every public promise line wait for your approval.
-- **Merges and production** are yours.
-- The first draft still comes after about 17 questions (P11), and Hinglish answers still give generic drafts (P1).
+Aryan asked for everything to be built without questions. Built and committed on the same branch:
+
+| Commit | What |
+|---|---|
+| `749da45` | The interview offers "See my first drafts now" after the first project answer. Short path: 20 taps, 8 typed fields, 11 to 12 screens (was 36, 16, 20 to 22). Demo, a script. |
+| `198d640` | A Hinglish answer is stored as an English fact when every number and name survives. Unit-tested; no live model. |
+| `67d0d3f` | The outreach and comment prompts name what the guards reject. README "Start here". |
+| `852b8b2`, `7bfa8ab` | **Posts**, behind `LYNKR_POSTS`: interview, versions, editor, approve, copy and post it yourself, reminders, Calendar source, and guarded LinkedIn publishing behind `LYNKR_AUTOPUBLISH` (off). Detail: `research/progress-posts.md`. |
+
+**Checks at the end of this pass (run):** `npm test` 765 of 765; `next build` compiles; browser suites on fresh demo servers: interview 36/36 and a11y 9/9, outreach 20/20 and a11y 24/24, Calendar 30/30, 20/20, 31/31, Posts 71/71 (its first run failed one "no JS errors" check on a Next dev-mode error unrelated to the app, the same one seen before on the Calendar suite; clean on the re-run).
+
+**Not verified, plainly:** no live model call in either pass; no live LinkedIn call; Posts' real routes were never exercised against a real database in a browser (the browser suite fakes them); the code review pass was not run on these commits; the preview is still on an old build and its database lacks migrations 003 and 008.
+
+## What is left, and whose it is
+
+**Nothing left that can be built without you, except these, which I chose not to build and why:**
+- **Pictures and carousels for posts (U6):** need a storage choice and an image budget (money).
+- **Server-rendered landing page (P7):** a refactor of the app shell; left because it risks the flows the browser suites cover and buys only link-preview text.
+- **Limits in the database (P4):** needs the real client-address header checked on Render first.
+- **An outreach step's "Moved from" note:** small; not done.
+
+**Yours:**
+- **Billing B2, B4, B8:** need Dodo test events, a test cancel and a test card.
+- **Copy and legal approvals:** the Posts strings (`components/posts/words.ts` and the list in `progress-posts.md`), the paywall card, the Landing line; the D-P1 decision before publishing is ever switched on; the legal read (P9).
+- **Merges, migrations, variables, live payments, the LinkedIn question and smoke test:** the action list above, plus the three Posts steps below.
+
+## Posts: three more steps for the action list
+
+- **P-a. Preview database:** run `npm run db:migrate` with the preview connection in your terminal (it applies 003 and 008). Worked when: it lists both as applied. Do this **before** deploying, or the Posts routes will error.
+- **P-b. Try Posts on the preview:** deploy, sign in, open "Posts & comments". Worked when: "Your posts this week" shows, a post goes from questions to versions to Approved, and a reminder appears on the Calendar.
+- **P-c. Publishing stays off.** Do not set `LYNKR_AUTOPUBLISH` until LinkedIn answers the question and you have run the smoke test on your own profile.
 
 ## Decided by the lead (reversible)
 

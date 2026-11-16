@@ -2,7 +2,7 @@
 
 From the end-to-end audit, 2026-11-16. Each has the evidence, a recommendation and the cost. Nothing here was changed in code.
 
-## P1. Hinglish answers give generic drafts
+## P1. Hinglish answers give generic drafts (DONE without a data change 2026-11-17, commit `198d640`; needs a live-model check)
 
 - **Evidence:** facts are stored in the person's own words. The guards compare words, so an English draft written from a Hinglish fact cannot be traced to it and is rejected; the offline composer then has nothing it may quote. After the audit fix the Hinglish line is no longer pasted into an English message, but the person gets the generic version (`scripts/probe-drafts.mts`, "Hinglish fact"). Demo mode only; not run against a live model.
 - **Recommendation:** store a plain-English rendering next to each fact, written by the interview's judge step and shown to the person to confirm ("We'll use this English version in your drafts. Edit it if it's off."). Drafts and guards read the English line; the original is kept.
@@ -14,7 +14,7 @@ From the end-to-end audit, 2026-11-16. Each has the evidence, a recommendation a
 - **Recommendation:** decide one rule. If complete text wins: change the first-win and post prompts to write around a missing fact, and change the Landing line (a public promise) in the same release.
 - **Cost:** two prompt rewrites, one copy change, a live-model eval.
 
-## P3. Prompt wording that should follow the new guards
+## P3. Prompt wording that should follow the new guards (DONE 2026-11-17, commit `67d0d3f`; needs a live-model check)
 
 - **Evidence:** the server now rejects invented titles, quantities, credentials, praise, a shared past and a second ask. `OUTREACH_SYSTEM` does not name these, so a live model may waste a try on a version that is then rejected (the offline version still comes back).
 - **Recommendation:** add one line to `OUTREACH_SYSTEM` and to the comment prompt: "Never give the person a job title, years of experience, an award, a result or a quantity that their facts do not state. One question only." Apply only with a live-model eval before and after.
@@ -60,13 +60,13 @@ From the end-to-end audit, 2026-11-16. Each has the evidence, a recommendation a
 - Deletion is not one transaction: a failure midway leaves part of the data.
 - **Recommendation:** have these five read against the Privacy and Terms drafts before the paid launch.
 
-## P11. The first draft comes after about 17 questions
+## P11. The first draft comes after about 17 questions (DONE 2026-11-17, commit `749da45`)
 
 - **Evidence:** `scripts/measure-first-value.mjs` (demo mode, a script): 36 taps, 16 typed fields and 19 to 20 questions or screens between the landing page and "Your first drafts", at phone and desktop width. A nervous fresher typing on a phone will not do that in three minutes.
 - **Recommendation:** show the first headline and one message right after the first project answer (question 8 or 9 today), then say "Answer five more and these get sharper". The remaining questions stay, after the first result instead of before it.
 - **Cost:** the interview order is a settled decision in `build-plan-interview.md`, so this needs your yes. Then about one unit: the first-win call moves earlier and runs again at the end.
 
-## P12. Posts: what is needed before it can be built
+## P12. Posts (BUILT 2026-11-17 as text posts with reminders; see `progress-posts.md`). Still open: pictures and carousels
 
 - **State:** not started. The plan has 17 units, a migration, and 15 open decisions (D-P1 to D-P15, each with a recommended option).
 - **The plan no longer fits the hosting.** It was written for Vercel: Vercel Blob for pictures (A4), Vercel's Protection Bypass for the scheduler (A3b), Vercel Preview variables. The app now runs on Render. Picture storage and the scheduler's way in need a new choice before U6 and U9.

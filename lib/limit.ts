@@ -65,7 +65,7 @@ export function checkLimits(req: Request, kind: LimitKind): string | null {
     return "You have used a lot of requests this hour. Please try again later.";
   }
   if (!hit("global:day", dailyCap, DAY)) {
-    return "This free demo has reached its daily limit. Please come back tomorrow.";
+    return "Lynkr has reached today's writing limit. Your work is saved. Please come back tomorrow.";
   }
   return null;
 }

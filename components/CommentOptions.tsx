@@ -56,7 +56,10 @@ export function CommentOptions({ mock }: { mock: boolean | null }) {
   async function posted(i: number, value: boolean) {
     const id = logged[i];
     if (!id) return;
-    await fetch("/api/comments", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, posted: value }) });
+    // Only say it is saved when the account has it: a failed save must not read as "counts toward your week".
+    const res = await fetch("/api/comments", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, posted: value }) }).catch(() => null);
+    if (!res?.ok) { setError("Couldn't save that. Check your connection and tap again."); return; }
+    setError(null);
     setLogged((cur) => ({ ...cur, [i]: `${id}:${value ? "yes" : "no"}` }));
     window.dispatchEvent(new Event("lynkr-comments-changed"));
   }
@@ -164,9 +167,11 @@ export function CommentLog() {
 
   function remove(id: string) {
     const t = setTimeout(async () => {
-      await fetch("/api/comments", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => {});
+      const res = await fetch("/api/comments", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
       setPending((p) => { const { [id]: _gone, ...rest } = p; void _gone; return rest; });
-      setEntries((cur) => (cur ?? []).filter((e) => e.id !== id));
+      // A delete the account did not make stays on the list, so it does not come back by surprise after a reload.
+      if (res?.ok) setEntries((cur) => (cur ?? []).filter((e) => e.id !== id));
+      else void load();
     }, 5000);
     setPending((p) => ({ ...p, [id]: t }));
   }

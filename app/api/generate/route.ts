@@ -89,6 +89,7 @@ export async function POST(req: Request) {
       system: GENERATE_SYSTEM,
       user: generateUser(profile, facts, jobDescription, imported, reqText),
       schema: GenerateReply,
+      timeoutMs: 110_000,
       effort: "low",
       maxTokens: 16000,
     });

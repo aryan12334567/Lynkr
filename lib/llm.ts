@@ -91,9 +91,15 @@ export async function callStructured<S extends z.ZodType>(opts: {
   effort: Effort;
   maxTokens: number;
   image?: ImageInput;
+  /** How long to wait for the provider. Default 55 seconds, inside the 60 the routes allow. */
+  timeoutMs?: number;
 }): Promise<z.infer<S>> {
   return provider() === "openai" ? callOpenAI(opts) : callAnthropic(opts);
 }
+
+/** A provider that has not answered in this long is not going to: the person gets a plain message and can retry. */
+export const LLM_TIMEOUT_MS = 55_000;
+const TOO_LONG = "The AI took too long to answer. Please try again.";
 
 async function callAnthropic<S extends z.ZodType>(opts: {
   system: string;
@@ -102,6 +108,7 @@ async function callAnthropic<S extends z.ZodType>(opts: {
   effort: Effort;
   maxTokens: number;
   image?: ImageInput;
+  timeoutMs?: number;
 }): Promise<z.infer<S>> {
   try {
     const res = await client().messages.parse({
@@ -120,7 +127,7 @@ async function callAnthropic<S extends z.ZodType>(opts: {
         },
       ],
       output_config: { format: zodOutputFormat(opts.schema), effort: opts.effort },
-    });
+    }, { timeout: opts.timeoutMs ?? LLM_TIMEOUT_MS, maxRetries: 0 });
     if (res.stop_reason === "refusal") {
       throw new LlmError("The AI declined this request. Try rewording your answers.", 422);
     }
@@ -142,6 +149,9 @@ async function callAnthropic<S extends z.ZodType>(opts: {
     if (err instanceof Anthropic.BadRequestError) {
       throw new LlmError("The AI could not process this request.", 400);
     }
+    if (err instanceof Anthropic.APIConnectionTimeoutError) {
+      throw new LlmError(TOO_LONG, 504);
+    }
     if (err instanceof Anthropic.APIConnectionError) {
       throw new LlmError("Could not reach the AI. Check your connection and retry.", 502);
     }
@@ -160,6 +170,7 @@ async function callOpenAI<S extends z.ZodType>(opts: {
   effort: Effort;
   maxTokens: number;
   image?: ImageInput;
+  timeoutMs?: number;
 }): Promise<z.infer<S>> {
   const base = openaiBase();
   const model = modelName();
@@ -173,6 +184,7 @@ async function callOpenAI<S extends z.ZodType>(opts: {
   let res: Response;
   try {
     res = await fetch(`${base}/chat/completions`, {
+      signal: AbortSignal.timeout(opts.timeoutMs ?? LLM_TIMEOUT_MS),
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -199,7 +211,8 @@ async function callOpenAI<S extends z.ZodType>(opts: {
         },
       }),
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) throw new LlmError(TOO_LONG, 504);
     throw new LlmError("Could not reach the AI. Check your connection and retry.", 502);
   }
 

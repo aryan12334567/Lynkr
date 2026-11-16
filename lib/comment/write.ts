@@ -38,6 +38,8 @@ export type WriteDeps = {
 };
 const defaultDeps: WriteDeps = { call: callStructured, mock: isMock };
 
+/** The model is asked again after a failed check only if the first answer came back this fast. */
+export const RETRY_WITHIN_MS = 25_000;
 const WHY_MAX_WORDS = 25;
 const trimWhy = (s: string) => {
   const w = s.trim().split(/\s+/).filter(Boolean);
@@ -87,7 +89,10 @@ export async function writeComments(input: WriteInput, deps: WriteDeps = default
 
   let dropped = 0;
   let skipWhy = "";
+  const started = Date.now();
   for (let attempt = 0; attempt < 2; attempt++) {
+    // A second try after a slow first one would keep the person waiting past a minute.
+    if (attempt > 0 && Date.now() - started > RETRY_WITHIN_MS) break;
     const model = await deps.call({
       system: COMMENT_OPTIONS_SYSTEM,
       user: commentOptionsUser({ goal: input.goal, targetRole: input.targetRole, author, post: parsed.post, facts: input.facts, reaction, retry: attempt > 0 }),

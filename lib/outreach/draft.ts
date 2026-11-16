@@ -633,7 +633,7 @@ export type GenerateOptions = {
 const defaultModel: ModelFn = async (_attempt, pack, { input, book, problems, afterAccept }) => {
  const { limit, unit } = limitFor(input, book);
  const step = input.step ? { kind: input.step, intent: STEPS[input.step].intent, ask: stepAsk(input.step, book), guidance: STEPS[input.step].guidance } : undefined;
- return (await callStructured({ system: OUTREACH_SYSTEM, user: outreachUser(pack, book, { channel: input.channel, limit, unit, problems, afterAccept, step }), schema: DraftModelReply, effort: "low", maxTokens: 2000 })).versions;
+ return (await callStructured({ system: OUTREACH_SYSTEM, user: outreachUser(pack, book, { channel: input.channel, limit, unit, problems, afterAccept, step }), schema: DraftModelReply, timeoutMs: 25_000, effort: "low", maxTokens: 2000 })).versions;
 };
 
 /** Keeps a model's angle when the playbook has it; otherwise the first playbook angle not used yet. */

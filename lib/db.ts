@@ -1,4 +1,4 @@
-import { databaseUrl } from "./dbUrl";
+import { databaseUrl, poolOptions } from "./dbUrl";
 import { Pool } from "pg";
 import type { FactConfidence, FactKind, ReviewStatus, StoryFact } from "./schemas";
 import type { Answer } from "./interview/engine";
@@ -81,7 +81,7 @@ let pooled: Db | null = null;
 /** The app's pooled connection (see lib/dbUrl.ts). Created on first use. */
 export function getDb(): Db {
   if (!pool) {
-    pool = new Pool({ connectionString: databaseUrl(), max: 3 });
+    pool = new Pool(poolOptions(databaseUrl()));
     pooled = poolDb(pool as unknown as PoolLike);
   }
   return pooled!;

@@ -43,11 +43,20 @@ export async function sendEmail(to: string, kind: Kind, value: string): Promise<
     console.info(`[lynkr email:${kind}] to ${to}: ${value}`);
     return;
   }
-  const res = await fetch("https://api.resend.com/emails", {
+  // A provider that never answers must not hold a sign-in open: give up after 10 seconds (LYNKR_EMAIL_TIMEOUT_MS to change).
+  const timeoutMs = Number(process.env.LYNKR_EMAIL_TIMEOUT_MS) || 10_000;
+  let res: Response;
+  try {
+    res = await fetch("https://api.resend.com/emails", {
+    signal: AbortSignal.timeout(timeoutMs),
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: FROM(), to: [to], subject: copy[3], html: html(kind, copy[0], copy[1], value, copy[2]) }),
-  });
+    });
+  } catch {
+    // Never the address, link, code or key: only that it could not be sent.
+    throw new Error("Email send failed (no answer from the email service).");
+  }
   // Status only: never log the address, link, code or key.
   if (!res.ok) throw new Error(`Email send failed (${res.status}).`);
 }

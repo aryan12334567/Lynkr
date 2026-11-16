@@ -1,4 +1,4 @@
-import { databaseUrl } from "./dbUrl";
+import { databaseUrl, poolOptions } from "./dbUrl";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, magicLink, oneTap } from "better-auth/plugins";
@@ -60,7 +60,7 @@ function build() {
     appName: "Lynkr",
     baseURL: site,
     secret: process.env.BETTER_AUTH_SECRET,
-    database: new Pool({ connectionString: databaseUrl(), max: 3 }),
+    database: new Pool(poolOptions(databaseUrl())),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,

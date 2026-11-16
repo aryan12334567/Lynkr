@@ -22,7 +22,7 @@
  */
 import { z } from "zod";
 import { callStructured, isMock } from "../llm";
-import { unsupportedSentences } from "../grounding";
+import { unsupportedSentences, claimProblem, looksHinglish } from "../grounding";
 import { checkMessage, CHANNEL_RULES, hasPlaceholder, type Relationship } from "../checker";
 import { DEFAULT_CONNECT, notesLeft as notesLeftFor, type Person } from "../connect";
 import { confirmedFacts, saveFacts, type Db } from "../db";
@@ -323,6 +323,11 @@ const HOOK = /\b(?:i (?:saw|read|noticed|watched|loved|enjoyed|liked|heard|admir
 
 /** A statement about what happened in a meeting: "you suggested ...", "we discussed ...", "thanks for your advice on ...". */
 const MEETING_CLAIM = /\b(?:you (?:mentioned|said|told me|suggested|recommended|shared|explained|walked me through|talked about|pointed out|advised)|we (?:discussed|talked about|spoke about|covered|agreed)|(?:our|the) (?:discussion|conversation|chat|call) (?:about|on)|your (?:advice|suggestion|tip|recommendation|feedback|insight)s? (?:on|about)|what you (?:said|shared|explained|told me)|(?:advice|tips?|suggestions?) (?:you gave|on|about))\b/i;
+/** A past the two people share. Only the person's own facts, notes or words can make it true. */
+const SHARED_CLAIM = /\b(?:mutual (?:connection|friend|contact)s?|common (?:connection|friend|contact)s?|(?:great|nice|lovely|good|wonderful) (?:meeting|talking|speaking|chatting|catching up)|we (?:met|spoke|talked|chatted|worked together)|met you|since we last|introduced (?:me|us)|suggested i (?:reach|contact|write)|referred me to you)\b/i;
+/** Pressure on the reader. A first message never carries the sender's urgency. */
+const NEEDY = /\bneed (?:a|the|any|some|this) (?:job|role|internship|referral|opening|work)\b|\bdesperat\w*|\bplease help\b|\bstruggling to (?:find|get)\b|\bas soon as possible\b|\bjobless\b|\bunemployed\b/i;
+const knownPerson = (texts: readonly string[]) => new Set(content(texts.join(" ")).map(stem));
 /** The steps that never ask for anything about work. */
 const NO_JOB_ASK: readonly StepKind[] = ["thank_you", "reschedule", "check_in"];
 const JOB_ASK = /\b(?:(?:any|a|an|open|available|the) (?:jobs?|roles?|openings?|vacanc(?:y|ies)|positions?)|refer(?:ral|ring)?\b|refer me|hire me|ask(?:ing)? for)\b/i;
@@ -374,12 +379,22 @@ export function draftProblem(input: ExtendedDraftInput, candidate: Pick<Candidat
   if (HOOK.test(s) && ratio(s, recipient) < 0.5) return "recipient_claim";
  }
  if (unsupportedSentences(body, sources).length) return "grounding";
+ // The added thing itself: a credential, outcome, quantity, title or praise that no source holds (audit dimension 1).
+ const person = [...pack.facts.map(f => f.text), ...pack.extras.filter(e => !isSelected(e)).map(e => e.text)];
+ const invented = claimProblem(split(body).map(unquoted).join(" "), ownSources, sources, person);
+ if (invented) return invented;
+ // A shared past (a meeting, a mutual contact, an introduction) is true only when the person said so.
+ const shared = SHARED_CLAIM.exec(unquoted(body));
+ if (shared && input.relationship !== "knows_me" && !input.meeting && ratio(shared[0], knownPerson(person)) < 0.5) return "shared_history";
+ if (NEEDY.test(body)) return "tone";
  // A thank-you, a reschedule or a check-in never asks for a job, an opening or a referral, whatever the evidence says.
  if (input.step && NO_JOB_ASK.includes(input.step) && JOB_ASK.test(body)) return "off_intent";
  const check = checkMessage(body, checkRelOf(input), checkCtx(input, pack.facts.map(f => f.text), quotedFrom(body, pack)));
  if (check.verdict === "Do not send yet") return "checker";
  // A referral ask is for someone who already knows the person's work, and only on the referral playbook or the referral step.
  if (check.isReferralAsk && book.intent !== "referral" && input.step !== "referral_ask") return "referral";
+ // One ask. A second question is a second ask, whatever it asks for.
+ if (split(body).filter(x => /\?["”’]?$/.test(x)).length > 1) return "asks";
  return null;
 }
 
@@ -491,15 +506,25 @@ function build(c: Ctx, parts: Piece[], avoid: readonly string[] = [], rescue: re
  return candidates.find(t => !avoid.includes(t)) ?? candidates[0];
 }
 
+/** True when half or more of the shorter line's meaningful words are in the other: the two lines are about one thing. */
+function sameTopic(a: string, b: string): boolean {
+ const x = new Set(content(a).map(stem)), y = new Set(content(b).map(stem));
+ const small = x.size <= y.size ? x : y, big = small === x ? y : x;
+ return small.size > 0 && [...small].filter(w => big.has(w)).length / small.size >= 0.5;
+}
+
 /** The first-person facts a message can open with: proof kinds first, no stand-alone fragments. */
 function factPieces(book: Playbook, facts: readonly FactRef[]): Piece[] {
- const usable = facts.filter(f => f.kind !== "goal_detail" && book.proof.includes(f.kind) && !hasPlaceholder(f.text));
+ // A Hinglish line pasted into an English message reads wrong to a stranger: it is left out, and the goal's own wording speaks instead.
+ const usable = facts.filter(f => f.kind !== "goal_detail" && book.proof.includes(f.kind) && !hasPlaceholder(f.text) && !looksHinglish(f.text));
  const out: Piece[] = [];
  for (const f of usable) {
   const text = safe(f.text, 400);
   const first = split(text)[0] ?? "";
   const line = text.length <= 170 ? text : first.length <= 170 ? first : "";
   if (!line || (!out.length && !FIRST_PERSON.test(line))) continue;
+  // A second line about the same thing either repeats the first or contradicts it ("I led a team", "I worked alone").
+  if (out.length && FIRST_PERSON.test(line) && sameTopic(out[0].text, line)) continue;
   out.push({ text: sentence(line), keep: out.length ? 1 : 5 });
   if (out.length === 2) break;
  }

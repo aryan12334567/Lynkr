@@ -1,5 +1,5 @@
 import { callStructured, isMock } from "../llm";
-import { splitSentences, unsupportedSentences } from "../grounding";
+import { claimProblem, looksHinglish, splitSentences, unsupportedSentences } from "../grounding";
 import { COMMENT_ANGLES, CommentOptionsModel, type CommentAngle, type CommentGoal, type CommentOption, type FactRef } from "../schemas";
 import { validOption } from "./checks";
 import { commentOptionsUser, COMMENT_OPTIONS_SYSTEM } from "./prompt";
@@ -49,13 +49,17 @@ function keep(model: CommentOptionsModel, post: string, facts: FactRef[], reacti
   const seen = new Set<CommentAngle>();
   const kept: CommentWriterOption[] = [];
   let dropped = 0;
-  const sources = [reaction, post, ...facts.map((f) => f.text)];
+  const own = [reaction, ...facts.map((f) => f.text)];
+  const sources = [post, ...own];
   for (const o of model.options.slice(0, 6)) {
     if (!COMMENT_ANGLES.includes(o.angle) || seen.has(o.angle) || validOption(o, post, facts)) { dropped++; continue; }
+    // A credential, outcome, quantity, title or praise that neither the person nor the post supplied: dropped, any angle.
+    if (claimProblem(o.body, own, sources)) { dropped++; continue; }
     const flags = unsupportedSentences(o.body, sources);
     // "Add a point" is the angle most likely to invent. When more than half of it rests on nothing the person gave, it is
-    // not worth showing with warnings: drop it, as any other option that fails a check.
-    if (o.angle === "add" && flags.length * 2 > splitSentences(o.body).length) { dropped++; continue; }
+    // not worth showing with warnings: drop it. Word matching cannot judge an English comment against a Hinglish reaction,
+    // so that case keeps the option and its flags.
+    if (o.angle === "add" && !looksHinglish(reaction) && flags.length * 2 > splitSentences(o.body).length) { dropped++; continue; }
     seen.add(o.angle);
     kept.push({ ...o, body: o.body.trim(), why: trimWhy(o.why), flags });
   }

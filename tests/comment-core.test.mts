@@ -199,3 +199,49 @@ test("R7: fresher and experienced default to job seeker, networker to visibility
   assert.equal(defaultGoal("founder"), "job_seeker");
   assert.equal(defaultGoal(undefined), "job_seeker");
 });
+
+// ---- review follow-ups: the weak "Add a point" option and the reasoning effort ----
+
+const INVENTED_ADD = ok({
+  angle: "add",
+  body: "Regulatory timelines in banking usually take several quarters to settle, so programmes budget extra months for approvals. Most vendors quote fixed fees that ignore those delays entirely. Planning buffers early avoids painful surprises later.",
+  factRefs: [],
+});
+const GROUNDED_ADD = ok({
+  angle: "add",
+  body: "One caveat from my own work: the cleaning step changed the summary charts for the fest feedback survey, so I would also check how the survey data was collected before trusting the dashboard numbers.",
+  factRefs: ["F1"],
+});
+
+test("an 'add a point' option that is mostly lines the person never supplied is dropped, not shown with warnings", async () => {
+  const { deps } = stub({ status: "options", skipWhy: "", options: [ok(), INVENTED_ADD] });
+  const r = await writeComments(input(), deps);
+  assert.equal(r.kind, "options");
+  if (r.kind !== "options") return;
+  assert.deepEqual(r.options.map((o) => o.angle), ["experience"], "only the grounded option remains");
+  assert.ok(r.dropped >= 1, "the invented one is counted as dropped");
+});
+
+test("an 'add a point' option that rests on the person's facts is kept", async () => {
+  const { deps } = stub({ status: "options", skipWhy: "", options: [GROUNDED_ADD] });
+  const r = await writeComments(input(), deps);
+  assert.equal(r.kind, "options");
+  if (r.kind === "options") assert.deepEqual(r.options.map((o) => o.angle), ["add"]);
+});
+
+test("when the only option is an invented 'add a point', the person gets a clear skip, not a flagged comment", async () => {
+  const { deps } = stub({ status: "options", skipWhy: "", options: [INVENTED_ADD] });
+  const r = await writeComments(input(), deps);
+  assert.equal(r.kind, "skip");
+});
+
+test("the prompt says 'add a point' is built from the person's own facts or reaction", () => {
+  assert.match(COMMENT_OPTIONS_SYSTEM, /add:[^\n]*only[^\n]*(fact|reaction)/i);
+});
+
+test("the model call asks for low reasoning effort: the options come from the person's own material, not from long reasoning", async () => {
+  const seen: string[] = [];
+  const deps: WriteDeps = { mock: () => false, call: (async (o: { effort: string }) => { seen.push(o.effort); return { status: "options", skipWhy: "", options: [ok()] }; }) as unknown as WriteDeps["call"] };
+  await writeComments(input(), deps);
+  assert.deepEqual(seen, ["low"]);
+});

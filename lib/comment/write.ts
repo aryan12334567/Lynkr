@@ -1,5 +1,5 @@
 import { callStructured, isMock } from "../llm";
-import { unsupportedSentences } from "../grounding";
+import { splitSentences, unsupportedSentences } from "../grounding";
 import { COMMENT_ANGLES, CommentOptionsModel, type CommentAngle, type CommentGoal, type CommentOption, type FactRef } from "../schemas";
 import { validOption } from "./checks";
 import { commentOptionsUser, COMMENT_OPTIONS_SYSTEM } from "./prompt";
@@ -52,8 +52,12 @@ function keep(model: CommentOptionsModel, post: string, facts: FactRef[], reacti
   const sources = [reaction, post, ...facts.map((f) => f.text)];
   for (const o of model.options.slice(0, 6)) {
     if (!COMMENT_ANGLES.includes(o.angle) || seen.has(o.angle) || validOption(o, post, facts)) { dropped++; continue; }
+    const flags = unsupportedSentences(o.body, sources);
+    // "Add a point" is the angle most likely to invent. When more than half of it rests on nothing the person gave, it is
+    // not worth showing with warnings: drop it, as any other option that fails a check.
+    if (o.angle === "add" && flags.length * 2 > splitSentences(o.body).length) { dropped++; continue; }
     seen.add(o.angle);
-    kept.push({ ...o, body: o.body.trim(), why: trimWhy(o.why), flags: unsupportedSentences(o.body, sources) });
+    kept.push({ ...o, body: o.body.trim(), why: trimWhy(o.why), flags });
   }
   return { kept: kept.slice(0, 3), dropped };
 }
@@ -84,7 +88,7 @@ export async function writeComments(input: WriteInput, deps: WriteDeps = default
       system: COMMENT_OPTIONS_SYSTEM,
       user: commentOptionsUser({ goal: input.goal, targetRole: input.targetRole, author, post: parsed.post, facts: input.facts, reaction, retry: attempt > 0 }),
       schema: CommentOptionsModel,
-      effort: "medium",
+      effort: "low",
       maxTokens: 2500,
     });
     if (model.status === "skip" || model.options.length === 0) {

@@ -9,7 +9,7 @@ export const COMMENT_OPTIONS_SYSTEM = `You help a person in India answer a Linke
 You get the part of the post they selected, the author if known, their goal, up to 12 facts about them (ids like F1), and optionally their own reaction.
 Write up to three complete comment options, at most one per angle:
 - experience: something the person did, taken from one fact, that connects to a specific point in the post.
-- add: a useful addition or a respectful caveat to a specific point in the post.
+- add: a useful addition or a respectful caveat to a specific point in the post, built only from one fact or the person's own reaction. When neither gives something to add, leave this angle out.
 - question: a genuine question, only when the person's reaction shows a real one. Otherwise leave this angle out.
 Each option:
 - body is 30 to 70 words, ready to post, with no blanks, no greeting and no sign-off.

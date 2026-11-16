@@ -6,6 +6,39 @@ A LinkedIn co-pilot (₹499 a month, taxes included) for freshers, experienced j
 
 Full product spec, feature matrix and decisions: [`CONTEXT.md`](CONTEXT.md). Reddit evidence: [`research/reddit-pain-points.md`](research/reddit-pain-points.md). Build plan: [`research/build-plan.md`](research/build-plan.md).
 
+## Start here (November 2026)
+
+The sections further down were written for earlier phases and for Vercel. This section is current.
+
+**Hosting:** Render (`render.yaml`: `lynkr` is production, `lynkr-preview` is the tester preview). The preview does not deploy by itself: Manual Deploy, "Deploy latest commit". What to check when something looks wrong: [`research/runbook.md`](research/runbook.md).
+
+**Set up from a clean clone** (Node 24, Google Chrome for the browser tests):
+```bash
+npm install
+cp .env.example .env.local     # every variable is listed there with what it does; with none set the app runs in demo mode
+npm run dev                    # http://localhost:3000
+```
+For accounts, set `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=http://localhost:3000` and `LYNKR_DATABASE_URL` (a Neon branch that is not production), then run `npm run db:migrate` once.
+
+**Parts and their switches** (unset: the new version on a preview, the old one elsewhere): `LYNKR_INTERVIEW`, `LYNKR_OUTREACH`, `LYNKR_CALENDAR`, `LYNKR_POSTS` (v1 or v2) and `LYNKR_COMMENTER` (on or off). `/api/status` shows what a deployment is running.
+
+**Scripts:**
+
+| Command | What it does |
+|---|---|
+| `npm test` | every unit test (in-process Postgres; no network) |
+| `bash scripts/run-browser-checks.sh` | every v2 browser suite, each on a fresh demo-mode server (Git Bash on Windows) |
+| `npm run test:e2e`, `test:e2e:v2`, `test:e2e:outreach`, `test:e2e:calendar`, `test:e2e:calendar-feed` | one browser suite against a server you started (`LYNKR_URL`) |
+| `npm run test:ext`, `ext:build`, `ext:zip` | the Chrome extension: tests, build, tester zip |
+| `npm run eval:outreach` | the outreach draft evaluation, demo mode |
+| `node --no-warnings --import ./tests/register.mjs scripts/probe-drafts.mts` | what the draft guards do with invented text, demo mode |
+| `node scripts/measure-first-value.mjs` | taps and screens from the landing page to the first drafts (`LYNKR_URL`) |
+| `node --no-warnings --import ./tests/register.mjs scripts/eval-personas.mts` | the interview evaluation with the real model (needs a key; costs a little) |
+| `npm run db:migrate` | applies the migrations to the database in `LYNKR_DATABASE_URL` or `DATABASE_URL` |
+| `npm run lint`, `npx tsc --noEmit`, `npm run build` | lint, types, production build |
+
+**Where the state of the work is written:** [`research/handoff.md`](research/handoff.md), [`research/final-audit-report.md`](research/final-audit-report.md), [`research/proposals.md`](research/proposals.md), and one `research/progress-*.md` per part.
+
 ## Status
 Phase 1 works end to end in demo mode (no AI key): setup, interview, Story Vault, profile fix, outreach drafts, posts and comments, and the message checker. Tested by clicking through in Chrome at desktop and phone widths; typecheck, lint and production build are clean. Real-AI mode is wired but has not been run against a real provider yet. See `CONTEXT.md` for details.
 

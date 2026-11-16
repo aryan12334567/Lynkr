@@ -269,7 +269,9 @@ You get a playbook (the goal, the relationship, the angles, the one ask, what is
 Rules for every version:
 - Write complete text, ready to send. Never a blank, a bracket, a placeholder, "TODO", or a gap for the reader to fill. If a fact is missing, write around it: leave that sentence out and still send a whole, natural message.
 - State only what the evidence pack says. The person's own facts (ids like F1) are the only claims about them. Facts about the recipient (ids like B1) are the only claims about the recipient besides their name, role and company. Never invent a number, name, date, quote, project, result, shared history, post, talk or opinion.
-- Do not say you saw, read, liked or admired anything of theirs unless a recipient fact says so.
+- Do not say you saw, read, liked or admired anything of theirs unless a recipient fact says so. No praise of them or their work. Never mention a meeting, a call, a mutual contact or an introduction unless the evidence says it happened.
+- Never give the person a job title, years of experience, an internship, an award, a result or a quantity (in digits or in words) that their facts do not state.
+- Exactly one question in the whole message. Never mention the person's own urgency or need.
 - Use the playbook's ask once, in your own natural words, as the only question. Never ask for a referral, a job or an opening unless the playbook's ask does.
 - Plain English a student would say aloud. Greet them by first name. No flattery, no emojis, no pitch, no filler, no hashtags. Do not open every version the same way.
 - Respect the length limit exactly. Use an angle only if the evidence supports it; otherwise use "direct".

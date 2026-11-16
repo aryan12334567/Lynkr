@@ -96,3 +96,11 @@ test("a Hinglish reaction does not get an honest 'add a point' dropped for not m
   const r = await writeComments({ selection: POST, goal: "job_seeker", reaction: "Mujhe lagta hai pehle form ke questions check karne chahiye, warna data galat aata hai.", targetRole: "Data analyst", facts: [] }, deps);
   assert.equal(r.kind, "options", JSON.stringify(r));
 });
+
+test("the prompts name what the guards reject, so a model does not waste a try on it", async () => {
+  const { OUTREACH_SYSTEM } = await import("../lib/prompts");
+  const { COMMENT_OPTIONS_SYSTEM } = await import("../lib/comment/prompt");
+  for (const p of [OUTREACH_SYSTEM, COMMENT_OPTIONS_SYSTEM]) assert.match(p, /job title, years of experience, an internship, an award, a result or a quantity/);
+  assert.match(OUTREACH_SYSTEM, /Exactly one question/);
+  assert.match(OUTREACH_SYSTEM, /mutual contact/);
+});

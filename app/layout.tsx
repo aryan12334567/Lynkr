@@ -1,3 +1,4 @@
+import { isIndexable, publicUrl } from "@/lib/public-url";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Geist, Mona_Sans } from "next/font/google";
@@ -23,13 +24,23 @@ const display = Mona_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Lynkr",
-  description: "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts messages and posts from facts you confirm.",
-  verification: {
-    google: "D2FKxikgMBg1m6UZKzFROoJdya6hOau3b0hMkD-JayI",
-  },
-};
+const DESCRIPTION = "Write to one person on LinkedIn and sound like yourself. A LinkedIn co-pilot that drafts messages and posts from facts you confirm.";
+
+/** Built per request: the address differs between the real site and a preview, and only the real site is indexed. */
+export function generateMetadata(): Metadata {
+  const base = publicUrl();
+  return {
+    metadataBase: new URL(base),
+    title: { default: "Lynkr: your LinkedIn co-pilot", template: "%s" },
+    description: DESCRIPTION,
+    robots: isIndexable() ? { index: true, follow: true } : { index: false, follow: false },
+    openGraph: { type: "website", siteName: "Lynkr", title: "Lynkr: your LinkedIn co-pilot", description: DESCRIPTION, url: base, locale: "en_IN" },
+    twitter: { card: "summary", title: "Lynkr: your LinkedIn co-pilot", description: DESCRIPTION },
+    verification: {
+      google: "D2FKxikgMBg1m6UZKzFROoJdya6hOau3b0hMkD-JayI",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#fafaf8",
@@ -60,6 +71,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <PostHogPageView />
         {children}
+        {/* The app is drawn in the browser. A reader or crawler without JavaScript still gets what Lynkr is and where to read more. */}
+        <noscript>
+          <div style={{ maxWidth: 560, margin: "48px auto", padding: "0 20px", fontFamily: "system-ui, sans-serif", lineHeight: 1.6 }}>
+            <h1>Lynkr: your LinkedIn co-pilot</h1>
+            <p>{DESCRIPTION}</p>
+            <p>Lynkr needs JavaScript to run. Please turn it on and reload this page.</p>
+            <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/refunds">Refunds</a> · <a href="/contact">Contact</a></p>
+          </div>
+        </noscript>
       </body>
     </html>
   );

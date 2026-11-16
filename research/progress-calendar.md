@@ -83,7 +83,7 @@ Aryan used the preview and said an item looked like it was on two days. The refe
 - **Not done:** an outreach step moved away has no "Moved from" note or Move back button (only plan slots do).
 
 ### Whole-stage verification
-`npx tsc --noEmit` clean; `npm test` 638 (the `outreach-timeline` file crashes Node on Windows in a full run and passes alone, 14/14); `npx next build` clean; `npm run lint` 1 error, the old `MondayTodo.tsx` refs one (not from this work). Browser (fresh server per run, `LYNKR_INTERVIEW=v2` needed): paid 1280 28/28, phone 20/20, free 29/29; Stage 1 22/22, v1 6/6 as of the review round.
+`npx tsc --noEmit` clean; `npm test` 638 (the `outreach-timeline` file crashes Node on Windows in a full run and passes alone, 14/14); `npx next build` clean; `npm run lint` 1 error, the old `MondayTodo.tsx` refs one (not from this work). Browser (fresh server per run, `LYNKR_INTERVIEW=v2` needed): paid 1280 29/29, phone 20/20, free 30/30 (with the drag-state checks F13a and F13b); Stage 1 22/22, v1 6/6 as of the review round.
 
 ### U10 copy and U11 release (drafts only, nothing published)
 - **[VISIBLE] strings in code, not approved:** the paywall card ("<item> is part of the subscription. The Calendar, your week, progress and reminders are free. Drafting posts, comments and outreach messages is ₹499 a month." with "See what's included" and "Not now"); "Download week (.ics)", "Remind me in this tab"; "Sign in to move items by chat."; "I couldn't find that item."; "Nothing planned. Change the plan by chat or add a post."

@@ -62,6 +62,7 @@ function Chips({ list, props, compact, setDragging }: { list: readonly FeedItem[
 export function WeekGrid({ monday, ...props }: GridProps & { monday: string }) {
   const [held, setDragging] = useState<FeedItem | null>(null);
   const dragging = stillThere(held, props.items);
+  if (held && !dragging) setDragging(null); // forget a drag whose chip is gone, so it cannot return with the chip
   const by = groupByDay(shown(props.items));
   return (
     <div className="hidden gap-3 sm:grid sm:grid-cols-7" data-view="week" onDragEnd={() => setDragging(null)}>
@@ -87,6 +88,7 @@ export function WeekGrid({ monday, ...props }: GridProps & { monday: string }) {
 export function MonthGrid({ anyDay, onOpenDay, ...props }: GridProps & { anyDay: string; onOpenDay: (day: string) => void }) {
   const [held, setDragging] = useState<FeedItem | null>(null);
   const dragging = stillThere(held, props.items);
+  if (held && !dragging) setDragging(null);
   const { first, days } = monthCells(anyDay);
   const by = groupByDay(shown(props.items));
   return (

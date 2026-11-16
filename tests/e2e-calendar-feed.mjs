@@ -213,6 +213,7 @@ async function run(width, paid) {
       server.items.push(removed); // put it back for the checks that follow
       await page.evaluate(() => window.dispatchEvent(new Event("lynkr:calendar-changed")));
       await chipOf("plan:2026-11-09:comment-0").first().waitFor({ timeout: 5000 });
+      check(id("F13b when that chip comes back, the days are still not marked"), (await page.locator("[data-drop-ok]").count()) === 0);
     }
 
     if (!paid) {

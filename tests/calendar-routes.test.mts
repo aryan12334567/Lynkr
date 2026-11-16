@@ -112,17 +112,17 @@ test("RT4 the feed reads the weeks it shows in one query, not one per week", asy
   });
 });
 
-test("RT5 the feed route refuses a flood from one address", async () => {
-  const restore = env({ LYNKR_CALENDAR: "v2" });
+test("RT5 the feed route limits each signed-in person, not each address: a shared college connection is not locked out", async () => {
+  const restore = env({ LYNKR_CALENDAR: "v2", LYNKR_CALENDAR_PER_HOUR: "5" });
   try {
     await world(async () => {
       const { GET } = await import("../app/api/calendar/route");
-      const ask = () => GET(new Request("http://x/api/calendar", { headers: { "x-forwarded-for": "203.0.113.77" } }));
+      const ask = (user?: string) => GET(new Request("http://x/api/calendar", { headers: { "x-forwarded-for": "203.0.113.77", ...(user ? { "x-test-user": user } : {}) } }));
       let status = 0;
-      for (let i = 0; i < 700 && status !== 429; i++) status = (await ask()).status;
-      assert.equal(status, 429, "a limit applies");
-      const other = await GET(new Request("http://x/api/calendar", { headers: { "x-forwarded-for": "203.0.113.78" } }));
-      assert.notEqual(other.status, 429, "another address is not affected");
+      for (let i = 0; i < 12 && status !== 429; i++) status = (await ask("A")).status;
+      assert.equal(status, 429, "person A hit the limit");
+      assert.notEqual((await ask("B")).status, 429, "person B, on the same address, is not affected");
+      assert.equal((await ask()).status, 401, "a request with no session is refused, not rate-limited");
     });
   } finally { restore(); }
 });

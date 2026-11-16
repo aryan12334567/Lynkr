@@ -4,7 +4,7 @@ import { requireLicense } from "@/lib/billing";
 import { commenterSwitch } from "@/lib/comment/flags";
 import { calendarVersion } from "@/lib/calendar/flags";
 import { calendarFeed } from "@/lib/calendar/server";
-import { checkLimits } from "@/lib/limit";
+import { checkCalendarLimit } from "@/lib/limit";
 import { outreachVersion } from "@/lib/outreach/flags";
 
 export const maxDuration = 30;
@@ -17,9 +17,10 @@ export const maxDuration = 30;
  */
 export async function GET(req: Request) {
   if (calendarVersion() !== "v2") return Response.json({ error: "Not found." }, { status: 404 });
-  const limited = checkLimits(req, "calendar");
+  const user = await sessionUser(req);
+  if (!user) return unauthorized();
+  const limited = checkCalendarLimit(user.id);
   if (limited) return Response.json({ error: limited }, { status: 429 });
-  if (!(await sessionUser(req))) return unauthorized();
   const ctx = await accountContext(req);
   if (!ctx) return noCloud();
   const q = new URL(req.url).searchParams;

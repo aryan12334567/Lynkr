@@ -24,7 +24,16 @@ export function clientIp(req: Request): string {
   return (fwd ? fwd.split(",")[0].trim() : req.headers.get("x-real-ip")) || "unknown";
 }
 
-export type LimitKind = "interview" | "interview2" | "generate" | "enrich" | "checkout" | "license" | "calendar";
+/**
+ * The Calendar feed is read on every screen change and after every move, and each read touches the database. The limit is
+ * per signed-in person, not per address: a college or office shares one address among many people. Default 600 an hour.
+ */
+export function checkCalendarLimit(userId: string): string | null {
+  const max = Number(process.env.LYNKR_CALENDAR_PER_HOUR) || 600;
+  return hit(`user:calendar:${userId}`, max, HOUR) ? null : "Too many Calendar requests. Please try again in a few minutes.";
+}
+
+export type LimitKind = "interview" | "interview2" | "generate" | "enrich" | "checkout" | "license";
 
 /** Returns an error message if the request should be refused, else null. */
 export function checkLimits(req: Request, kind: LimitKind): string | null {
@@ -48,10 +57,6 @@ export function checkLimits(req: Request, kind: LimitKind): string | null {
     // Unlocking with a key: enough for typos and a few devices, too few to guess keys.
     if (!hit(`ip:license:${clientIp(req)}`, 30, HOUR)) return "Too many attempts. Please try again in an hour.";
     return null;
-  }
-  if (kind === "calendar") {
-    // The Calendar feed is read on every screen change and after every move, and each read touches the database: generous, but bounded.
-    return hit(`ip:calendar:${clientIp(req)}`, 600, HOUR) ? null : "Too many Calendar requests. Please try again in a few minutes.";
   }
   // Interview v2 saves every answer and follow-up: about 25 to 40 calls per interview.
   const perHour = kind === "interview2" ? 120 : kind === "interview" ? 40 : 6;

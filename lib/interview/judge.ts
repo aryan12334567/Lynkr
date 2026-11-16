@@ -1,4 +1,5 @@
 import { overlap, plainDashes } from "../clean";
+import { looksHinglish } from "../grounding";
 import { callStructured, isMock } from "../llm";
 import { judgeSystem, judgeUser } from "../prompts";
 import { JudgeReply, type Bucket, type FactKind } from "../schemas";
@@ -17,6 +18,22 @@ function allowedKinds(qid: string, attempt: number, trigger?: string): FactKind[
   if (!q?.factKind) return attempt > 0 ? [trigger === "we" ? "contribution" : "evidence"] : [];
   if (attempt === 0) return q.factKind === "project" ? ["project", "contribution", "evidence", "challenge"] : [q.factKind];
   return [trigger === "we" ? "contribution" : trigger === "no_number" ? "evidence" : q.factKind];
+}
+
+/**
+ * A Hinglish answer is stored as an English fact so every draft and check downstream can use it (audit P1). Words cannot
+ * be matched across the two, so the check is on what survives translation: every number and every name in the fact must
+ * be in the answer, the fact must not be Hinglish itself, and it cannot be much longer than what was said. The person
+ * still confirms or edits each fact on the read-back screen before anything is written from it.
+ */
+export function translationHolds(fact: string, answer: string): boolean {
+  if (!fact.trim() || looksHinglish(fact)) return false;
+  const said = answer.toLowerCase();
+  for (const n of fact.match(/\d[\d,.]*/g) ?? []) if (!said.includes(n.replace(/[,.]$/, ""))) return false;
+  const names = [...fact.matchAll(/\b[A-Z][\p{L}\p{N}'-]+\b/gu)].filter((m) => !/(^|[.!?]\s+)$/.test(fact.slice(0, m.index))).map((m) => m[0]);
+  for (const name of names) if (name !== "I" && !said.includes(name.toLowerCase())) return false;
+  const words = (t: string) => t.trim().split(/\s+/).filter(Boolean).length;
+  return words(fact) <= Math.max(12, Math.ceil(words(answer) * 1.6));
 }
 
 export async function judgeAnswer(bucket: Bucket, answers: Answer[], a: Answer): Promise<Judged> {
@@ -38,9 +55,10 @@ export async function judgeAnswer(bucket: Bucket, answers: Answer[], a: Answer):
       maxTokens: 2000,
     });
     const source = [earlier, a.text].join(" ");
+    const hinglish = looksHinglish(a.text);
     const facts: CandidateFact[] = r.facts
       .map((f) => ({ ...f, text: plainDashes(f.text.trim()).slice(0, 300) }))
-      .filter((f) => f.text && kinds.includes(f.kind) && overlap(f.text, source) >= 0.3 && !isExampleText(q, bucket, f.text))
+      .filter((f) => f.text && kinds.includes(f.kind) && (hinglish ? translationHolds(f.text, source) : overlap(f.text, source) >= 0.3) && !isExampleText(q, bucket, f.text))
       .slice(0, 3)
       .map((f) => ({ kind: f.kind, text: f.text, sourceQid: a.qid, confidence: confidenceOf(f.text, a.trigger === "no_number") }));
     const reflection = reflectionOk(r.reflection, a.text) ? plainDashes(r.reflection.trim()) : fallback.reflection;

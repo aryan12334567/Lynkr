@@ -60,7 +60,7 @@ function planItem(plan: Plan, it: Plan["items"][number], why: string | null, lab
     const ghosts: FeedItem[] = [];
     (it.moves ?? []).forEach((m, i) => {
       const key = `${m.day} ${m.time}`;
-      if (seen.has(key)) return;
+      if (seen.has(key) || ghosts.length > 0) return; // only where it started: a chain of moves is one note, not one per hop
       seen.add(key);
       ghosts.push({ ...live, id: `${live.id}:was:${i}`, day: m.day, time: m.time, status: "replaced", statusText: "Replaced", replacedBy: it.day, movable: false, lockedReason: "Replaced", gated: false });
     });

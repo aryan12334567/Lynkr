@@ -94,6 +94,19 @@ test("R4 the old date of a moved plan slot stays visible as Replaced (R14)", asy
   });
 });
 
+test("R14 a slot moved twice leaves one note where it started, not one per hop", async () => {
+  await world(async (db) => {
+    const before = (await getWeek(db, "A", MON))!.items.find((i) => i.id === "post-0")!;
+    const hops = ["2026-11-12", "2026-11-13", "2026-11-14"].filter((d) => d !== before.day).slice(0, 2);
+    for (const d of hops) assert.equal((await moveItem(db, "A", { op_id: op(), id: planFeedId(MON, "post-0"), day: d }, PAID)).status, 200);
+    const feed = await calendarFeed(db, "A", { now: NOW, from: MON, to: "2026-11-15", paid: true, switches: ON, ...CREATE });
+    const notes = feed.items.filter((i) => i.status === "replaced" && i.kind === "post");
+    assert.equal(notes.length, 1, "one note, not one per hop");
+    assert.equal(notes[0].day, before.day, "at the date it started");
+    assert.equal(notes[0].replacedBy, hops[1], "says where it is now");
+  });
+});
+
 test("R5 the month header names the month the grid shows (Nov 2026 starts on a Sunday)", () => {
   assert.match(monthLabel("2026-11-18"), /Nov/);
   assert.match(monthLabel("2026-11-18"), /2026/);

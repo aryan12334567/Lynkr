@@ -5,6 +5,7 @@
 import { todayIST } from "../ist";
 import type { CalendarItem as OutreachStep } from "../outreach/calendar";
 import { TAG_LABEL, type Plan, type PlanItem } from "../plan";
+import type { Post } from "../posts/db";
 import type { FeedItem, FeedKind, FeedStatus } from "./types";
 
 export const PICK_SOMEONE = "Pick someone to contact";
@@ -130,6 +131,66 @@ export function fillMessageSlots(plan: readonly FeedItem[], steps: readonly Feed
   for (const p of plan) if (p.kind !== "message" || p.status === "done") out.push(p);
   for (const s of steps) if (!used.has(s.id)) out.push(s);
   return out.sort((a, b) => (a.day + a.time).localeCompare(b.day + b.time) || a.id.localeCompare(b.id));
+}
+
+// ---- posts (owner: post) ----
+
+const POST_STATUS: Record<string, [FeedStatus, string]> = {
+  scheduled: ["scheduled", "Scheduled"],
+  publishing: ["scheduled", "Publishing now"],
+  published: ["done", "Posted"],
+  failed: ["failed", "Failed"],
+  unknown: ["check", "Check LinkedIn"],
+};
+
+/**
+ * Scheduled, publishing, published, failed and unknown posts (Posts plan R32). A draft or approved post has no time, so it
+ * is not on the Calendar. A manual post reads "Reminder set": nothing is sent for it. Only a scheduled post moves, and
+ * only for a paid account; a publishing one is locked.
+ */
+export function postFeedItems(posts: readonly Post[], access: Access): FeedItem[] {
+  const out: FeedItem[] = [];
+  for (const p of posts) {
+    const map = POST_STATUS[p.status];
+    const at = p.scheduledAt ?? p.publishedAt;
+    if (!map || !at) continue;
+    const scheduled = p.status === "scheduled";
+    const movable = scheduled && access.paid;
+    const lockedReason = movable ? undefined : p.status === "publishing" ? "Publishing now" : scheduled ? "Needs a subscription" : p.status === "published" ? "Already done" : "Check it on LinkedIn";
+    out.push({
+      id: `post:${p.id}`,
+      owner: "post",
+      kind: "post",
+      day: todayIST(new Date(at)),
+      time: istTime(at),
+      status: map[0],
+      statusText: scheduled && p.publishMode !== "auto" ? "Reminder set" : map[1],
+      title: TAG_LABEL[p.type],
+      label: null,
+      why: null,
+      href: "#app/posts",
+      movable,
+      ...(lockedReason ? { lockedReason } : {}),
+      gated: true,
+    });
+  }
+  return out;
+}
+
+/**
+ * R9 for posts: a post made from a plan slot takes that slot's place (same week and slot number); a post with no slot
+ * takes the first open post slot on its day. A slot the person already marked done stays, and the post is an extra item.
+ */
+export function fillPostSlots(plan: readonly FeedItem[], posts: readonly { item: FeedItem; week: string | null; slot: number | null }[]): FeedItem[] {
+  const taken = new Set<string>();
+  const out: FeedItem[] = [];
+  const open = (s: FeedItem) => s.owner === "plan" && s.kind === "post" && s.status !== "done" && s.status !== "replaced";
+  for (const { item, week, slot } of posts) {
+    const exact = week !== null && slot !== null ? plan.find((s) => open(s) && s.id === planFeedId(week, `post-${slot}`)) : undefined;
+    const target = exact ?? (week === null ? plan.find((s) => open(s) && s.day === item.day && !taken.has(s.id)) : undefined);
+    if (target && !taken.has(target.id)) { taken.add(target.id); out.push({ ...item, fills: target.id }); } else out.push(item);
+  }
+  return [...plan.filter((s) => !taken.has(s.id)), ...out];
 }
 
 // ---- comments (R8) ----

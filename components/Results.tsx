@@ -19,6 +19,7 @@ import { DraftCard } from "./DraftCard";
 import { Checker, RelationshipPicker } from "./Checker";
 import { VaultReview } from "./VaultReview";
 import { CommentHelper } from "./CommentHelper";
+import { PostsWorkspace } from "./posts/PostsWorkspace";
 import { Today } from "./Today";
 import { AccountMenu } from "./AccountMenu";
 import type { Account } from "@/lib/auth-client";
@@ -71,7 +72,8 @@ export function Results({
 }) {
   const [outreachV2, setOutreachV2] = useState(false);
   const [calendarV2, setCalendarV2] = useState(false);
-  useEffect(() => { fetch("/api/status").then(r => r.json()).then(d => { setOutreachV2(d.outreach === "v2"); setCalendarV2(d.calendar === "v2"); }).catch(() => {}); }, []);
+  const [postsV2, setPostsV2] = useState(false);
+  useEffect(() => { fetch("/api/status").then(r => r.json()).then(d => { setOutreachV2(d.outreach === "v2"); setCalendarV2(d.calendar === "v2"); setPostsV2(d.posts === "v2"); }).catch(() => {}); }, []);
   const [rel, setRel] = useState<Relationship>("stranger");
   // The person described in Connect: in memory only, shared with the checker.
   const [packet, setPacket] = useState<Packet>(EMPTY_PACKET);
@@ -263,6 +265,7 @@ export function Results({
 
               {tab === "posts" && (
                 <div className="space-y-8">
+                  <PostsWorkspace enabled={postsV2} signedIn={account?.signedIn === true} />
                   <section className="space-y-4">
                     <SectionHead title="Posts from your own work">
                       Each starts with something you did. A closing question only belongs if you really want the answer.

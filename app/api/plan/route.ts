@@ -14,6 +14,7 @@ import { calendarFeed, type Switches } from "@/lib/calendar/server";
 import { isMonday } from "@/lib/calendar/plan-store";
 import { addDays } from "@/lib/ist";
 import { outreachVersion } from "@/lib/outreach/flags";
+import { postsVersion } from "@/lib/posts/flags";
 
 export const maxDuration = 60;
 
@@ -22,7 +23,7 @@ const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 /** Chat moves belong to the Calendar's v2 screens. On v1 a "move" request is not one, and the model's move field is ignored. */
 const movesOn = () => calendarVersion() === "v2";
 
-const switches = (): Switches => ({ outreach: outreachVersion() === "v2", commenter: commenterSwitch() === "on", posts: false });
+const switches = (): Switches => ({ outreach: outreachVersion() === "v2", commenter: commenterSwitch() === "on", posts: postsVersion() === "v2" });
 
 /**
  * A move (calendar plan U7) is matched to the signed-in person's own item and sent through the Calendar's owner code.

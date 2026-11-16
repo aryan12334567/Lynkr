@@ -39,7 +39,7 @@ async function world(run: (db: Db) => Promise<void>) {
   const pg = new PGlite();
   try {
     await pg.exec(`create table "user" (id text primary key, "dodoCustomerId" text); insert into "user" values ('A','a'),('B','b');`);
-    for (const f of ["001_vertical1.sql", "002_outreach.sql", "003_posts.sql"]) await pg.exec(sql(f));
+    for (const f of ["001_vertical1.sql", "002_outreach.sql", "003_posts.sql", "008_posts_publish.sql"]) await pg.exec(sql(f));
     const db = pgliteDb(pg) as Db;
     (globalThis as { __lynkrTestDb?: Db }).__lynkrTestDb = db;
     await putWeek(db, "A", MON, planForWeek(MON, { posts: 2, comments: 2, messages: 3 }));

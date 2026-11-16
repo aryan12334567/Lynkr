@@ -21,6 +21,12 @@ export type Post = {
   weekStart: string | null;
   slotIndex: number | null;
   scheduledAt: string | null;
+  /** 'manual': a reminder, the person posts it themselves. 'auto': the server publishes it once. Null until scheduled. */
+  publishMode: "manual" | "auto" | null;
+  publishedAt: string | null;
+  linkedinUrn: string | null;
+  /** A short code ("rejected", "late", ...) when the post failed. Never provider text. */
+  failReason: string | null;
   currentVersionId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -40,12 +46,14 @@ export type PostVersion = {
   createdAt: string;
 };
 
-type PostRow = { id: string; type: PostType; brief: string; mode: PostMode; status: PostStatus; week_start: string | null; slot_index: number | null; scheduled_at: string | Date | null; current_version_id: string | null; created_at: string | Date; updated_at: string | Date };
-const POST_COLS = "id, type, brief, mode, status, week_start::text as week_start, slot_index, scheduled_at, current_version_id, created_at, updated_at";
-const iso = (d: string | Date) => new Date(d).toISOString();
-const toPost = (r: PostRow): Post => ({
+export type PostRow = { id: string; type: PostType; brief: string; mode: PostMode; status: PostStatus; week_start: string | null; slot_index: number | null; scheduled_at: string | Date | null; publish_mode: "manual" | "auto" | null; published_at: string | Date | null; linkedin_urn: string | null; fail_reason: string | null; current_version_id: string | null; created_at: string | Date; updated_at: string | Date };
+const POST_COLS = "id, type, brief, mode, status, week_start::text as week_start, slot_index, scheduled_at, publish_mode, published_at, linkedin_urn, fail_reason, current_version_id, created_at, updated_at";
+export const POST_COLUMNS = POST_COLS;
+export const iso = (d: string | Date) => new Date(d).toISOString();
+export const toPost = (r: PostRow): Post => ({
   id: r.id, type: r.type, brief: r.brief, mode: r.mode, status: r.status, weekStart: r.week_start, slotIndex: r.slot_index === null ? null : Number(r.slot_index),
-  scheduledAt: r.scheduled_at ? iso(r.scheduled_at) : null, currentVersionId: r.current_version_id, createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
+  scheduledAt: r.scheduled_at ? iso(r.scheduled_at) : null, publishMode: r.publish_mode ?? null, publishedAt: r.published_at ? iso(r.published_at) : null,
+  linkedinUrn: r.linkedin_urn ?? null, failReason: r.fail_reason ?? null, currentVersionId: r.current_version_id, createdAt: iso(r.created_at), updatedAt: iso(r.updated_at),
 });
 
 export async function getPost(db: Db, userId: string, id: string): Promise<Post | null> {
@@ -58,6 +66,17 @@ export async function listPosts(db: Db, userId: string, opts: { weekStart?: stri
   const r = opts.weekStart
     ? await db.query<PostRow>(`select ${POST_COLS} from posts where user_id = $1 and week_start = $2::date order by slot_index, created_at`, [userId, opts.weekStart])
     : await db.query<PostRow>(`select ${POST_COLS} from posts where user_id = $1 order by updated_at desc limit $2`, [userId, Math.min(opts.limit ?? 100, 200)]);
+  return r.rows.map(toPost);
+}
+
+/** Posts that have a time on the Calendar (scheduled, publishing, published, failed, unknown) between two instants. */
+export async function listFeedPosts(db: Db, userId: string, from: Date, to: Date): Promise<Post[]> {
+  const r = await db.query<PostRow>(
+    `select ${POST_COLS} from posts where user_id = $1 and status in ('scheduled', 'publishing', 'published', 'failed', 'unknown')
+     and coalesce(scheduled_at, published_at) >= $2::timestamptz and coalesce(scheduled_at, published_at) < $3::timestamptz
+     order by coalesce(scheduled_at, published_at) limit 300`,
+    [userId, from.toISOString(), to.toISOString()],
+  );
   return r.rows.map(toPost);
 }
 

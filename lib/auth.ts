@@ -10,6 +10,7 @@ import { billingProductId, dodoBaseUrl, forgetSubscription } from "./billing";
 import { applyGraceWebhook } from "./billing-grace";
 import { getDb } from "./db";
 import { sendEmail } from "./email";
+import { autopublishOn } from "./posts/flags";
 
 /**
  * Lynkr accounts (Better Auth on Postgres). The account holds only sign-in details and the link to the
@@ -75,7 +76,7 @@ function build() {
     socialProviders: {
       ...(googleConfigured() && { google: { clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET!, prompt: "select_account" as const } }),
       ...(appleConfigured() && { apple: { clientId: process.env.APPLE_CLIENT_ID!, clientSecret: process.env.APPLE_CLIENT_SECRET! } }),
-      ...(linkedinConfigured() && { linkedin: { clientId: process.env.LINKEDIN_CLIENT_ID!, clientSecret: process.env.LINKEDIN_CLIENT_SECRET! } }),
+      ...(linkedinConfigured() && { linkedin: { clientId: process.env.LINKEDIN_CLIENT_ID!, clientSecret: process.env.LINKEDIN_CLIENT_SECRET!, ...(autopublishOn() && { scope: ["w_member_social"] }) } }),
     },
     // Apple returns to the site with a form POST from its own origin.
     trustedOrigins: [...previewOrigins(), ...(appleConfigured() ? ["https://appleid.apple.com"] : [])],

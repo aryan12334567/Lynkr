@@ -14,6 +14,7 @@
     "test:e2e:outreach": "node tests/e2e-outreach.mjs && node tests/e2e-outreach-a11y.mjs",
     "test:e2e:calendar": "node tests/e2e-calendar.mjs",
     "test:e2e:calendar-feed": "node tests/e2e-calendar-feed.mjs",
+    "test:e2e:posts": "node tests/e2e-posts.mjs",
     "ext:build": "node extension/build.mjs",
     "ext:zip": "node extension/zip.mjs",
     "test:ext": "node --test tests/ext-extension.test.mjs tests/ext-comment.test.mjs",

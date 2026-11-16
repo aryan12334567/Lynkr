@@ -14,5 +14,6 @@ run "outreach a11y"       node tests/e2e-outreach-a11y.mjs
 run "calendar paid 1280"  ONLY=paid W=1280 node tests/e2e-calendar-feed.mjs
 run "calendar paid 375"   ONLY=paid W=375 node tests/e2e-calendar-feed.mjs
 run "calendar free"       ONLY=free node tests/e2e-calendar-feed.mjs
+run "posts"               node tests/e2e-posts.mjs
 stop
 echo "== done"

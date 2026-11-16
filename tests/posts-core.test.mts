@@ -313,7 +313,7 @@ test("lowering the count from 3 to 1 keeps the posts already made visible (AE10)
   const pg = new PGlite();
   try {
     await pg.exec(`create table "user" (id text primary key, "dodoCustomerId" text); insert into "user" values ('A','a');`);
-    for (const f of ["001_vertical1.sql", "002_outreach.sql", "003_posts.sql"]) await pg.exec(sql(f));
+    for (const f of ["001_vertical1.sql", "002_outreach.sql", "003_posts.sql", "008_posts_publish.sql"]) await pg.exec(sql(f));
     const db = pgliteDb(pg) as Db;
     assert.ok(await putWeek(db, "A", MON, planForWeek(MON, { posts: 3, comments: 2, messages: 3 })));
     for (const i of [0, 1, 2]) {
@@ -378,7 +378,7 @@ test("generate, refine and hand edits each add a version; nothing is overwritten
   const pg = new PGlite();
   try {
     await pg.exec(`create table "user" (id text primary key, "dodoCustomerId" text); insert into "user" values ('A','a'),('B','b');`);
-    for (const f of ["001_vertical1.sql", "002_outreach.sql", "003_posts.sql"]) await pg.exec(sql(f));
+    for (const f of ["001_vertical1.sql", "002_outreach.sql", "003_posts.sql", "008_posts_publish.sql"]) await pg.exec(sql(f));
     const db = pgliteDb(pg) as Db;
     await db.query("insert into facts (user_id, fact_key, kind, text, status, use_in_drafts) values ('A','F1','project',$1,'confirmed',true), ('A','F9','target','Targeting Acme Corp for a data analyst role.','confirmed',true)", [F1.text]);
     const p = await createPost(db, "A", { type: "proof", brief: EV.brief, mode: "quick" });

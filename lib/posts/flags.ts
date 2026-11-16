@@ -8,3 +8,11 @@ export function postsVersion(): PostsVersion {
   const v = process.env.LYNKR_POSTS?.trim();
   return v === "v1" || v === "v2" ? v : process.env.VERCEL_ENV === "preview" ? "v2" : "v1";
 }
+
+/**
+ * LYNKR_AUTOPUBLISH=on: the server may publish an approved post to the person's own LinkedIn profile at its time.
+ * Exactly "on" turns it on; anything else, or unset, is off everywhere. Off means nothing is ever sent to LinkedIn.
+ */
+export function autopublishOn(): boolean {
+  return process.env.LYNKR_AUTOPUBLISH?.trim() === "on";
+}

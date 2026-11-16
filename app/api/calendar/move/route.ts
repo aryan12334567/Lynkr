@@ -4,7 +4,9 @@ import { sessionUser } from "@/lib/auth";
 import { requireLicense } from "@/lib/billing";
 import { calendarVersion } from "@/lib/calendar/flags";
 import { moveItem } from "@/lib/calendar/move";
+import { postsOwner } from "@/lib/posts/schedule";
 import { readJson } from "@/lib/http";
+import { postsVersion } from "@/lib/posts/flags";
 
 export const maxDuration = 30;
 
@@ -34,6 +36,6 @@ export async function POST(req: Request) {
     const denied = await requireLicense(req);
     if (denied) return denied;
   }
-  const out = await moveItem(ctx.db, ctx.userId, parsed.data, { paid: !parsed.data.id.startsWith("plan:") });
+  const out = await moveItem(ctx.db, ctx.userId, parsed.data, { paid: !parsed.data.id.startsWith("plan:"), posts: postsVersion() === "v2" ? postsOwner(ctx.db) : undefined });
   return Response.json(out.body, { status: out.status });
 }

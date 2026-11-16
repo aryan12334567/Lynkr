@@ -11,6 +11,7 @@ const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<":
 
 /** The action block: a button for links, or the code itself, large and easy to copy. */
 function action(kind: Kind, value: string, button: string): string {
+  if (kind === "notice") return "";
   if (kind === "code")
     return `<p style="margin:24px 0;font-size:34px;font-weight:600;letter-spacing:8px;color:#111318;font-family:ui-monospace,Menlo,Consolas,monospace">${escape(value)}</p>`;
   return `<p style="margin:24px 0"><a href="${escape(value)}" style="background:#3a42c8;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">${escape(button)}</a></p>`;
@@ -25,14 +26,15 @@ ${action(kind, value, button)}
 <p style="font-size:13px;color:#5f6472">If you didn't ask for this, you can ignore this email.</p></div>`;
 }
 
-type Kind = "verify" | "reset" | "code" | "continue";
+type Kind = "verify" | "reset" | "code" | "continue" | "notice";
 
-/** `value` is the link to open, or for "code" the one-time code to type in. */
+/** `value` is the link to open, or for "code" the one-time code to type in, or for "notice" the one plain sentence to show (never post text). */
 export async function sendEmail(to: string, kind: Kind, value: string): Promise<void> {
   const copy = {
     verify: ["Confirm your email", "Confirm your email address to finish creating your Lynkr account.", "Confirm email", "Confirm your Lynkr email"],
     reset: ["Reset your password", "Use this link to choose a new password. It expires in one hour.", "Choose a new password", "Reset your Lynkr password"],
     continue: ["Continue on your laptop", "Open this on your laptop to import your LinkedIn PDF. The link works once and expires in 15 minutes.", "Continue on my laptop", "Continue Lynkr on your laptop"],
+    notice: ["A note about your post", value, "", "A note about your Lynkr post"],
     code: ["Your sign-in code", "Enter this code in Lynkr to sign in. It expires in ten minutes and works once.", "", `${value} is your Lynkr sign-in code`],
   }[kind];
   const key = process.env.RESEND_API_KEY?.trim();

@@ -55,6 +55,7 @@ export async function generateForPost(db: Db, userId: string, postId: string, de
 
 export type RefineOutcome =
   | { kind: "not_found" }
+  | { kind: "locked" }
   | { kind: "refined"; version: PostVersion }
   | { kind: "rejected"; message: string; problems: Problem[] }
   | { kind: "invalid"; message: string; problems: Problem[] };
@@ -63,6 +64,7 @@ export type RefineOutcome =
 export async function refineForPost(db: Db, userId: string, postId: string, opts: { versionId?: string; instruction: string }, deps?: RefineDeps): Promise<RefineOutcome> {
   const post = await getPost(db, userId, postId);
   if (!post) return { kind: "not_found" };
+  if (!["draft", "approved"].includes(post.status)) return { kind: "locked" };
   const from = opts.versionId ?? post.currentVersionId;
   const base = from ? await getVersion(db, userId, postId, from) : null;
   if (!base) return { kind: "invalid", message: "Pick a version to change first.", problems: [] };
@@ -80,7 +82,8 @@ export type SaveOutcome = { kind: "not_found" } | { kind: "locked" } | { kind: "
 export async function saveText(db: Db, userId: string, postId: string, body: string): Promise<SaveOutcome> {
   const post = await getPost(db, userId, postId);
   if (!post) return { kind: "not_found" };
-  if (!["draft", "approved", "scheduled"].includes(post.status)) return { kind: "locked" };
+  // A scheduled post is posted as approved: its text changes only after the schedule is cancelled.
+  if (!["draft", "approved"].includes(post.status)) return { kind: "locked" };
   const prior = post.currentVersionId ? await getVersion(db, userId, postId, post.currentVersionId) : null;
   const row = await addVersion(db, userId, postId, { body: body.trim(), why: "", factRefs: prior?.factRefs ?? [], answerRefs: prior?.answerRefs ?? [], source: "manual", parentId: prior?.id });
   if (!row) return { kind: "not_found" };

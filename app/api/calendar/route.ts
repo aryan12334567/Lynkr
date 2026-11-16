@@ -6,6 +6,7 @@ import { calendarVersion } from "@/lib/calendar/flags";
 import { calendarFeed } from "@/lib/calendar/server";
 import { checkCalendarLimit } from "@/lib/limit";
 import { outreachVersion } from "@/lib/outreach/flags";
+import { postsVersion } from "@/lib/posts/flags";
 
 export const maxDuration = 30;
 
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
     to: q.get("to") ?? undefined,
     paid,
     createWeeks: q.get("create") === "1",
-    switches: { outreach: outreachVersion() === "v2", commenter: commenterSwitch() === "on", posts: false },
+    switches: { outreach: outreachVersion() === "v2", commenter: commenterSwitch() === "on", posts: postsVersion() === "v2" },
   });
   return Response.json({ ...feed, paid }, { headers: { "Cache-Control": "no-store" } });
 }

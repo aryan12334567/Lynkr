@@ -8,6 +8,7 @@ import { addDays, istToUTC, mondayOf, todayIST } from "../ist";
 import { clampWindow } from "../outreach/calendar";
 import { FAMILY_LABEL, goalFamily, planForPerson, whyThisWeek, type MixInput, type Plan } from "../plan";
 import type { ProfileInput } from "../schemas";
+import { listFeedPosts, type Post } from "../posts/db";
 import { buildFeed, type WeekInput } from "./feed";
 import { loadOutreachSteps, type OutreachStepRow } from "./load";
 import { getWeeks, importWeekOnce } from "./plan-store";
@@ -41,7 +42,7 @@ export async function calendarFeed(db: Db, userId: string, opt: FeedOptions): Pr
   const win = clampWindow(now, wantFrom, wantTo);
   const from = todayIST(win.from);
   const to = addDays(todayIST(win.to), -1);
-  const sources: Feed["sources"] = { plan: "ok", outreach: opt.switches.outreach ? "ok" : "off", posts: opt.switches.posts ? "unavailable" : "off", comments: opt.switches.commenter ? "ok" : "off" };
+  const sources: Feed["sources"] = { plan: "ok", outreach: opt.switches.outreach ? "ok" : "off", posts: opt.switches.posts ? "ok" : "off", comments: opt.switches.commenter ? "ok" : "off" };
 
   const mix = await mixInputFor(db, userId).catch(() => ({}) as MixInput);
   const family = goalFamily(mix);
@@ -69,11 +70,16 @@ export async function calendarFeed(db: Db, userId: string, opt: FeedOptions): Pr
     try { steps = await loadOutreachSteps(db, userId, win.from, win.to); } catch { sources.outreach = "unavailable"; }
   }
 
+  let posts: Post[] | null = null;
+  if (opt.switches.posts) {
+    try { posts = await listFeedPosts(db, userId, win.from, win.to); } catch { sources.posts = "unavailable"; }
+  }
+
   let posted: number | null = null;
   if (opt.switches.commenter) {
     try { posted = await countPostedSince(db, userId, istToUTC(thisWeek, "00:00")); } catch { sources.comments = "unavailable" as SourceState; }
   }
 
-  const feed = buildFeed({ weeks, steps, posted, currentWeek: thisWeek, access: { paid: opt.paid }, from, to, sources });
+  const feed = buildFeed({ weeks, steps, posts, posted, currentWeek: thisWeek, access: { paid: opt.paid }, from, to, sources });
   return { ...feed, from, to, clamped: win.clamped };
 }

@@ -91,14 +91,15 @@ export async function PATCH(req: Request) {
   if (!post) return notFound();
   if (!EDITABLE.includes(post.status)) return Response.json({ error: "This post can't be changed now." }, { status: 409 });
   if (p.status === "approved" && !post.currentVersionId && p.text === undefined && p.versionId === undefined) return Response.json({ error: "Choose a version before you approve." }, { status: 409 });
-  if (p.status && post.status === "scheduled") return Response.json({ error: "This post can't be changed now." }, { status: 409 });
+  // What is scheduled is what was approved: no new text, version or status until the schedule is cancelled.
+  if (post.status === "scheduled" && (p.status || p.text !== undefined || p.versionId !== undefined)) return Response.json({ error: "Cancel the schedule to edit this post." }, { status: 409 });
 
   if (p.versionId !== undefined && !(await getVersion(db, userId, post.id, p.versionId.slice(0, 60)))) return notFound();
   let updated = (p.brief !== undefined || p.type || p.mode || p.status ? await updatePost(db, userId, post.id, { brief: p.brief, type: p.type, mode: p.mode, status: p.status }) : post) ?? post;
   if (p.versionId !== undefined) updated = (await setCurrentVersion(db, userId, post.id, p.versionId)) ?? updated;
   if (p.text !== undefined) {
     const saved = await saveText(db, userId, post.id, p.text);
-    if (saved.kind !== "saved") return saved.kind === "locked" ? Response.json({ error: "This post can't be changed now." }, { status: 409 }) : notFound();
+    if (saved.kind !== "saved") return saved.kind === "locked" ? Response.json({ error: "Cancel the schedule to edit this post." }, { status: 409 }) : notFound();
     return Response.json({ post: await getPost(db, userId, post.id), version: saved.version, problems: saved.problems });
   }
   return Response.json({ post: updated });

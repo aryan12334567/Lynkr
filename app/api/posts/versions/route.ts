@@ -47,6 +47,7 @@ export async function POST(req: Request) {
     }
     const out = await refineForPost(db, userId, post.id, { versionId: body.data.versionId, instruction: body.data.instruction });
     if (out.kind === "not_found") return notFound();
+    if (out.kind === "locked") return Response.json({ error: "Cancel the schedule to edit this post." }, { status: 409 });
     if (out.kind === "invalid") return Response.json({ error: out.message }, { status: 400 });
     if (out.kind === "rejected") return Response.json({ result: "rejected", message: out.message, problems: out.problems });
     return Response.json({ result: "refined", version: out.version, post: await getPost(db, userId, post.id) });

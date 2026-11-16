@@ -9,6 +9,14 @@ import type { Counts } from "../plan";
 import type { WeekCount } from "./progress";
 import type { FeedItem } from "./types";
 
+const DAY_MS = 86_400_000;
+const IST_OFFSET_MS = 330 * 60_000;
+
+/** Milliseconds until the next midnight in India (a full day at exactly 00:00). */
+export function msUntilNextDayIST(now: Date): number {
+  return DAY_MS - ((now.getTime() + IST_OFFSET_MS) % DAY_MS);
+}
+
 const OPEN: readonly FeedItem["status"][] = ["draft", "scheduled", "due", "overdue", "check", "failed"];
 
 export function todaySlice(items: readonly FeedItem[], today: string): { today: FeedItem[]; overdue: FeedItem[] } {

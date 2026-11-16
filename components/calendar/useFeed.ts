@@ -43,6 +43,7 @@ export function useFeed({ enabled, from, to }: { enabled: boolean; from: string;
     if (!enabled) return;
     const mine = ++seq.current;
     fetchFeed(from, to).then((feed) => { if (mine === seq.current) setGot({ key, feed }); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the live counter is wanted here: leaving invalidates every answer still in flight
     return () => { seq.current++; };
   }, [enabled, from, to, key]);
 

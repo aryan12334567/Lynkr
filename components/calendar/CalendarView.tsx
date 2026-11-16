@@ -7,7 +7,8 @@ import { dueReminders, weekEvents } from "@/lib/calendar/reminders";
 import { Button } from "../ui";
 import { monthCells, monthLabel } from "@/lib/calendar/grid";
 import type { FeedItem } from "@/lib/calendar/types";
-import { addDays, formatDay, mondayOf, todayIST } from "@/lib/ist";
+import { addDays, formatDay, mondayOf } from "@/lib/ist";
+import { useToday } from "./useToday";
 import { MondayTodo } from "../outreach/MondayTodo";
 import { ChangeDate } from "./ChangeDate";
 import { DayList, MonthGrid, WeekGrid } from "./grids";
@@ -22,7 +23,7 @@ const SOURCE_WORDS: Record<string, string> = { posts: "Posts", outreach: "Outrea
  * cannot be had at all (no database, the switch off), it renders `fallback`, today's week screen, so nothing is lost.
  */
 export function CalendarView({ enabled, fallback, onActive }: { enabled: boolean; fallback: React.ReactNode; onActive?: (on: boolean) => void }) {
-  const today = todayIST();
+  const today = useToday();
   const [view, setView] = useState<"week" | "month">("week");
   const [anchor, setAnchor] = useState(today);
   const [chosen, setChosen] = useState(today);

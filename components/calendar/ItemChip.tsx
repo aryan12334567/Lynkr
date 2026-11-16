@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { chipStatus, chipSummary } from "@/lib/calendar/grid";
 import { downloadIcs } from "@/lib/ics";
 import { eventFor, googleUrlFor, isOpen } from "@/lib/calendar/reminders";
@@ -27,12 +26,11 @@ export function ItemChip({
   moving?: boolean;
   problem?: string;
   onOpen: (item: FeedItem) => void;
-  onChangeDate: (item: FeedItem, opener: HTMLElement | null) => void;
+  onChangeDate: (item: FeedItem) => void;
   onDragStart?: (item: FeedItem) => void;
   /** Puts the item back on the day it started. */
   onMoveBack?: (item: FeedItem) => void;
 }) {
-  const menu = useRef<HTMLButtonElement>(null);
   const replaced = item.status === "replaced";
   return (
     <div
@@ -64,7 +62,7 @@ export function ItemChip({
       )}
       <div className="mt-1 flex items-center justify-between gap-2">
         {item.movable ? (
-          <button ref={menu} data-change-date className="min-h-11 min-w-11 rounded px-2 text-accent hover:underline sm:min-h-8 sm:min-w-0" onClick={() => onChangeDate(item, menu.current)} aria-label={`Change date for ${item.title}`}>
+          <button data-change-date className="min-h-11 min-w-11 rounded px-2 text-accent hover:underline sm:min-h-8 sm:min-w-0" onClick={() => onChangeDate(item)} aria-label={`Change date for ${item.title}`}>
             Change date
           </button>
         ) : (

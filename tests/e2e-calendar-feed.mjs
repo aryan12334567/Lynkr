@@ -200,6 +200,19 @@ async function run(width, paid) {
       await past.dispatchEvent("drop", { dataTransfer: dt2 });
       await page.waitForTimeout(400);
       check(id("F13 dropping on a past day sends nothing"), server.moves.length === n);
+
+      // A drag that never ends (its chip is removed by a reload while it is held) must not leave the days marked.
+      const dt3 = await page.evaluateHandle(() => new DataTransfer());
+      await chipOf("plan:2026-11-09:comment-0").dispatchEvent("dragstart", { dataTransfer: dt3 });
+      const marked = await page.locator("[data-drop-ok]").count();
+      const removed = server.items.find((x) => x.id === "plan:2026-11-09:comment-0");
+      server.items = server.items.filter((x) => x.id !== "plan:2026-11-09:comment-0");
+      await page.evaluate(() => window.dispatchEvent(new Event("lynkr:calendar-changed")));
+      await page.locator("[data-chip='plan:2026-11-09:comment-0']").waitFor({ state: "detached", timeout: 5000 });
+      check(id("F13a a drag whose chip disappears does not leave the days marked"), marked > 0 && (await page.locator("[data-drop-ok]").count()) === 0, `marked before ${marked}, after ${await page.locator("[data-drop-ok]").count()}`);
+      server.items.push(removed); // put it back for the checks that follow
+      await page.evaluate(() => window.dispatchEvent(new Event("lynkr:calendar-changed")));
+      await chipOf("plan:2026-11-09:comment-0").first().waitFor({ timeout: 5000 });
     }
 
     if (!paid) {

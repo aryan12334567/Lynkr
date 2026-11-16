@@ -13,7 +13,7 @@ export type GridProps = {
   problems: Record<string, string>;
   moving: string | null;
   onOpen: (item: FeedItem) => void;
-  onChangeDate: (item: FeedItem, opener: HTMLElement | null) => void;
+  onChangeDate: (item: FeedItem) => void;
   onDrop: (item: FeedItem, day: string) => void;
   /** Puts a moved item back where it started. */
   onMoveBack?: (item: FeedItem) => void;
@@ -23,6 +23,9 @@ export type GridProps = {
 const shown = (items: readonly FeedItem[]) => items.filter((i) => i.status !== "replaced");
 
 const byId = (items: readonly FeedItem[], id: string) => items.find((i) => i.id === id);
+
+/** The dragged chip, only while it is still on the screen: when a reload removes it mid-drag the browser never sends dragend. */
+const stillThere = (held: FeedItem | null, items: readonly FeedItem[]): FeedItem | null => (held && items.some((i) => i.id === held.id) ? held : null);
 
 /** A day that takes drops: valid days are marked while a chip is being dragged (R14). */
 function DropDay({ day, props, dragging, setDragging, className, children }: { day: string; props: GridProps; dragging: FeedItem | null; setDragging: (i: FeedItem | null) => void; className: string; children: React.ReactNode }) {
@@ -57,7 +60,8 @@ function Chips({ list, props, compact, setDragging }: { list: readonly FeedItem[
 
 /** Seven columns, Monday to Sunday (R2). Hidden under 640 px, where the day list takes over (R3). */
 export function WeekGrid({ monday, ...props }: GridProps & { monday: string }) {
-  const [dragging, setDragging] = useState<FeedItem | null>(null);
+  const [held, setDragging] = useState<FeedItem | null>(null);
+  const dragging = stillThere(held, props.items);
   const by = groupByDay(shown(props.items));
   return (
     <div className="hidden gap-3 sm:grid sm:grid-cols-7" data-view="week" onDragEnd={() => setDragging(null)}>
@@ -81,7 +85,8 @@ export function WeekGrid({ monday, ...props }: GridProps & { monday: string }) {
 
 /** A month of days. Three chips a day, then "+N more", which opens that day in the week view (R1). */
 export function MonthGrid({ anyDay, onOpenDay, ...props }: GridProps & { anyDay: string; onOpenDay: (day: string) => void }) {
-  const [dragging, setDragging] = useState<FeedItem | null>(null);
+  const [held, setDragging] = useState<FeedItem | null>(null);
+  const dragging = stillThere(held, props.items);
   const { first, days } = monthCells(anyDay);
   const by = groupByDay(shown(props.items));
   return (
@@ -132,7 +137,7 @@ export function DayList({ monday, chosen, onChoose, onWeek, ...props }: GridProp
       <h4 className="mt-3 font-semibold">{formatDay(chosen)}</h4>
       <div className="mt-2 space-y-2">
         {list.length === 0 ? <p className="text-sm text-faint">Nothing planned for this day.</p> : list.map((it) => (
-          <ItemChip key={it.id} item={{ ...it, movable: it.movable }} moving={props.moving === it.id} problem={props.problems[it.id]} onOpen={props.onOpen} onChangeDate={props.onChangeDate} onMoveBack={props.onMoveBack} />
+          <ItemChip key={it.id} item={it} moving={props.moving === it.id} problem={props.problems[it.id]} onOpen={props.onOpen} onChangeDate={props.onChangeDate} onMoveBack={props.onMoveBack} />
         ))}
       </div>
     </div>

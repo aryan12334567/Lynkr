@@ -7,9 +7,9 @@ import { ArrowRight, CalendarDays, Library, PenLine, Send, Users } from "lucide-
 import type { Saved } from "@/lib/store";
 import { openSlots } from "@/lib/slots";
 import { personFollowUpDue } from "@/lib/connect";
-import { todayIST } from "@/lib/ist";
-import { TAG_LABEL } from "@/lib/plan";
 import { addDays, mondayOf } from "@/lib/ist";
+import { useToday } from "./calendar/useToday";
+import { TAG_LABEL } from "@/lib/plan";
 import { mixWords, todayRow, todaySlice, weekRing } from "@/lib/calendar/today";
 import type { FeedItem } from "@/lib/calendar/types";
 import { fetchFeed } from "./calendar/useFeed";
@@ -23,6 +23,7 @@ type Tab = "vault" | "outreach" | "posts" | "plan" | "connect" | "check";
  */
 export function Today({ s, go, outreachV2 = false, calendarV2 = false, signedIn = false }: { s: Saved; go: (t: Tab) => void; outreachV2?: boolean; calendarV2?: boolean; signedIn?: boolean }) {
   const [outreachDue, setOutreachDue] = useState(0);
+  const today = useToday();
   // Calendar v2 (U8, R23): today's slice of the account's calendar. Without it, today's plan from this browser, as before.
   const [feedItems, setFeedItems] = useState<FeedItem[] | null>(null);
   const onFeed = calendarV2 && signedIn;
@@ -30,14 +31,14 @@ export function Today({ s, go, outreachV2 = false, calendarV2 = false, signedIn 
     if (!onFeed) return;
     let live = true;
     const load = () => {
-      const monday = mondayOf(todayIST());
+      const monday = mondayOf(today);
       fetchFeed(monday, addDays(monday, 6)).then((f) => { if (live && f) setFeedItems(f.items); });
     };
     load();
     window.addEventListener(CALENDAR_CHANGED, load);
     return () => { live = false; window.removeEventListener(CALENDAR_CHANGED, load); };
-  }, [onFeed]);
-  const slice = onFeed && feedItems ? todaySlice(feedItems, todayIST()) : null;
+  }, [onFeed, today]);
+  const slice = onFeed && feedItems ? todaySlice(feedItems, today) : null;
   const r = s.result!;
   const drafts: [string, string, Tab][] = [
     ...r.posts.map((p, i) => [`post:${i}`, p.body, "posts"] as [string, string, Tab]),
@@ -48,7 +49,6 @@ export function Today({ s, go, outreachV2 = false, calendarV2 = false, signedIn 
   const ready = drafts.filter(([id, body]) => body && (s.edits[id] ? !/\[\[/.test(s.edits[id].text) : openSlots(body, s.fills[id] ?? []) === 0)).length;
   const confirmed = s.facts.filter((f) => f.reviewStatus === "confirmed" && f.useInDrafts).length;
   const toCheck = s.facts.filter((f) => f.reviewStatus === "candidate").length;
-  const today = todayIST();
   const todays = (s.plan?.items ?? []).filter((it) => it.day === today && it.status !== "done");
   const planDone = (s.plan?.items ?? []).filter((it) => it.status === "done").length;
   const planTotal = s.plan?.items.length ?? 0;

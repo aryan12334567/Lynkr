@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mixWords, todayRow, todaySlice, weekRing } from "../lib/calendar/today";
+import { mixWords, msUntilNextDayIST, todayRow, todaySlice, weekRing } from "../lib/calendar/today";
 import type { FeedItem } from "../lib/calendar/types";
 
 const item = (id: string, day: string, over: Partial<FeedItem> = {}): FeedItem => ({
@@ -37,4 +37,13 @@ test("an overdue row says how late; a row for today does not", () => {
   assert.equal(todayRow(item("x", "2026-11-10"), TODAY).late, "1 day late");
   assert.equal(todayRow(item("x", TODAY), TODAY).late, null);
   assert.equal(todayRow(item("x", TODAY, { status: "scheduled", statusText: "Reminder set" }), TODAY).status, "Reminder set");
+});
+
+test("the screen knows how long until India's midnight, so a tab left open overnight rolls over", () => {
+  // 23:59:00 IST on Wed 11 Nov is 18:29:00Z: one minute to go.
+  assert.equal(msUntilNextDayIST(new Date("2026-11-11T18:29:00Z")), 60_000);
+  // 00:00:00 IST is the start of a new day: a full day to the next one.
+  assert.equal(msUntilNextDayIST(new Date("2026-11-11T18:30:00Z")), 86_400_000);
+  // Mid-morning: 10:30 IST (05:00Z) has 13.5 hours left.
+  assert.equal(msUntilNextDayIST(new Date("2026-11-12T05:00:00Z")), 13.5 * 3_600_000);
 });
